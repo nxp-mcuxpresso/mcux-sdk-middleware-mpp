@@ -1,0 +1,25 @@
+menu "MCU Vision Pipeline"
+    config MCUX_COMPONENT_middleware.eiq.mpp
+        bool "Component middleware.eiq.mpp"
+        select MCUX_COMPONENT_middleware.eiq.tensorflow_lite_micro
+        select MCUX_COMPONENT_middleware.freertos-kernel
+        select MCUX_COMPONENT_middleware.freertos-kernel.heap_4
+        select MCUX_COMPONENT_middleware.freertos-kernel.cm33_non_trustzone
+        
+    choice
+        prompt "choose a log level for MPP HAL"
+        depends on MCUX_COMPONENT_middleware.eiq.mpp
+        config HAL_LOG_ERR
+            bool "Error"
+        config HAL_LOG_INFO
+            bool "Info"
+        config HAL_LOG_DEBUG
+            bool "Debug"
+    endchoice
+
+    config MCUX_COMPONENT_middleware.eiq.mpp.log
+        int
+        default 0
+        default 1 if HAL_LOG_INFO
+        default 2 if HAL_LOG_DEBUG
+endmenu

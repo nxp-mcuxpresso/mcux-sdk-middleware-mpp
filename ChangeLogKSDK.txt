@@ -1,0 +1,115 @@
+/*!
+@page middleware_log Middleware Change Log
+
+@section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
+  Current version is 3.2.0
+
+  - 3.2.0
+    - Bugfixes
+      - fix black screen when performing conversion to full screen + rotation + flip with vglite
+    - New Features
+      - new parameters for model input normalization
+      - pipeline tasks priorities can be changed
+      - model file split into 2: model raw-data and model information
+      - support inference model switching with mpp_element_update()
+      - support dynamic update of image conversion params with mpp_element_update()
+      - support mcu-sdk-3.0 build system
+      - open-source license Apache 2.0
+    - RFP version
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkmimxrt1170 (CM7 only),
+      - evkbmimxrt1170 (CM7 only),
+      - evkbimxrt1050
+      - mimxrt700evk
+  - 3.1.0
+    - Bugfixes
+      - Fixed MPP memory allocator buffer alignment and requirement constraints issues.
+    - New Features
+      - New GPU backend for image conversion element (imxrt1170 and mimxrt700).
+    - RFP version
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkmimxrt1170 (CM7 only),
+      - evkbmimxrt1170 (CM7 only),
+      - evkbimxrt1050
+      - mimxrt700evk
+  - 3.0.0
+    - Bugfixes
+    - New Features
+      - Added Stripe mode for elements:
+        camera, display, image convert, static image, labeled rectangle.
+      - Removed Glow inference engine.
+      - Removed DeepViewRT inference engine.
+      - Added "Person Detection" example.
+      - Added mpp_background() in API for processing elements with low priority.
+      - Support NXP LCD-PAR-S035 display panel for MCXN947.
+      - Added OS Abstraction Layer, removed FreeRTOS dependency in libMPP.
+      - New GPU backend for image conversion element (imxrt1170).
+    - RFP version
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkmimxrt1170 (CM7 only),
+      - evkbmimxrt1170 (CM7 only),
+      - evkbimxrt1050
+  - 2.1.0
+    - Bugfixes
+    - New Features
+      - Added Open-CMSIS-Pack support
+      - Added ability to change RC tasks cycle duration
+      - Removed mpp_element_split() API function
+    - RFP version
+    - Supported evaluation boards:
+      - evkmimxrt1170 (CM7 only),
+      - evkbmimxrt1170 (CM7 only),
+      - evkbimxrt1050
+  - 2.0.0
+     - Bugfixes
+      - Fixed computation of detection zone dimensions which was not aligned with model aspect ratio.
+      - Fixed multiple bugs related to cropping and orientation of boxes label.
+      - Optimized NMS calculation.
+    - New Features
+      - Face detection example application with TFlite (using ultraface-slim model).
+      - Implemented HAL documentation generation through Doxygen.
+      - Implemented new CPU backend for image conversion element.
+    - RFP version
+    - Supported evaluation boards:
+      - evkmimxrt1170 (CM7 only),
+      - evkbmimxrt1170 (CM7 only),
+      - evkbimxrt1050
+  - 1.0.0
+    - Bugfixes
+      - Source element "Static Image" does not require anymore an aligned image buffer.
+        Thus, it now allows connecting directly with Inference or Display element.
+      - Optimized Glow models with compiler option --use-cmsis-nn.
+      - Optimized pipeline task executions (PR versus RC).
+      - Fix issues preventing to run Glow and TensorFlow-Lite simultaneously in the same pipeline.
+    - New Features
+      - DeepViewRT framework support for the ML inference element
+      - The examples now print the inference's results and statistics in the main task at a configurable rate.
+    - RFP version
+    - Supported evaluation boards:
+      - evkmimxrt1170 (CM7 only),
+      - evkbmimxrt1170 (CM7 only),
+      - evkbimxrt1050
+
+  - 0.9.1
+    - New Features
+      - GLOW framework support for the ML inference element
+      - Stop pipeline functionality
+      - Models with multiple output tensors support for the ML inference element
+      - The example camera_mobilenet_view is available in 2 variants:
+        - one using Tensorflow Lite inference,
+        - the other one using GLOW inference
+      - Object detection example application with TFlite and Glow (using nanodet m model)
+      - User configuration of the input tensor dimension order
+      - Image flip operation
+      - IOU (Intersection Over Union) and NMS (Non-Maximum Suppression) computation available as example’s utility functions
+      - RGB 32bits input format support for PXP HAL
+    - PRC1 version
+    - Supported evaluation boards: evkmimxrt1170 (CM7 only)
+
+  - 0.9.0
+    - EAR1 version. Supported evaluation boards: evkmimxrt1170 (CM7 only)
+
+*/

@@ -1,0 +1,35 @@
+Hardware requirements
+=====================
+- Mini/micro USB cable
+- MCX-N9XX-BRK board
+- Personal computer
+- NXP MCU-Link-(Pro) Debug Probe board
+- OV7670 camera
+- MikroElectonica TFT Proto 5" display (800x480)
+- (optional) UART to USB cable
+
+Board settings
+==============
+Connect the camera to EZH pins
+Connect the display to FLEXIO pins (panel pins from GND up to TFT_D15)
+Connect SWD connector to MCU-Link-Pro Debug Probe board (J7)
+board power options:
+- Connect USB (J3) to power source (host pc or USB charger)
+- OR put jumper (J6) on MCU-Link to power the MCXN target over SWD
+(Optional) connect the UART RX to pin P3_20 and UART TX to pin P3_21, UART ground to any pin GND.
+
+Prepare the Demo
+================
+1. Connect a USB cable between the host PC and MCU-Link Debug Probe.
+2. Debug Console:
+   - Either connect the UART pins to host with a USB-UART adapter, 
+   - or rebuild the MCUX project with semihosting enabled (SDK_DEBUGCONSOLE=0).
+3. For console over UART: Open a serial terminal with the following settings:
+   - 115200 baud rate
+   - 8 data bits
+   - No parity
+   - One stop bit
+   - No flow control
+4. Build the project using the MCUX IDE (axf image) or armgcc (elf image).
+5. Download the program to the target board using the MCUX IDE or other Debug-Probe utility.
+6. Either press the reset button on your board or launch the debugger in your IDE to begin running the demo.
