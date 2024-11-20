@@ -1,0 +1,14 @@
+.build.env
+cs.sh
+cscope.*
+*.bin
+*.dis
+*.elf
+*.map
+build_evkmimxrt1170/*
+build_evkbimxrt1050/*
+build_mcxn9xxevk/*
+build_mcxn9xxbrk/*
+build/*
+boards/linux-pc/FreeRTOS/Demo/Posix_GCC/build/*
+boards/linux-pc/camera_emulator/*
