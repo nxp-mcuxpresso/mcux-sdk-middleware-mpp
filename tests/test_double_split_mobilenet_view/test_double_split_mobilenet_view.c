@@ -80,7 +80,7 @@ typedef struct _user_data_t {
 
 #define RECT_LINE_WIDTH 2
 #if (SOURCE_STATIC_IMAGE == 1)
-#include "images/mechanical_stopwatch_128_128_vuyx.h"
+#include "images/stopwatch168_208_vuyx.h"
 #define SRC_WIDTH  SRC_IMAGE_WIDTH
 #define SRC_HEIGHT SRC_IMAGE_HEIGHT
 #else  /* SOURCE_STATIC_IMAGE */

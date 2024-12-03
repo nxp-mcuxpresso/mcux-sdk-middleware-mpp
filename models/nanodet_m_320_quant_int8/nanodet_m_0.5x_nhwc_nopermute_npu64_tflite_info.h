@@ -16,9 +16,8 @@
 #define NANODET_NAME "nanodet_m_0_5x_nhwc_nopermute_tflite"
 /* mean and std will be used to get input values in the model input data range.
  * for Nanodet data should be between -1 and 1. */
-#define NANODET_INPUT_MEAN   -14.0f
-// STD value should be multiplied by 127 to get input image between -1 and 1 before normalization
-#define NANODET_INPUT_STD    (127.0f * 0.01865844801068306f)
+#define NANODET_INPUT_MEAN  128
+#define NANODET_INPUT_STD   127
 #define NANODET_WIDTH       320
 #define NANODET_HEIGHT      320
 /* output tensor properties */

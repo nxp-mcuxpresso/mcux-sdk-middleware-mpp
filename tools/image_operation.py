@@ -1,3 +1,7 @@
+# Copyright 2023-2024 NXP
+# All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 """ 
 This script is used for raw image validation and raw image operations.
 

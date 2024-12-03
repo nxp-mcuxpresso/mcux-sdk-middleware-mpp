@@ -1,6 +1,8 @@
 /*
  * Copyright 2020-2024 NXP.
  *
+ *  SPDX-License-Identifier: Apache-2.0
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -19,7 +21,7 @@
 
 #include "hal_debug.h"
 
-int tickratecheck(uint32_t *last, int *curr, int max);
+int tick_check_rate(uint32_t *last, int *curr, int max);
 
 /* get string from element id */
 char * elem_name(mpp_element_id_t id);
@@ -45,7 +47,7 @@ char * elem_name(mpp_element_id_t id);
     static uint32_t last;                             \
     static int curr;                                    \
     bool enable = false;                                \
-    if (tickratecheck(&last, &curr, mps))               \
+    if (tick_check_rate(&last, &curr, mps))               \
         enable = true;                                  \
     enable;                                             \
 })
@@ -55,7 +57,7 @@ char * elem_name(mpp_element_id_t id);
     {                                                        \
         static uint32_t last;                              \
         static int curr;                                     \
-        if (tickratecheck(&last, &curr, mps))                \
+        if (tick_check_rate(&last, &curr, mps))                \
             MPP_LOGD(format, ##__VA_ARGS__);                 \
     }                                                        \
 } while (0)

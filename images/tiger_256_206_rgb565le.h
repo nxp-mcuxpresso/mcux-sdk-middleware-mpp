@@ -1,4 +1,5 @@
 /* 
+ * Copyright "Bernard Spragg. NZ"
  * "Sumatran Tiger" by "Bernard Spragg. NZ" is licensed under public domain
  * To view a copy of this license,
  * visit https://creativecommons.org/publicdomain/zero/1.0/

@@ -22,11 +22,9 @@
 tflite::MicroOpResolver &MODEL_GetOpsResolver()
 {
 #ifdef APP_USE_NEUTRON64_MODEL
-    static tflite::MicroMutableOpResolver<5> s_microOpResolver;
+    static tflite::MicroMutableOpResolver<3> s_microOpResolver;
 
     s_microOpResolver.AddDequantize();
-    s_microOpResolver.AddReshape();
-    s_microOpResolver.AddSlice();
     s_microOpResolver.AddSoftmax();
     s_microOpResolver.AddCustom(tflite::GetString_NEUTRON_GRAPH(),
         tflite::Register_NEUTRON_GRAPH());

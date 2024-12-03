@@ -29,7 +29,6 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
     )
     # macros
     mcux_add_macro(
-        "-DHAL_LOG_LEVEL=${CONFIG_MCUX_COMPONENT_middleware.eiq.mpp.log}"
         CC "-DSDK_OS_FREE_RTOS"
     )
     # HAL sources

@@ -24,7 +24,7 @@
 #ifndef APP_CONFIG
 #error "ERROR: test configuration APP_CONFIG is not defined"
 #elif (APP_CONFIG==1) || (APP_CONFIG==3) || (APP_CONFIG==5)
-#include "images/mechanical_stopwatch_128_128_vuyx.h"
+#include "images/stopwatch168_208_vuyx.h"
 #define EXPECTED_CONFIDENCE_MIN 62
 #define EXPECTED_LABEL          "stopwatch"
 #define EXPECTED_CHECKSUM       0xec15b997

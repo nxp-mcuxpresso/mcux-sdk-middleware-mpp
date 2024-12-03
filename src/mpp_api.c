@@ -1,6 +1,8 @@
 /*
  * Copyright 2020-2024 NXP.
  *
+ *  SPDX-License-Identifier: Apache-2.0
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -124,10 +126,13 @@ static void vPipelineCtlTask( void *params )
     /* PR task is the lowest-priority task in the pipeline. */
     static int pr_task_prio = MIN_CTL_TASK_PRIO - 2;
 
-    if (mpp_params->pipeline_task_max_prio != 0)
+    if (mpp_params)
     {
-        rc_task_prio = mpp_params->pipeline_task_max_prio - 1;
-        pr_task_prio = mpp_params->pipeline_task_max_prio - 2;
+        if (mpp_params->pipeline_task_max_prio != 0)
+        {
+            rc_task_prio = mpp_params->pipeline_task_max_prio - 1;
+            pr_task_prio = mpp_params->pipeline_task_max_prio - 2;
+        }
     }
 
     /* wait until application finished pipeline construction for the first start */

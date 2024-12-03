@@ -5,21 +5,30 @@ menu "MCU Vision Pipeline"
         select MCUX_COMPONENT_middleware.freertos-kernel
         select MCUX_COMPONENT_middleware.freertos-kernel.heap_4
         select MCUX_COMPONENT_middleware.freertos-kernel.cm33_non_trustzone
-        
-    choice
-        prompt "choose a log level for MPP HAL"
-        depends on MCUX_COMPONENT_middleware.eiq.mpp
-        config HAL_LOG_ERR
-            bool "Error"
-        config HAL_LOG_INFO
-            bool "Info"
-        config HAL_LOG_DEBUG
-            bool "Debug"
-    endchoice
 
-    config MCUX_COMPONENT_middleware.eiq.mpp.log
-        int
-        default 0
-        default 1 if HAL_LOG_INFO
-        default 2 if HAL_LOG_DEBUG
+    config FORCE_HAL_LOG_LEVEL
+        depends on MCUX_COMPONENT_middleware.eiq.mpp
+        bool "Override log level"
+        default n
+
+        choice HAL_LOG_LEVEL
+            depends on FORCE_HAL_LOG_LEVEL
+            prompt "choose a log level for MPP HAL"
+            default HAL_LOG_ERR
+
+            config HAL_LOG_ERR
+                bool "0: Error"
+            config HAL_LOG_INFO
+                bool "1: Info"
+            config HAL_LOG_DEBUG
+                bool "2: Debug"
+        endchoice
+
+        config HAL_LOG_LEVEL
+            help
+                No prefix in generated macro
+            int
+            default 0 if HAL_LOG_ERR
+            default 1 if HAL_LOG_INFO
+            default 2 if HAL_LOG_DEBUG
 endmenu
