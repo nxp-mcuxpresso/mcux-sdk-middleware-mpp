@@ -14,6 +14,7 @@ mcux_add_source(
             examples/_boards/${board}/eiq_examples/mpp/src/utick_config.c
             examples/_boards/${board}/eiq_examples/mpp/inc/pin_mux.h
             examples/_boards/${board}/eiq_examples/mpp/inc/app.h
+            examples/_boards/${board}/eiq_examples/mpp/inc/board.h
             examples/_boards/${board}/eiq_examples/mpp/inc/clock_config.h
             examples/_boards/${board}/eiq_examples/mpp/inc/utick_config.h
             examples/_boards/${board}/eiq_examples/mpp/inc/FreeRTOSConfig.h
@@ -22,8 +23,6 @@ mcux_add_source(
 
 mcux_add_macro(
     CC "-DSDK_I2C_BASED_COMPONENT_USED=1 \
-        -DSSD1963_DATA_WITDH=8 \
-        -DFLEXIO_MCULCD_DATA_BUS_WIDTH=8 \
         -DSDK_DEBUGCONSOLE_UART \
         -DARM_MATH_CM33 \
         -D__FPU_PRESENT=1"

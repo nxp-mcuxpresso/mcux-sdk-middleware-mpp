@@ -4,7 +4,6 @@ menu "MCU Vision Pipeline"
         select MCUX_COMPONENT_middleware.eiq.tensorflow_lite_micro
         select MCUX_COMPONENT_middleware.freertos-kernel
         select MCUX_COMPONENT_middleware.freertos-kernel.heap_4
-        select MCUX_COMPONENT_middleware.freertos-kernel.cm33_non_trustzone
 
     config FORCE_HAL_LOG_LEVEL
         depends on MCUX_COMPONENT_middleware.eiq.mpp

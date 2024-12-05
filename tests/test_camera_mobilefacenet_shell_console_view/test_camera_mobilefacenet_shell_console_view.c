@@ -35,7 +35,7 @@
 #include "pin_mux.h"
 #include "clock_config.h"
 #include "board.h"
-#include "board_init.h"
+#include "app.h"
 
 /* Shell includes */
 #include "fsl_shell.h"

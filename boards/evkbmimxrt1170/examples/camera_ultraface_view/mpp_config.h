@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 NXP
+ * Copyright 2023-2025 NXP
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -101,18 +101,18 @@
 
 /* Tensorflow lite Model data */
 #ifndef APP_ULTRAFACE_ULTRASLIM
-#define APP_TFLITE_ULTRAFACE_DATA "models/ultraface_slim_quant_int8/ultraface_slim_tflite.h"
-#define APP_TFLITE_ULTRAFACE_INFO "models/ultraface_slim_quant_int8/ultraface_slim_tflite_info.h"
+#define APP_TFLITE_ULTRAFACE_DATA "ultraface_slim_tflite.h"
+#define APP_TFLITE_ULTRAFACE_INFO "ultraface_slim_tflite_info.h"
 #else
 #ifdef APP_USE_NEUTRON16_MODEL
-#define APP_TFLITE_ULTRAFACE_DATA "models/ultraface_slim_quant_int8/ultraface_slim_ultraslim_npu16_tflite.h"
-#define APP_TFLITE_ULTRAFACE_INFO "models/ultraface_slim_quant_int8/ultraface_slim_ultraslim_npu16_tflite_info.h"
+#define APP_TFLITE_ULTRAFACE_DATA "ultraface_slim_ultraslim_npu16_tflite.h"
+#define APP_TFLITE_ULTRAFACE_INFO "ultraface_slim_ultraslim_npu16_tflite_info.h"
 #elif defined(APP_USE_NEUTRON64_MODEL)
-#define APP_TFLITE_ULTRAFACE_DATA "models/ultraface_slim_quant_int8/ultraface_slim_ultraslim_npu64_tflite.h"
-#define APP_TFLITE_ULTRAFACE_INFO "models/ultraface_slim_quant_int8/ultraface_slim_ultraslim_npu64_tflite_info.h"
+#define APP_TFLITE_ULTRAFACE_DATA "ultraface_slim_ultraslim_npu64_tflite.h"
+#define APP_TFLITE_ULTRAFACE_INFO "ultraface_slim_ultraslim_npu64_tflite_info.h"
 #else
-#define APP_TFLITE_ULTRAFACE_DATA "models/ultraface_slim_quant_int8/ultraface_slim_ultraslim_tflite.h"
-#define APP_TFLITE_ULTRAFACE_INFO "models/ultraface_slim_quant_int8/ultraface_slim_ultraslim_tflite_info.h"
+#define APP_TFLITE_ULTRAFACE_DATA "ultraface_slim_ultraslim_tflite.h"
+#define APP_TFLITE_ULTRAFACE_INFO "ultraface_slim_ultraslim_tflite_info.h"
 #endif
 #endif
 

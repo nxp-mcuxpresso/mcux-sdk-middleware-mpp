@@ -24,7 +24,7 @@
 #include "fsl_debug_console.h"
 #include "pin_mux.h"
 #include "clock_config.h"
-#include "board_init.h"
+#include "app.h"
 #include "board.h"
 #else
 #include <stdio.h>

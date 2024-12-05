@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 NXP
+ * Copyright 2024-2025 NXP
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -81,11 +81,11 @@
 
 /* define a Tensorflow lite model data input */
 #ifndef USE_NAS_OPTIMIZED_MODEL
-#define APP_TFLITE_PERSONDETECT_DATA "models/persondetect/persondetect_160_128_tflite.h"
-#define APP_TFLITE_PERSONDETECT_INFO "models/persondetect/persondetect_160_128_tflite_info.h"
+#define APP_TFLITE_PERSONDETECT_DATA "persondetect_160_128_tflite.h"
+#define APP_TFLITE_PERSONDETECT_INFO "persondetect_160_128_tflite_info.h"
 #else
-#define APP_TFLITE_PERSONDETECT_DATA "models/persondetect/persondetect_220_220_tflite.h"
-#define APP_TFLITE_PERSONDETECT_INFO "models/persondetect/persondetect_220_220_tflite_info.h"
+#define APP_TFLITE_PERSONDETECT_DATA "persondetect_220_220_tflite.h"
+#define APP_TFLITE_PERSONDETECT_INFO "persondetect_220_220_tflite_info.h"
 #endif
 
 /* display parameters */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 NXP
+ * Copyright 2023-2025 NXP
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -89,7 +89,7 @@
 #define APP_MAX_BOXES 10000
 
 /* Tensorflow lite Model data */
-#define APP_TFLITE_NANODET_DATA "models/nanodet_m_320_quant_int8/nanodet_m_0.5x_nhwc_tflite.h"
-#define APP_TFLITE_NANODET_INFO "models/nanodet_m_320_quant_int8/nanodet_m_0.5x_nhwc_tflite_info.h"
+#define APP_TFLITE_NANODET_DATA "nanodet_m_0.5x_nhwc_tflite.h"
+#define APP_TFLITE_NANODET_INFO "nanodet_m_0.5x_nhwc_tflite_info.h"
 
 #endif /* _MPP_CONFIG_H */

@@ -1,11 +1,9 @@
 #!/bin/bash
 
 W_DIR=$(readlink -f $0 | xargs dirname)/
+SDK_DIR=$(realpath ${W_DIR}/../../../)
 # for make -j option, do not use all CPUs
 NTASK=$(($(getconf _NPROCESSORS_ONLN) / 2))
-if [ -z "${SDK_VERSION}" ];then
-    SDK_VERSION=2_16_0
-fi
 MPP_COMMIT_ID=$(git describe --dirty --always --exclude='*')
 GEN_DOC=false
 
@@ -26,64 +24,34 @@ setup_toolchain_and_sdk_dir()
 
     case "${BOARD}" in
         evkmimxrt1170)
-            SDK_NAME="SDK_${SDK_VERSION}_MIMXRT1170-EVK"
+            CORE_ID="cm7"
             ;;
         evkbimxrt1050)
-            SDK_NAME="SDK_${SDK_VERSION}_EVKB-IMXRT1050"
+            CORE_ID="cm7"
             ;;
         mcxn9xxevk)
-            SDK_NAME="SDK_${SDK_VERSION}_MCX-N9XX-EVK"
+            CORE_ID="cm33_core0"
             ;;
         mcxn9xxbrk)
-            SDK_NAME="SDK_${SDK_VERSION}_MCX-N9XX-BRK"
+            CORE_ID="cm33_core0"
             ;;
         frdmmcxn947)
-            SDK_NAME="SDK_${SDK_VERSION}_FRDM-MCXN947"
+            CORE_ID="cm33_core0"
             ;;
         mimxrt700evk)
-            SDK_NAME="SDK_${SDK_VERSION}_MIMXRT700-EVK"
+            CORE_ID="cm33_core0"
             ;;
         evkbmimxrt1170)
-            SDK_NAME="SDK_${SDK_VERSION}_MIMXRT1170-EVKB"
+            CORE_ID="cm7"
             ;;
         *)
             echo "Fail sdk board name"
             exit 1
     esac
-
-    # toolchain file
-    if [ -z "${SDK_DIR}" ];then
-        SDK_DIR=${W_DIR}../${SDK_NAME}/
-    fi
-    TOOLCHAIN_FILE=${SDK_DIR}tools/cmake_toolchain_files/armgcc.cmake
-    if [ ! -f ${TOOLCHAIN_FILE} ];then
-        SDK_DIR=$(zenity --file-selection --directory --title "Please select SDK directory" )
-        SDK_DIR=${SDK_DIR}/
-        TOOLCHAIN_FILE=${SDK_DIR}tools/cmake_toolchain_files/armgcc.cmake
-        if [ -f ${TOOLCHAIN_FILE} ];then
-            echo export SDK_DIR=${SDK_DIR} >> .build.env
-        else
-            echo "SDK directory is missing, please install it before building"
-            exit 1
-        fi
-    fi
-}
-
-set_default_build_flag()
-{
-    # If no extra build flag is set by user
-    # => set extra build flag to default config with APP_CONFIG=0
-    if [[ "${EXTRA_BUILD_FLAGS}" == "" ]]; then EXTRA_BUILD_FLAGS="-DAPP_CONFIG=0"; fi
-    # workaround where following setting from component_serial_manager_uart.xx.cmake doesn't seem to take effect for the target "example" due to libsdk.a being linked with MCUX_SDK_PROJECT_NAME
-    EXTRA_BUILD_FLAGS+=" -DSERIAL_PORT_TYPE_UART=1 "
-    # hack to enable freertos statistics in libsdk.a
-    EXTRA_BUILD_FLAGS+=" -DconfigGENERATE_RUN_TIME_STATS=1 "
 }
 
 build()
 {
-    set_default_build_flag
-
     echo "BOARD=${BOARD}"
     echo "PANEL=${PANEL}"
     echo "BUILD_TYPE=${BUILD_TYPE}"
@@ -91,121 +59,51 @@ build()
     echo "EXTRA_BUILD_FLAGS=${EXTRA_BUILD_FLAGS}"
     echo "TEST=${TEST}"
 
-    set -x
+    set -ex
 
     setup_toolchain_and_sdk_dir
 
-    #use libtflm.a built by us.
-    if [ "${TFLM_REBUILD}" == "true" ] ; then
-        if [ -f "build_${BOARD}/eiq/lib/${BUILD_TYPE}/libtflm.a" ];then
-            echo "reusing build_${BOARD}/eiq/lib/${BUILD_TYPE}/libtflm.a"
-        else
-            echo "re-building build_${BOARD}/eiq/lib/${BUILD_TYPE}/libtflm.a"
-            mkdir -p build_${BOARD}/eiq
-            cd build_${BOARD}/eiq
-            cmake -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
-                  -G "Unix Makefiles" \
-                  -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-                  -DSDK_DIR="${SDK_DIR}" \
-                  -DBOARD="${BOARD}" \
-                  ../../eiq/
-            make -j ${NTASK} install ${verbose} || exit $?
-        fi
+    #list examples
+    if [ "${EXP}" = "all" ] ; then
+        EXP=$( cat boards/${BOARD}/examples.conf )
+    fi
+    #list tests
+    if [ "${TEST}" = "all" ] ; then
+        TEST=$( cat boards/${BOARD}/tests.conf )
     fi
 
-    cd ${W_DIR}
-    mkdir -p build_${BOARD}/apps
-    cd build_${BOARD}/apps
-    if [ -d "CMakeFiles" ];then rm -rf CMakeFiles; fi
-    if [ -f "Makefile" ];then rm -f Makefile; fi
-    if [ -f "cmake_install.cmake" ];then rm -f cmake_install.cmake; fi
-    if [ -f "CMakeCache.txt" ];then rm -f CMakeCache.txt; fi
+    cd ${SDK_DIR}
+    mkdir -p build_${BOARD}/${BUILD_REL_OR_DBG}
 
     #build examples
-    if [ "${EXP}" = "all" ] ; then
-        EXP=$( cat ../../boards/${BOARD}/examples.conf )
-    fi
-
     if [ -n "${EXP}" ] ; then
         for APP in ${EXP} ; do
-            cmake -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
-                  -G "Unix Makefiles" \
-                  -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-                  -DSDK_DIR="${SDK_DIR}" \
-                  -DAPPNAME="${APP}" \
-                  -DBOARD="${BOARD}" \
-                  -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
-                  -DDEMO_PANEL="${PANEL}" \
-                  -DAPPTYPE="examples" \
-                  -DMPP_COMMIT="${MPP_COMMIT_ID}" \
-                  -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}" \
-                  -DTFLM_REBUILD="${TFLM_REBUILD}" \
-                  ../../
-            make -j ${NTASK} install ${verbose} || exit $?
+            rm -fr build
+            west build -b ${BOARD} examples/eiq_examples/mpp/${APP} -p always --config ${BUILD_TYPE} --toolchain armgcc -Dcore_id=${CORE_ID}
+            cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
         done
     fi
 
     #build tests
-    if [ "${TEST}" = "all" ] ; then
-        TEST=$( cat ../../boards/${BOARD}/tests.conf )
-    fi
-
     if [ -n "${TEST}" ] ; then
         for APP in ${TEST} ; do
-            cmake -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
-                  -G "Unix Makefiles" \
-                  -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-                  -DSDK_DIR="${SDK_DIR}" \
-                  -DAPPNAME="${APP}" \
-                  -DBOARD="${BOARD}" \
-                  -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
-                  -DDEMO_PANEL="${PANEL}" \
-                  -DAPPTYPE="tests" \
-                  -DMPP_COMMIT="${MPP_COMMIT_ID}" \
-                  -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}" \
-                  ../../
-            make -j ${NTASK} install ${verbose} || exit $?
+            rm -fr build
+            west build -b ${BOARD} middleware/eiq/mpp/tests/${APP} -p always --config ${BUILD_TYPE} --toolchain armgcc -Dcore_id=${CORE_ID}
+            cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
         done
     fi
     cd ${W_DIR}
-
-    get_version
+    
+    set +ex
 }
 
 get_version()
 {
     set -x
-
+ 
     cd build_${BOARD}/apps
     mpp_version=$(strings lib/${BUILD_TYPE}/libmpp.a | grep MPP_VERSION)
     echo ${mpp_version} > lib/${BUILD_TYPE}/mpp_version.txt
-    cd -
-}
-
-build_emulator()
-{
-    set -x
-    make -C boards/linux-pc/FreeRTOS/Demo/Posix_GCC libfreertos.a
-
-    cd boards/linux-pc/camera_emulator
-    cmake ..
-    make -j ${NTASK} ${verbose}
-}
-
-setup_sdk()
-{
-    set -x
-    cd ..
-    archive=$(ls ${W_DIR}sdk/*.tbz)
-    echo "${archive} will be installed"
-    tar -xf ${archive}
-    ret=$?
-    set +x
-    if [ ${ret} -eq 0 ];then
-        echo Success
-    else
-        echo Failed
-    fi
     cd -
 }
 
@@ -275,7 +173,6 @@ usage()
     echo "usage:"
     echo "$0 [-e:ih?vsb:d:Dp:]"
     echo " -h|?: help"
-    echo " -s: setup sdk"
     echo " -b <board name>: {evkmimxrt1170, ...}"
     echo " -D: build mpp and hal APIs documentation"
     echo " -e <example name>: build the example app {camera_view, all, ...}"
@@ -295,7 +192,7 @@ EXP=camera_view
 # no test to build by default
 TEST=""
 # default board
-BOARD=evkmimxrt1170
+BOARDS=evkbmimxrt1170
 BUILD_REL_OR_DBG=release
 BUILD_TYPE=flexspi_nor_sdram_${BUILD_REL_OR_DBG}
 EXTRA_BUILD_FLAGS=""
@@ -311,16 +208,13 @@ while getopts "ab:e:h?id:Dp:c:f:t:sv" opt; do
     case "$opt" in
     a)  TFLM_REBUILD=true
         ;;
-    b)  BOARD=$OPTARG
+    b)  BOARDS=$OPTARG
         setup_peripherals
         ;;
     e)  EXP=$OPTARG
         ;;
     h|\?)
         usage
-        ;;
-    i)  build_emulator
-        exit $?
         ;;
     d)  LOG_LEVEL=$OPTARG
         ;;
@@ -334,35 +228,40 @@ while getopts "ab:e:h?id:Dp:c:f:t:sv" opt; do
         ;;
     f)  EXTRA_BUILD_FLAGS+=$OPTARG
         ;;
-    s)  # setup sdk
-        setup_sdk;
-        exit $?
-        ;;
     v)  verbose="VERBOSE=1"
         ;;
     esac
 done
 
-#adjust build type
-if [ ${BOARD} == "mcxn9xxevk" -o  ${BOARD} == "mcxn9xxbrk"  -o  ${BOARD} == "frdmmcxn947" ] ; then
-	BUILD_TYPE=${BUILD_REL_OR_DBG}
-elif [ ${BOARD} == "mimxrt700evk" ] ; then
-        BUILD_TYPE=flash_${BUILD_REL_OR_DBG}
-else
-	BUILD_TYPE=flexspi_nor_sdram_${BUILD_REL_OR_DBG}
+if [ ${BOARDS} == "all" ] ; then
+	BOARDS="frdmmcxn947 evkbmimxrt1170 mimxrt700evk evkbimxrt1050"
 fi
 
-#Set default panel depending on board:
-#RT700: Default Panel 4 
-#RT1170 and RT1050: Default Panel 0
-if [ ${BOARD} == "mimxrt700evk" ] ; then
-        default_panel=4
-else
-        default_panel=0
-fi
+for BOARD in ${BOARDS} ; do 
+	#adjust build type
+	if [ ${BOARD} == "mcxn9xxevk" -o  ${BOARD} == "mcxn9xxbrk"  -o  ${BOARD} == "frdmmcxn947" ] ; then
+		BUILD_TYPE=flash_${BUILD_REL_OR_DBG}
+	elif [ ${BOARD} == "mimxrt700evk" ] ; then
+		BUILD_TYPE=flash_${BUILD_REL_OR_DBG}
+	else
+		BUILD_TYPE=flexspi_nor_sdram_${BUILD_REL_OR_DBG}
+	fi
 
-#use default panel if not passed by user
-PANEL="${PANEL:=${default_panel}}"
+	#Set default panel depending on board:
+	#RT700: Default Panel 4 
+	#RT1170 and RT1050: Default Panel 0
+	if [ ${BOARD} == "mimxrt700evk" ] ; then
+		    default_panel=4
+	else
+		    default_panel=0
+	fi
+
+	#use default panel if not passed by user
+	PANEL="${PANEL:=${default_panel}}"
+
+	# run build
+	build
+done
 
 #generate doc
 if [ ${GEN_DOC} == "true" ] ; then
@@ -370,5 +269,3 @@ if [ ${GEN_DOC} == "true" ] ; then
     exit $?
 fi
 
-# run build
-build

@@ -15,6 +15,7 @@ The person detection model used is quantized persondetect model that detects mul
 ## Hardware requirements
 Refer to board.readme for hardware setup requirements.
 - [FRDM-MCXN947](../../../_boards/frdmmcxn947/eiq_examples/mpp/board_readme.md)
+- [MIMXRT1170-EVKB](../../../_boards/evkbmimxrt1170/eiq_examples/mpp/board_readme.md)
 
 ## Use-cases Description
 

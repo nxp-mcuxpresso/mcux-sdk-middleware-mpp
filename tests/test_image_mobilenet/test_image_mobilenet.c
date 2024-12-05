@@ -27,7 +27,7 @@
 #include "pin_mux.h"
 #include "clock_config.h"
 #include "board.h"
-#include "board_init.h"
+#include "app.h"
 #else
 #define main app_main
 #endif
@@ -77,6 +77,11 @@ typedef enum {
 #define CROP_TOP 0
 #define CROP_LEFT 0
 #define CROP_SIZE SRC_IMAGE_WIDTH
+
+/* Use TensorFlowLite-Micro as an inference engine by default */
+#if !defined(INFERENCE_ENGINE_GLOW) && !defined(INFERENCE_ENGINE_DeepViewRT)
+#define INFERENCE_ENGINE_TFLM
+#endif
 
 /* define this flag to enable MPP stop and start */
 #ifndef CONFIG_STOP_MPP

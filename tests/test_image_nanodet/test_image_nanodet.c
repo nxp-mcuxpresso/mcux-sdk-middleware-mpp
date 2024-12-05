@@ -28,7 +28,7 @@
 #include "pin_mux.h"
 #include "clock_config.h"
 #include "board.h"
-#include "board_init.h"
+#include "app.h"
 
 #include "hal_debug.h"
 
@@ -74,6 +74,11 @@ typedef struct _user_data_t {
 #define CROP_TOP      0
 #define CROP_LEFT     0
 #define CROP_SIZE     SRC_IMAGE_WIDTH
+
+/* Use TensorFlowLite-Micro as an inference engine by default */
+#if !defined(INFERENCE_ENGINE_TFLM) && !defined(INFERENCE_ENGINE_GLOW)
+#define INFERENCE_ENGINE_TFLM
+#endif
 
 #define NANODET_FORMAT  MPP_PIXEL_RGB
 
