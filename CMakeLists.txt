@@ -34,7 +34,6 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
     # HAL sources
     mcux_add_source(
         BASE_PATH ${CMAKE_CURRENT_LIST_DIR}
-        SOURCES hal/hal_${board}.c
         SOURCES hal/hal_camera_mipi_ov5640.c
         SOURCES hal/hal_draw.c
         SOURCES hal/hal_display_lcdifv2_rk055.c
