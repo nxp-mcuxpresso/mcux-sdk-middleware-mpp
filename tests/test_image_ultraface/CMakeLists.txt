@@ -16,7 +16,7 @@ mcux_add_include(
 )
 
 # board files
-include(${SdkRootDirPath}/examples/_boards/${board}/eiq_examples/mpp/board.cmake)
+include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 # model and post-processing
 include(${SdkRootDirPath}/middleware/eiq/mpp/models/ultraface_slim_quant_int8/model.cmake)
 

@@ -1,12 +1,12 @@
 # lists board specific files for SDK
 
 mcux_add_include(
-    BASE_PATH ${SdkRootDirPath}/examples/_boards/${board}/eiq_examples/mpp
+    BASE_PATH ${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp
     INCLUDES inc
 )
 
 mcux_add_source(
-    BASE_PATH ${SdkRootDirPath}/examples/_boards/${board}/eiq_examples/mpp
+    BASE_PATH ${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp
     SOURCES src/pin_mux.c
             src/hardware_init.c
             src/gpt_config.c
@@ -18,10 +18,10 @@ mcux_add_source(
 
 mcux_add_source(
     BASE_PATH ${SdkRootDirPath}
-    SOURCES examples/_boards/${board}/display_support.h
-            examples/_boards/${board}/display_support.c
-            examples/_boards/${board}/camera_support.h
-            examples/_boards/${board}/camera_support.c
+    SOURCES ${board_root}/${board}/display_support.h
+            ${board_root}/${board}/display_support.c
+            ${board_root}/${board}/camera_support.h
+            ${board_root}/${board}/camera_support.c
             middleware/eiq/mpp/hal/hal_${board}.c
 )
 
@@ -38,6 +38,6 @@ mcux_remove_armgcc_linker_script(
 
 mcux_add_armgcc_linker_script(
     TARGETS flexspi_nor_sdram_debug flexspi_nor_sdram_release
-    BASE_PATH ${SdkRootDirPath}/examples/_boards/${board}/eiq_examples/mpp
+    BASE_PATH ${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp
     LINKER MIMXRT1176xxxxx_cm7_flexspi_nor_sdram.ld
 )

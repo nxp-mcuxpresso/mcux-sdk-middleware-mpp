@@ -17,7 +17,7 @@ mcux_add_include(
 )
 
 # board files
-include(${SdkRootDirPath}/examples/_boards/${board}/eiq_examples/mpp/board.cmake)
+include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 
 # top level
 include(${SdkRootDirPath}/CMakeLists.txt)

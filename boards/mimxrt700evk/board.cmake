@@ -1,21 +1,21 @@
 # lists board specific files for SDK
 
 mcux_add_include(
-    BASE_PATH ${SdkRootDirPath}/examples/_boards/${board}/eiq_examples/mpp
+    BASE_PATH ${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp
     INCLUDES inc
 )
 
 mcux_add_source(
     BASE_PATH ${SdkRootDirPath}
-    SOURCES examples/_boards/${board}/eiq_examples/mpp/src/pin_mux.c
-            examples/_boards/${board}/eiq_examples/mpp/src/hardware_init.c
-            examples/_boards/${board}/eiq_examples/mpp/src/clock_config.c
-            examples/_boards/${board}/eiq_examples/mpp/src/utick_config.c
-            examples/_boards/${board}/eiq_examples/mpp/inc/pin_mux.h
-            examples/_boards/${board}/eiq_examples/mpp/inc/app.h
-            examples/_boards/${board}/eiq_examples/mpp/inc/utick_config.h
-            examples/_boards/${board}/eiq_examples/mpp/inc/FreeRTOSConfig.h
-            examples/_boards/${board}/eiq_examples/mpp/inc/clock_config.h
+    SOURCES ${board_root}/${board}/eiq_examples/mpp/src/pin_mux.c
+            ${board_root}/${board}/eiq_examples/mpp/src/hardware_init.c
+            ${board_root}/${board}/eiq_examples/mpp/src/clock_config.c
+            ${board_root}/${board}/eiq_examples/mpp/src/utick_config.c
+            ${board_root}/${board}/eiq_examples/mpp/inc/pin_mux.h
+            ${board_root}/${board}/eiq_examples/mpp/inc/app.h
+            ${board_root}/${board}/eiq_examples/mpp/inc/utick_config.h
+            ${board_root}/${board}/eiq_examples/mpp/inc/FreeRTOSConfig.h
+            ${board_root}/${board}/eiq_examples/mpp/inc/clock_config.h
             middleware/eiq/mpp/hal/hal_${board}.c
 )
 
@@ -47,7 +47,7 @@ mcux_remove_armgcc_linker_script(
 
 mcux_add_armgcc_linker_script(
     TARGETS flash_debug flash_release
-    BASE_PATH ${SdkRootDirPath}/examples/_boards/${board}/eiq_examples/mpp
+    BASE_PATH ${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp
     LINKER MIMXRT798Sxxxx_cm33_core0_flash.ld
 )
 
