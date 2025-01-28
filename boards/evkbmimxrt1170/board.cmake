@@ -33,7 +33,7 @@ mcux_add_macro(
 mcux_remove_armgcc_linker_script(
     TARGETS flexspi_nor_sdram_debug flexspi_nor_sdram_release
     BASE_PATH ${SdkRootDirPath}
-    LINKER devices/${soc_portfolio}/${soc_series}/${device}/gcc/${CONFIG_MCUX_TOOLCHAIN_LINKER_DEVICE_PREFIX}_flexspi_nor_sdram.ld
+    LINKER ${device_root}/${soc_portfolio}/${soc_series}/${device}/gcc/${CONFIG_MCUX_TOOLCHAIN_LINKER_DEVICE_PREFIX}_flexspi_nor_sdram.ld
 )
 
 mcux_add_armgcc_linker_script(
