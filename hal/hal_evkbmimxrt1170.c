@@ -33,7 +33,8 @@ int HAL_GfxDev_PXP_Register(gfx_dev_t *dev);
 hal_graphics_setup_t gfx_setup[] =
 {
     {"gfx_PXP", HAL_GfxDev_PXP_Register},
-	{"gfx_CPU", HAL_GfxDev_CPU_Register},
+    {"gfx_CPU", HAL_GfxDev_CPU_Register},
+    {"gfx_GPU", HAL_GfxDev_GPU_Register},
 };
 
 int setup_graphic_dev(hal_graphics_setup_t gfx_setup[], int graphic_nb,
