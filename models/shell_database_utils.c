@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 NXP
+ * Copyright 2024-2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -22,17 +22,34 @@
  ******************************************************************************/
 static int delete_person (char* Name, int size);
 static int calculate_size(person * people);
-static int add_person (char* Name, int position);
+static void add_person (char* Name, int position);
 
 /*******************************************************************************
  * Variables declaration
  ******************************************************************************/
 static person *embeddings_db;
-static float person_embeddings[SIZE_EMBEDDING];
-
+static float new_person_embeddings[SIZE_EMBEDDING];
+static int state = 0;
 /*******************************************************************************
  * Code
  ******************************************************************************/
+
+/*
+ * get registration status.
+ * */
+int registration_state()
+{
+	return state;
+}
+
+/*
+ * reset registration status once user added.
+ * */
+int reset_registration_state()
+{
+	state = 0;
+	return state;
+}
 
 /*
  * Get pointer to persons database.
@@ -43,12 +60,11 @@ void init_database(person * db)
 }
 
 /*
- * Get new persons embeddings.
+ * Set new persons embeddings.
  */
-void get_new_person_embeddings(const float *new_person_embeddings)
+void set_new_person_embeddings(const float *person_embeddings)
 {
-	//person_embeddings = (const float *)new_person_embeddings;
-	memcpy(person_embeddings, new_person_embeddings, sizeof(person_embeddings));
+	memcpy(new_person_embeddings, person_embeddings, sizeof(new_person_embeddings));
 }
 
 /*
@@ -107,19 +123,16 @@ static int calculate_size(person * people)
 /*
  * This function is used to add a person to the database
  * @param Name  Name of the Person to be added to the database.
- * @param position Position where to add the person in th database
- * @retval size of the databse.
+ * @param position Position where to add the person in the database
  */
-static int add_person (char* Name, int position)
+static void add_person (char* Name, int position)
 {
-	strcpy(embeddings_db[position-1].name, Name);
+	strcpy(embeddings_db[position].name, Name);
 	PRINTF("position:%d\r\n",position);
 
     for (int i = 0; i < SIZE_EMBEDDING ; i++) {
-        embeddings_db[position-1].embedding[i] = person_embeddings[i];
+        embeddings_db[position].embedding[i] = new_person_embeddings[i];
     }
-
-    return 0;
 }
 
 /*
@@ -145,8 +158,10 @@ shell_status_t database_add(shell_handle_t shellHandle, int32_t argc, char **arg
 
 	const int new_database_size = calculate_size(embeddings_db) + 1;
 	PRINTF("size %d\r\n", new_database_size);
-	add_person(Name,new_database_size);
+	add_person(Name,new_database_size - 1);
 	PRINTF("Person added name %s\r\n", embeddings_db[new_database_size-1].name);
+
+	state = 1;
 
 	return kStatus_SHELL_Success;
 }
@@ -161,7 +176,7 @@ shell_status_t database_delete(shell_handle_t shellHandle, int32_t argc, char **
 	SHELL_Printf("You have entered: %s  \r\n", Name);
 	int new_database_size= calculate_size(embeddings_db);
 	delete_person(Name,new_database_size);
-	new_database_size--;
+
 	PRINTF("%s deleted from database. \r\n", Name);
 
 	return kStatus_SHELL_Success;

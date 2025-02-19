@@ -45,14 +45,14 @@
 #include "mpp_config.h"
 
 /* utility functions */
-#include "models/utils.h"
-#include "models/shell_database_utils.h"
+#include "utils.h"
+#include "shell_database_utils.h"
 
 /* Model data input */
 #include APP_TFLITE_MOBILEFACENET_DATA
 
 /* Model output post-processing */
-#include "models/mobilefacenet/mobilefacenet_output_postproc_quantized.h"
+#include "mobilefacenet_output_postproc_quantized.h"
 
 /* Persons database */
 #include APP_DATABASE_NAME
@@ -330,8 +330,8 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 			app_priv->result = result;
 			if (app_priv->result.recognized_name[0]=='\0')
 			{
-				/* get embeddings */
-				get_new_person_embeddings(result.embedding);
+				/* set embeddings */
+				set_new_person_embeddings(result.embedding);
 				if (task_status == -1) /* task suspended */
 				{
 					vTaskResume(shell_task_handle);

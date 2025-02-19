@@ -36,7 +36,7 @@ parser.add_argument("-o", "--output", help="output file")
 parser.add_argument("-W", "--width", type=int, help="image width")
 parser.add_argument("-H", "--height", type=int, help="image height")
 parser.add_argument("-C", "--channels", type=int, help="image channels")
-parser.add_argument("--img_op", choices=['swap_ch0_ch2', 'conv_RGB5652RGB', 'conv_RGB5652BGR'], help="image operation")
+parser.add_argument("--img_op", choices=['swap_ch0_ch2', 'conv_RGB5652RGB', 'conv_RGB5652BGR', 'conv_RGB2BGR'], help="image operation")
 parser.add_argument("--pix_fmt", choices=['yuvx','vuyx', 'uyvy422', 'rgb888', 'bgr888', 'rgb565'], help="input pixel format")
 args = parser.parse_args()
 print(args)
@@ -186,6 +186,23 @@ def conv_from_RGB565ToRGB(out_file, out_pix_fmt):
     print("Error: pixel format:", out_pix_fmt, " is not supported for conversion from RGB565")
     sys.exit('Error: invalid pixel format')
 
+def conv_from_RGBoBGR(out_file, out_pix_fmt):
+  """
+  Perform conversion from RGB888 to BGR888
+  Use input file from argument as image to convert
+  :param out_file: output converted image file
+  :param out_pix_fmt: pixel format of converted image
+  """
+  rgb = np.fromfile(args.input, dtype=np.uint8).reshape(args.height,args.width,3)
+
+  bgr = np.flip(rgb, axis=2)
+
+  if (out_pix_fmt == 'bgr888'):
+    bgr.tofile(out_file, '')
+  else:
+    print("Error: pixel format:", out_pix_fmt, " is not supported for conversion from RGB888")
+    sys.exit('Error: invalid pixel format')
+
 # This file is used to store the output converted image
 # and to be reused for checksum calculation and for display.
 conv_file = "conv_file.raw"
@@ -203,6 +220,10 @@ elif (args.img_op == 'conv_RGB5652BGR'):
   conv_from_RGB565ToRGB(conv_file, "bgr888")
   display_with_cv(conv_file, "bgr888", 3)
   calc_checksum(conv_file, args.width*args.height, 3)
+elif (args.img_op == 'conv_RGB2BGR'):
+  conv_from_RGBoBGR(args.output, "bgr888")
+  display_with_cv(args.output, "bgr888", 3)
+  calc_checksum(args.output, args.width*args.height, 3)
 else:
   display_with_cv(args.input, args.pix_fmt, args.channels)
   calc_checksum(args.input, args.width*args.height, args.channels)

@@ -1,11 +1,12 @@
 #!/bin/bash
 
 W_DIR=$(readlink -f $0 | xargs dirname)/
-SDK_DIR=$(realpath ${W_DIR}/../../../)
+SDK_DIR=$(realpath ${W_DIR}/../sdk-next/mcuxsdk/)
 # for make -j option, do not use all CPUs
 NTASK=$(($(getconf _NPROCESSORS_ONLN) / 2))
 MPP_COMMIT_ID=$(git describe --dirty --always --exclude='*')
 GEN_DOC=false
+LAST_BUILT_ELF=""
 
 setup_toolchain_and_sdk_dir()
 {
@@ -23,18 +24,6 @@ setup_toolchain_and_sdk_dir()
     fi
 
     case "${BOARD}" in
-        evkmimxrt1170)
-            CORE_ID="cm7"
-            ;;
-        evkbimxrt1050)
-            CORE_ID="cm7"
-            ;;
-        mcxn9xxevk)
-            CORE_ID="cm33_core0"
-            ;;
-        mcxn9xxbrk)
-            CORE_ID="cm33_core0"
-            ;;
         frdmmcxn947)
             CORE_ID="cm33_core0"
             ;;
@@ -57,6 +46,7 @@ build()
     echo "BUILD_TYPE=${BUILD_TYPE}"
     echo "MPP_COMMIT_ID=${MPP_COMMIT_ID}"
     echo "EXTRA_BUILD_FLAGS=${EXTRA_BUILD_FLAGS}"
+    echo "EXAMPLE=${EXP}"
     echo "TEST=${TEST}"
 
     set -ex
@@ -65,35 +55,57 @@ build()
 
     #list examples
     if [ "${EXP}" = "all" ] ; then
-        EXP=$( cat boards/${BOARD}/examples.conf )
+        EXPS=$( cat boards/${BOARD}/examples.conf )
+    else
+        EXPS=${EXP}
     fi
     #list tests
     if [ "${TEST}" = "all" ] ; then
-        TEST=$( cat boards/${BOARD}/tests.conf )
+        TESTS=$( cat boards/${BOARD}/tests.conf )
+    else
+        TESTS=${TEST}
     fi
 
     cd ${SDK_DIR}
     mkdir -p build_${BOARD}/${BUILD_REL_OR_DBG}
 
     #build examples
-    if [ -n "${EXP}" ] ; then
-        for APP in ${EXP} ; do
+    if [ -n "${EXPS}" ] ; then
+        for APP in ${EXPS} ; do
             rm -fr build
-            west build -b ${BOARD} examples/eiq_examples/mpp/${APP} -p always --config ${BUILD_TYPE} --toolchain armgcc -Dcore_id=${CORE_ID}
+            west build -b ${BOARD} examples/eiq_examples/mpp/${APP} -p always \
+                       --config ${BUILD_TYPE} \
+                       --toolchain armgcc \
+                       -Dcore_id=${CORE_ID} \
+                       -DCONFIG_${PANEL}="y" \
+                       -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
+                       -DMPP_COMMIT=${MPP_COMMIT_ID} \
+                       -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}"
             cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
+            LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
         done
     fi
 
     #build tests
-    if [ -n "${TEST}" ] ; then
-        for APP in ${TEST} ; do
+    if [ -n "${TESTS}" ] ; then
+        for APP in ${TESTS} ; do
             rm -fr build
-            west build -b ${BOARD} middleware/eiq/mpp/tests/${APP} -p always --config ${BUILD_TYPE} --toolchain armgcc -Dcore_id=${CORE_ID}
+            west build -b ${BOARD} middleware/eiq/mpp/tests/${APP} -p always \
+                       --config ${BUILD_TYPE} \
+                       --toolchain armgcc \
+                       -Dcore_id=${CORE_ID} \
+                       -DCONFIG_${PANEL}="y" \
+                       -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
+                       -DMPP_COMMIT=${MPP_COMMIT_ID} \
+                       -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}"
             cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
+            LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
         done
     fi
     cd ${W_DIR}
     
+    get_version
+
     set +ex
 }
 
@@ -101,9 +113,9 @@ get_version()
 {
     set -x
  
-    cd build_${BOARD}/apps
-    mpp_version=$(strings lib/${BUILD_TYPE}/libmpp.a | grep MPP_VERSION)
-    echo ${mpp_version} > lib/${BUILD_TYPE}/mpp_version.txt
+    cd ${SDK_DIR}/build_${BOARD}/${BUILD_REL_OR_DBG}
+    mpp_version=$(strings ${LAST_BUILT_ELF} | grep MPP_VERSION)
+    echo ${mpp_version} > mpp_version.txt
     cd -
 }
 
@@ -144,7 +156,7 @@ build_doc ()
 {
     set -x
     
-    mpp_version=$(cat build_${BOARD}/apps/lib/${BUILD_TYPE}/mpp_version.txt | awk -F_ '{print $NF}')
+    mpp_version=$(cat ${SDK_DIR}/build_${BOARD}/${BUILD_REL_OR_DBG}/mpp_version.txt | awk -F_ '{print $NF}')
     if [ $? -ne 0 ];then
         mpp_version=""
         echo "Fail: mpp version doesn't exist!"
@@ -159,13 +171,21 @@ build_doc ()
     set +x
 }
 
-setup_peripherals()
+list_pannels()
 {
-    if [ ${BOARD} == "evkmimxrt1170" -o  ${BOARD} == "evkbimxrt1050" -o ${BOARD} == "mimxrt700evk" -o ${BOARD} == "evkbmimxrt1170" ] ; then
-    	panel_list=$(grep "define DEMO_PANEL_" boards/${BOARD}/inc/display_support.h | egrep -v "DEMO_PANEL_HEIGHT|DEMO_PANEL_WIDTH")
+    if [ "${BOARDS}" == "all" ] ; then
+        TEMP_BOARDS="frdmmcxn947 evkbmimxrt1170 mimxrt700evk"
     else
-        panel_list=""
+        TEMP_BOARDS="${BOARDS}"
     fi
+    for BOARD in ${TEMP_BOARDS} ; do
+        if [ "${BOARD}" == "frdmmcxn947" ] ; then
+            continue
+        fi
+        panel_list+="\nPanel list supported for board ${BOARD}\n"
+        panel_list+=$(grep "define DEMO_PANEL_" ${SDK_DIR}/examples/_boards/${BOARD}/display_support.h | egrep -v "DEMO_PANEL_HEIGHT|DEMO_PANEL_WIDTH")
+        panel_list+="\n"
+    done
 }
 
 usage()
@@ -173,7 +193,7 @@ usage()
     echo "usage:"
     echo "$0 [-e:ih?vsb:d:Dp:]"
     echo " -h|?: help"
-    echo " -b <board name>: {evkmimxrt1170, ...}"
+    echo " -b <board name>: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk}"
     echo " -D: build mpp and hal APIs documentation"
     echo " -e <example name>: build the example app {camera_view, all, ...}"
     echo " -i: build for host (x86)"
@@ -187,8 +207,8 @@ usage()
     exit 0
 }
 
-# default example camera_view
-EXP=camera_view
+# default example will be set later in this script
+EXP=""
 # no test to build by default
 TEST=""
 # default board
@@ -200,7 +220,6 @@ TFLM_REBUILD=false
 
 log_levels=$(grep LOG_LVL_ CMakeLists.txt)
 panel_list=""
-setup_peripherals
 
 #parse arguments
 OPTIND=1
@@ -209,11 +228,11 @@ while getopts "ab:e:h?id:Dp:c:f:t:sv" opt; do
     a)  TFLM_REBUILD=true
         ;;
     b)  BOARDS=$OPTARG
-        setup_peripherals
         ;;
     e)  EXP=$OPTARG
         ;;
     h|\?)
+        list_pannels
         usage
         ;;
     d)  LOG_LEVEL=$OPTARG
@@ -233,15 +252,18 @@ while getopts "ab:e:h?id:Dp:c:f:t:sv" opt; do
     esac
 done
 
-if [ ${BOARDS} == "all" ] ; then
-	BOARDS="frdmmcxn947 evkbmimxrt1170 mimxrt700evk evkbimxrt1050"
+if [ "${BOARDS}" == "all" ] ; then
+	BOARDS="frdmmcxn947 evkbmimxrt1170 mimxrt700evk"
+fi
+
+# default example camera_view (only if EXP and TEST are not set after parsing arguments)
+if [ "${EXP}" == "" -a "${TEST}" == "" ] ; then
+    EXP=camera_view
 fi
 
 for BOARD in ${BOARDS} ; do 
 	#adjust build type
-	if [ ${BOARD} == "mcxn9xxevk" -o  ${BOARD} == "mcxn9xxbrk"  -o  ${BOARD} == "frdmmcxn947" ] ; then
-		BUILD_TYPE=flash_${BUILD_REL_OR_DBG}
-	elif [ ${BOARD} == "mimxrt700evk" ] ; then
+	if [ "${BOARD}" == "frdmmcxn947" -o "${BOARD}" == "mimxrt700evk" ] ; then
 		BUILD_TYPE=flash_${BUILD_REL_OR_DBG}
 	else
 		BUILD_TYPE=flexspi_nor_sdram_${BUILD_REL_OR_DBG}
@@ -250,10 +272,8 @@ for BOARD in ${BOARDS} ; do
 	#Set default panel depending on board:
 	#RT700: Default Panel 4 
 	#RT1170 and RT1050: Default Panel 0
-	if [ ${BOARD} == "mimxrt700evk" ] ; then
-		    default_panel=4
-	else
-		    default_panel=0
+	if [ "${BOARD}" == "evkbmimxrt1170" -o "${BOARD}" == "mimxrt700evk" ] ; then
+		default_panel="DEMO_PANEL_RK055MHD091A0"
 	fi
 
 	#use default panel if not passed by user

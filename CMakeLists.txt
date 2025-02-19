@@ -31,6 +31,32 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
     mcux_add_macro(
         CC "-DSDK_OS_FREE_RTOS"
     )
+    # set log level
+    # supported log levels (from mpp_debug.h file):
+        # LOG_LVL_ERR       0 (default)
+        # LOG_LVL_INFO      1
+        # LOG_LVL_DEBUG     2
+    if (NOT ${HAL_LOG_LEVEL} STREQUAL "")
+        mcux_add_macro (
+            CC "-DHAL_LOG_LEVEL=${HAL_LOG_LEVEL}"
+        )
+    endif ()
+    # set MPP commit
+    if (NOT ${MPP_COMMIT} STREQUAL "")
+        mcux_add_macro (
+            CC "-DMPP_COMMIT=${MPP_COMMIT}"
+        )
+    endif ()
+    # set extra build flags
+    if (NOT ${EXTRA_BUILD_FLAGS} STREQUAL "")
+        separate_arguments (LIST_FLAG UNIX_COMMAND ${EXTRA_BUILD_FLAGS})
+        foreach(flag ${LIST_FLAG})
+            message("EXTRA_BUILD_FLAGS: ${flag}")
+            mcux_add_macro (
+                CC "${flag}"
+            )
+        endforeach()
+    endif () #(NOT ${EXTRA_BUILD_FLAGS} STREQUAL "")
     # HAL sources
     mcux_add_source(
         BASE_PATH ${CMAKE_CURRENT_LIST_DIR}
@@ -58,4 +84,3 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
     )
 
 endif() #(CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
-

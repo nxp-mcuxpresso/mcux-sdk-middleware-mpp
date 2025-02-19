@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP
+ * Copyright 2022-2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -232,6 +232,8 @@ static void main_task(void *params) {
 	args_t *args = (args_t *) params;
 	int ret;
 	bool stripe_mode = (APP_STRIPE_MODE > 0)? true : false;
+
+    PRINTF("[%s]\r\n", mpp_get_version());
 
 	ret = mpp_api_init(NULL);
 	if (ret)

@@ -13,13 +13,23 @@ mcux_add_source(
 mcux_add_include(
     BASE_PATH ${SdkRootDirPath}
     INCLUDES middleware/eiq/mpp/boards/${board}/tests/test_camera_switch_model_view/
+             middleware/eiq/mpp/models
 )
 
 # board files
 include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 # model and post-processing
-include(${SdkRootDirPath}/middleware/eiq/mpp/models/ultraface_slim_quant_int8/model.cmake)
-include(${SdkRootDirPath}/middleware/eiq/mpp/models/persondetect/model.cmake)
+mcux_add_source(
+    BASE_PATH ${SdkRootDirPath}/middleware/eiq/mpp/models
+    SOURCES get_top_n.cpp
+            utils.cpp
+            persondetect/persondetect_output_postprocess.c
+            persondetect/*.h
+            ultraface_slim_quant_int8/ultraface_output_postproc.c
+            ultraface_slim_quant_int8/*.h
+            get_top_n.h
+            utils.h
+)
 
 # top level
 include(${SdkRootDirPath}/CMakeLists.txt)

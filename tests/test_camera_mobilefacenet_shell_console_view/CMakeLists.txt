@@ -8,6 +8,7 @@ mcux_add_source(
     BASE_PATH ${SdkRootDirPath}
     SOURCES middleware/eiq/mpp/tests/test_camera_mobilefacenet_shell_console_view/test_camera_mobilefacenet_shell_console_view.c
             middleware/eiq/mpp/boards/${board}/tests/test_camera_mobilefacenet_shell_console_view/mpp_config.h
+            middleware/eiq/mpp/internal/images/thispersondoesnotexist_11_bgra.h
 )
 
 mcux_add_include(
@@ -18,7 +19,27 @@ mcux_add_include(
 # board files
 include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 # model and post-processing
-include(${SdkRootDirPath}/middleware/eiq/mpp/internal/models/mobilefacenet/model.cmake)
+mcux_add_include(
+    BASE_PATH ${SdkRootDirPath}/middleware/eiq/mpp
+    INCLUDES    models
+                models/ultraface_slim_quant_int8
+                internal/models
+                internal/models/mobilefacenet
+)
+
+mcux_add_source(
+    BASE_PATH ${SdkRootDirPath}/middleware/eiq/mpp
+    SOURCES models/get_top_n.cpp
+            models/utils.cpp
+            models/ultraface_slim_quant_int8/ultraface_output_postproc.c
+            models/ultraface_slim_quant_int8/*.h
+            models/get_top_n.h
+            models/utils.h
+            models/shell_database_utils.h
+            models/shell_database_utils.c
+            internal/models/mobilefacenet/mobilefacenet_output_postproc_quantized.cpp
+            internal/models/mobilefacenet/*.h
+)
 
 # top level
 include(${SdkRootDirPath}/CMakeLists.txt)

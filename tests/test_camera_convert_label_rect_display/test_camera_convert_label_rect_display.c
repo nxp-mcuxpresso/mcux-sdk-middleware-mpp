@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 NXP
+ * Copyright 2022-2023, 2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -156,6 +156,8 @@ static void app_task(void *params) {
     int ret;
     mpp_elem_handle_t elem = 0;
     args_t *args = (args_t *) params;
+
+    PRINTF("[%s]\r\n", mpp_get_version());
 
     ret = mpp_api_init(NULL);
     if (ret)

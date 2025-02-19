@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 NXP
+ * Copyright 2022-2025 NXP
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -22,8 +22,10 @@
 #endif
 
 #ifndef APP_CONFIG
-#error "ERROR: test configuration APP_CONFIG is not defined"
-#elif (APP_CONFIG==1) || (APP_CONFIG==3) || (APP_CONFIG==5)
+#define APP_CONFIG 1
+#endif
+
+#if (APP_CONFIG==1) || (APP_CONFIG==3) || (APP_CONFIG==5)
 #include "images/stopwatch168_208_vuyx.h"
 #define EXPECTED_CONFIDENCE_MIN 62
 #define EXPECTED_LABEL          "stopwatch"

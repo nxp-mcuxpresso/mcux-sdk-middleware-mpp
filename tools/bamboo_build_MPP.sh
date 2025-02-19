@@ -7,6 +7,7 @@
 echo "Set environment"
 export ARMGCC_DIR=/opt/toolchains/${bamboo_ARMGCC_DIR}
 TOPDIR=$(pwd)
+SDK_DIR=${TOPDIR}/sdk-next/mcuxsdk/
 
 if [[ "${BOARD}" == "" ]]; then
     BOARD=${bamboo_BOARD}
@@ -14,73 +15,42 @@ fi
 if [[ "${DISPLAY}" == "" ]]; then
     DISPLAY=${bamboo_DISPLAY}
 fi
-if [[ "${SDK_VERSION_BAMBOO}" == "ENABLED" ]] && [[ "${bamboo_SDK_VERSION}" != "" ]]; then
-    # use customized SDK version as set by bamboo variable
-    SDK_VERSION=${bamboo_SDK_VERSION}
-    export SDK_VERSION=${SDK_VERSION}
-else
-    # extract SDK_VERSION as set from build_mpp.sh
-    SDK_VERSION=$(grep "SDK_VERSION=" ${TOPDIR}/mpp/build_mpp.sh | awk -F"=" '{print $NF}')
-fi
 EXP=${bamboo_EXAMPLE}
 echo "board= ${BOARD}"
 echo "display= ${DISPLAY}"
-echo "SDK_version= ${SDK_VERSION}"
 
 case "${BOARD}" in
-    evkmimxrt1170)
-        SDK_ARCHIVE="mpp-sdk/MIMXRT1170-EVK/armgcc/SDK_${SDK_VERSION}_MIMXRT1170-EVK.tbz"
-        LIB_DIR="flexspi_nor_sdram_release"
-        ;;
-    evkbimxrt1050)
-        SDK_ARCHIVE="mpp-sdk/EVKB-IMXRT1050/armgcc/SDK_${SDK_VERSION}_EVKB-IMXRT1050.tbz"
-        LIB_DIR="flexspi_nor_sdram_release"
-        ;;
-    mcxn9xxevk)
-        SDK_ARCHIVE="mpp-sdk/MCX-N9XX-EVK/armgcc/SDK_${SDK_VERSION}_MCX-N9XX-EVK.tbz"
-        LIB_DIR="release"
-        ;;
-    mcxn9xxbrk)
-        SDK_ARCHIVE="mpp-sdk/MCX-N9XX-BRK/armgcc/SDK_${SDK_VERSION}_MCX-N9XX-BRK.tbz"
-        LIB_DIR="release"
-        ;;
     frdmmcxn947)
-        SDK_ARCHIVE="mpp-sdk/FRDM-MCXN947/armgcc/SDK_${SDK_VERSION}_FRDM-MCXN947.tbz"
         LIB_DIR="release"
+        CORE_ID="cm33_core0"
         ;;
     mimxrt700evk)
-        SDK_ARCHIVE="mpp-sdk/MIMXRT700-EVK/armgcc/SDK_${SDK_VERSION}_MIMXRT700-EVK.tbz"
         LIB_DIR="release"
+        CORE_ID="cm33_core0"
         ;;
     evkbmimxrt1170)
-        SDK_ARCHIVE="mpp-sdk/MIMXRT1170-EVKB/armgcc/SDK_${SDK_VERSION}_MIMXRT1170-EVKB.tbz"
         LIB_DIR="flexspi_nor_sdram_release"
+        CORE_ID="cm7"
 	;;
     *)
         echo "Fail sdk board name"
         exit 1
 esac
 
-# install SDK
-tar -xf ${SDK_ARCHIVE}
-
 # build MPP
 cd "$TOPDIR"/mpp
-rm -rf build_${BOARD}
-BUILD_OUTPUT="build_${BOARD}_output"
+rm -rf ${SDK_DIR}/build_${BOARD}
+BUILD_OUTPUT="${SDK_DIR}/build_${BOARD}_output"
 mkdir -p ${BUILD_OUTPUT}
 
 # build all tests and examples with default configuration
 ./build_mpp.sh -e all -b "$BOARD" -p "$DISPLAY"
 ./build_mpp.sh -t all -b "$BOARD" -p "$DISPLAY"
-for app in `ls build_${BOARD}/apps/*.bin`; do
+for app in `ls ${SDK_DIR}/build_${BOARD}/release/*.bin`; do
     app=$(basename ${app} .bin)
-    mv build_${BOARD}/apps/${app}.bin ${BUILD_OUTPUT}/
-    mv build_${BOARD}/apps/${app} ${BUILD_OUTPUT}/
+    mv ${SDK_DIR}/build_${BOARD}/release/${app}.bin ${BUILD_OUTPUT}/
+    mv ${SDK_DIR}/build_${BOARD}/release/${app}.elf ${BUILD_OUTPUT}/
 done
-
-# Library and MPP version
-cp build_${BOARD}/apps/lib/${LIB_DIR}/* ${BUILD_OUTPUT}/
 
 build_app () {
     local app="$1"
@@ -89,8 +59,8 @@ build_app () {
     local option
     if [[ "$4" == "tests" ]]; then option="-t"; else option="-e"; fi
     ./build_mpp.sh "${option}" "${app}" -b "$BOARD" -p "$DISPLAY" -f "${configs}"
-    mv build_${BOARD}/apps/${app}.bin ${BUILD_OUTPUT}/${app}_config${index}.bin
-    mv build_${BOARD}/apps/${app}     ${BUILD_OUTPUT}/${app}_config${index}
+    mv ${SDK_DIR}/build_${BOARD}/release/${app}_${CORE_ID}.bin ${BUILD_OUTPUT}/${app}_${CORE_ID}_config${index}.bin
+    mv ${SDK_DIR}/build_${BOARD}/release/${app}_${CORE_ID}.elf ${BUILD_OUTPUT}/${app}_${CORE_ID}_config${index}.elf
 }
 
 build_all_configs () {

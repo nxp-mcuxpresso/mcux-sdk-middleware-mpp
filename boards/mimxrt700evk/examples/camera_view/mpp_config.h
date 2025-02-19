@@ -1,4 +1,4 @@
-/* Copyright 2024 NXP
+/* Copyright 2024-2025 NXP
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -20,7 +20,7 @@
 #define HAL_ENABLE_CAMERA
 #define HAL_ENABLE_CAMERA_DEV_EzhV_Ov7670     1
 #define HAL_ENABLE_DISPLAY
-#define HAL_ENABLE_DISPLAY_DEV_Lcdifv2Rk055ah 1
+#define HAL_ENABLE_DISPLAY_DEV_Lcdifv2Rk055   1
 #define HAL_ENABLE_2D_IMGPROC
 
 /* use GPU backend */
@@ -75,7 +75,7 @@
 #define APP_CAMERA_FORMAT  MPP_PIXEL_RGB565
 
 /* display parameters */
-#define APP_DISPLAY_NAME   "Lcdifv2Rk055ah"
+#define APP_DISPLAY_NAME   "Lcdifv2Rk055"
 #define APP_DISPLAY_WIDTH  720
 #define APP_DISPLAY_HEIGHT 1280
 #define APP_DISPLAY_FORMAT MPP_PIXEL_RGB565

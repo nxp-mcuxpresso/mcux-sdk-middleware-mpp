@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 NXP
+ * Copyright 2024-2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -8,9 +8,12 @@
 #ifndef MPP_EXAMPLES_MODELS_SHELL_DATABASE_UTILS_H_
 #define MPP_EXAMPLES_MODELS_SHELL_DATABASE_UTILS_H_
 
-
+/* Shell includes */
 #include "fsl_shell.h"
 #include "fsl_debug_console.h"
+
+/* FreeRTOS kernel includes. */
+#include "task.h"
 
 /* mpp includes */
 #include "mpp_config.h"
@@ -20,9 +23,24 @@
 
 #define SHELL_Printf PRINTF
 
+/* Shell delay */
+#define SHELL_TASK_DELAY vTaskDelay(1000)
+
 void init_database(person * db);
 
-void get_new_person_embeddings(const float *new_person_embeddings);
+void set_new_person_embeddings(const float *person_embeddings);
+
+/*
+ * get registration status.
+ * @retval 0 face not registered.
+ * @retval 1 face registered.
+ * */
+int registration_state();
+
+/*
+ * reset registration status once user added.
+ * */
+int reset_registration_state();
 
 /*!
  * @brief Deletes element from database

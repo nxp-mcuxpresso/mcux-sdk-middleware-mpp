@@ -2,8 +2,22 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-  Current version is 3.2.0
+  Current version is 3.3.0
 
+  - 3.3.0
+    - Bugfixes
+      - fix flashing issue on RT700 with Linkserver by moving models to Flash then copy them to SRAM
+      - fix documentation issue, added TOC, replaced MCUX IDE instructions by VScode
+    - Known issues
+      - camera_view (when built with west): visible artifacts in the bottom of the screen in debug mode. Distorted image in release mode.
+    - New Features
+      - support camera OV7670 on RT700 EVK
+      - new camera view example on RT700
+    - RFP version
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170 (CM7 only),
+      - mimxrt700evk
   - 3.2.0
     - Bugfixes
       - fix black screen when performing conversion to full screen + rotation + flip with vglite

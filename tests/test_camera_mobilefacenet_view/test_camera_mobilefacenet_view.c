@@ -1,5 +1,5 @@
 /*
-* Copyright 2024 NXP
+* Copyright 2024-2025 NXP
 * All rights reserved.
 *
 * SPDX-License-Identifier: BSD-3-Clause
@@ -249,6 +249,7 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 		}
 
 		mpp_element_params_t params;
+		memset(&params, 0, sizeof(params));
 		uint8_t label_size = sizeof(params.labels.rectangles[0].label);
 
 		const char* label = "\0";

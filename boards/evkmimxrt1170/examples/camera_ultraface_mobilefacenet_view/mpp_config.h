@@ -108,6 +108,8 @@
 /* maximum number of boxes stored in RAM by APP (1box ~= 16B) */
 #define APP_MAX_BOXES 10000
 
+#define APP_PIPELINE_TASK_MAX_PRIO            5
+
 #define APP_RC_CYCLE_MIN 100
 #define APP_RC_CYCLE_INC 10
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -811,6 +811,9 @@ int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t
             ret = MPP_INVALID_PARAM;
             break;
         }
+
+        /* Copy the pointer to stats to the new params structure */
+        if (params->stats == NULL) params->stats = elem->params.stats;
 
         /* set element id */
         switch (elem->proc_typ) {

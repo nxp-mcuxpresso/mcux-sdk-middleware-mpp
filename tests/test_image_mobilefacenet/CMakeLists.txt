@@ -8,11 +8,13 @@ mcux_add_source(
     BASE_PATH ${SdkRootDirPath}
     SOURCES middleware/eiq/mpp/tests/test_image_mobilefacenet/test_image_mobilefacenet.c
             middleware/eiq/mpp/boards/${board}/tests/test_image_mobilefacenet/mpp_config.h
+            middleware/eiq/mpp/internal/images/thispersondoesnotexist_4_96_rgb.h
 )
 
 mcux_add_include(
     BASE_PATH ${SdkRootDirPath}
     INCLUDES middleware/eiq/mpp/boards/${board}/tests/test_image_mobilefacenet/
+    middleware/eiq/mpp/internal/images/
 )
 
 # board files

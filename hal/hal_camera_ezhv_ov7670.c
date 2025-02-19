@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 NXP.
+ * Copyright 2024-2025 NXP.
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -18,9 +18,11 @@
 
 #include "board.h"
 #include "camera_config.h"
-#include "flexio_camera.h"
+#include "fsl_flexio_camera.h"
 #include "ezhv_support.h"
 #include "fsl_ezhv.h"
+#include "ezhv_para.h"
+#include "flexio_camera.h"
 
 #include "hal.h"
 #include "hal_utils.h"
@@ -33,6 +35,7 @@
 
 #define CAMERA_DEV_ALIGN 128      /* alignment requirement */
 
+static EZHV_Para_t *pstPara = NULL;
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -74,7 +77,7 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Init(
     }
 
     /* init FlexIO */
-    flexio_camera_init();
+    CAMERA_Init();
 
     /* save config */
     dev->config.width = config->width;
@@ -108,7 +111,7 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Getbufdesc(const camera_dev_t *dev
     out_buf->cacheable = false;
     out_buf->stride = dev->config.pitch;
     out_buf->nb_lines = dev->config.height;
-    out_buf->addr = (uint8_t *)g_cameraQueue.queue[g_cameraQueue.userIdx].pBuf;
+    out_buf->addr = (uint8_t *)g_dvpTransfer.queue[g_dvpTransfer.userIdx].pBuf;
 
     HAL_LOGD("--HAL_CameraDev_EzhV_Ov7670_Getbufdesc\n");
     return ret;
@@ -133,8 +136,15 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Start(const camera_dev_t *dev)
     HAL_LOGD("++HAL_CameraDev_EzhV_Ov7670_Start\n");
 
     /* boot EZHV */
-    BOARD_EZHV_Init(&g_cameraQueue.queue[g_cameraQueue.driverIdx], sizeof(CameraBuffer_t));
-    g_stCamBuf = (CameraBuffer_t*)EZHV_GetParaAddr();
+    BOARD_EZHV_Init();
+
+    pstPara = (EZHV_Para_t *)EZHV_GetParaAddr();
+    pstPara->apiIdx = kEZHV_API_flexioDvp;
+    g_stCamBuf = (CameraBuffer_t*)(&pstPara->paraAddr);
+    g_stCamBuf->pBuf = g_dvpTransfer.queue[g_dvpTransfer.driverIdx].pBuf;
+    g_stCamBuf->len = g_dvpTransfer.queue[g_dvpTransfer.driverIdx].len;
+
+    EZHV_WakeUpEzhv(kEZHV_ARM2EZHV_MSI);
 
     if (status != kStatus_Success) return kStatus_HAL_CameraError;
 
@@ -145,7 +155,6 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Start(const camera_dev_t *dev)
 hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Stop(const camera_dev_t *dev)
 {
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
-    status_t status = kStatus_Success;
     HAL_LOGD("++\nHAL_CameraDev_EzhV_Ov7670_Stop");
 
     /* TODO */
@@ -159,14 +168,14 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Dequeue(const camera_dev_t *dev, v
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     HAL_LOGD("++HAL_CameraDev_EzhV_Ov7670_Dequeue\n");
 
-    // wait for new frame buffer
-    while (g_ezhvIrqIdx == 0);
-
-    g_ezhvIrqIdx = 0;
-    uint8_t *pSrcBuf = (uint8_t *)g_cameraQueue.queue[g_cameraQueue.userIdx].pBuf;
-
-    g_cameraQueue.userIdx = (g_cameraQueue.userIdx+1)%QUEUE_SIZE;
+    if (g_newVideoFrame == 1)
+    {
+        g_newVideoFrame = 0;
+        g_dvpTransfer.userIdx = (g_dvpTransfer.userIdx+1)%QUEUE_SIZE;
+    }
     
+    uint8_t *pSrcBuf = (uint8_t *)g_stCamBuf->pBuf;
+
     *data   = (void *)pSrcBuf;
     *stripe = 0;
 
