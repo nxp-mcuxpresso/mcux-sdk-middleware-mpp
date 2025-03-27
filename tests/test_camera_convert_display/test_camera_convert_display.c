@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 NXP
+ * Copyright 2022-2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -50,6 +50,15 @@
 #endif
 #ifndef CONFIG_RC_CYCLE_FRAMES
 #define CONFIG_RC_CYCLE_FRAMES 0
+#endif
+
+#if (IMG_CONVERT_CPU == 1)
+#define IMG_CONVERT_DEV_NAME "gfx_CPU"
+#elif (IMG_CONVERT_GPU == 1)
+#define IMG_CONVERT_DEV_NAME "gfx_GPU"
+#else
+/* pick default device from the first listed and supported by Hw */
+#define IMG_CONVERT_DEV_NAME NULL
 #endif
 
 typedef struct _args_t {
@@ -222,7 +231,7 @@ static void app_task(void *params) {
     mpp_element_params_t elem_params;
     memset(&elem_params, 0, sizeof(elem_params));
     /* pick default device from the first listed and supported by Hw */
-    elem_params.convert.dev_name = NULL;
+    elem_params.convert.dev_name = IMG_CONVERT_DEV_NAME;
     elem_params.convert.angle = APP_DISPLAY_LANDSCAPE_ROTATE;
     elem_params.convert.pixel_format = args->display_format;
     elem_params.convert.out_buf.width = APP_DISPLAY_WIDTH;

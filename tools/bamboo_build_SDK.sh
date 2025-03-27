@@ -30,7 +30,7 @@ unzip ${bamboo_ARTIFACTS_DIR}/*.zip -d ${SDK_DIR}
 
 # Build MPP examples
 MPP_DIR=${SDK_DIR}/middleware/eiq/mpp
-MPP_EXAMPLES_DIR=${SDK_DIR}/boards/${BOARD}/eiq_examples
+MPP_EXAMPLES_DIR=${SDK_DIR}/boards/${BOARD}/eiq_examples/mpp
 
 # MPP armgcc build output directory
 ARMGCC_BUILD_NAME=build_${bamboo_buildNumber}_mpp_examples_armgcc_${BOARD}_${DISPLAY}
@@ -44,7 +44,7 @@ MCUX_BUILD_DIR=${TOPDIR}/${MCUX_BUILD_NAME}
 BUILD_LOG_NAME=build_logs_${BOARD}_${DISPLAY}
 BUILD_LOG_DIR=${TOPDIR}/${BUILD_LOG_NAME}
 
-# Update DEMO_PANEL from display support.h
+# Update DEMO_PANEL from mcux_config.h
 DEFINE_DISPLAY="#define DEMO_PANEL ${DISPLAY}"
 
 # List of configs
@@ -64,14 +64,8 @@ archive_armgcc () {
         evkmimxrt1170 | evkbimxrt1050 | evkbmimxrt1170)
             BUILD_PREFIX="flexspi_nor_sdram_"
             ;;
-        mcxn9xxevk)
-            BUILD_PREFIX=""
-            ;;
-        mcxn9xxbrk)
-            BUILD_PREFIX=""
-            ;;
         frdmmcxn947)
-            BUILD_PREFIX=""
+            BUILD_PREFIX="flash_"
             ;;
         mimxrt700evk)
             BUILD_PREFIX="flash_"
@@ -87,6 +81,7 @@ archive_armgcc () {
         echo ${build}
         # store binary
         cp ${build}/*.bin ${out_dir} 2>/dev/null || :
+        cp ${build}/*.elf ${out_dir} 2>/dev/null || :
     done
 }
 
@@ -104,6 +99,7 @@ archive_mcux () {
         echo ${build}
         # store binary
         cp ${build}/*.bin ${out_dir} 2>/dev/null || :
+        cp ${build}/*.elf ${out_dir} 2>/dev/null || :
     done
 }
 
@@ -118,7 +114,7 @@ collect_build_log () {
     out_dir=${BUILD_LOG_DIR}${config_name}
     # Copy build logs
     find . -name "build_${build_type}.log" | xargs tar zcf ${out_dir}/build_log_${build_type}.tar.gz
-    find ~/mcutk_workspace/ -name "build_${build_type}.log" | xargs tar zcf ${out_dir}/build_log_${build_type}.tar.gz
+    # find ~/mcutk_workspace/ -name "build_${build_type}.log" | xargs tar zcf ${out_dir}/build_log_${build_type}.tar.gz
 }
 
 configure_example () {
@@ -143,8 +139,9 @@ if [ "${BOARD}" != "frdmmcxn947" ]  ; then
     for mpp_example in `ls * -d`; do
         echo ${mpp_example}
         # set display
-        sed -i '/DEMO_PANEL DEMO_PANEL_/c \'"${DEFINE_DISPLAY}"\\'' ${mpp_example}/display_support.h
-        grep "DEMO_PANEL DEMO_PANEL_" ${mpp_example}/display_support.h
+        grep -w "DEMO_PANEL" ${mpp_example}/mcux_config.h
+        sed -i '/DEMO_PANEL /c \'"${DEFINE_DISPLAY}"\\'' ${mpp_example}/mcux_config.h
+        grep -w "DEMO_PANEL" ${mpp_example}/mcux_config.h
     done
 fi
 

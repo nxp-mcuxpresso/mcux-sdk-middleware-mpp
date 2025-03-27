@@ -89,5 +89,8 @@ build_all_configs "tests"
 
 ARTIFACTS_DIR="/efs/shared/artifacts/${bamboo_planKey}/${bamboo_buildNumber}"
 
-# Store binaries into /efs to share with Dapeng testing
+# Archive binaries for artifacts
 tar zcf ${ARTIFACTS_DIR}/build_${BOARD}.tar.gz ${BUILD_OUTPUT}/*
+# Store binaries into /efs to share with Lava testing
+mkdir -p  ${ARTIFACTS_DIR}/build_${BOARD}
+cp ${BUILD_OUTPUT}/* ${ARTIFACTS_DIR}/build_${BOARD}/

@@ -77,6 +77,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/hal_camera_ezh_ov7670.c
         SOURCES hal/hal_display_mculcd_ssd1963.c
         SOURCES hal/hal_display_mculcd_st7796s.c
+        SOURCES hal/hal_display_lvgl.c
         SOURCES hal/hal_graphics_vglite.c
         SOURCES hal/hal_camera_ezhv_ov7670.c
         SOURCES hal/include/*.h

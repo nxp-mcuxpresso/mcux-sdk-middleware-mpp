@@ -185,6 +185,14 @@ static const char s_camera_name[] =  APP_CAMERA_NAME;
    Pipeline_task_max_prio in mpp_api_params_t structure should be adjusted with other application tasks.*/
 #define APP_DEFAULT_PRIO        1
 
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_camera_switch_model_view_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_camera_switch_model_view"
+#endif
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -341,12 +349,14 @@ static void check_model_switch_output(user_data_t *app_priv)
         }
     }
 
+    PRINTF("\r\nStart %s\r\n", TC_NAME);
     if (test_fail)
-        PRINTF("\n\rTEST FAIL\n\r");
-    else if (face_pass && face_pass)
-        PRINTF("\n\rTEST PASS\n\r");
+        PRINTF("%s - FAILED\r\n", TC_NAME);
+    else if (face_pass && person_pass)
+        PRINTF("%s - PASSED\r\n", TC_NAME);
     else    /* do nothing */
         test_fail = false;
+    PRINTF("%s finished\r\n", TC_NAME);
 #endif // (SOURCE_STATIC_IMAGE == 1)
 }
 

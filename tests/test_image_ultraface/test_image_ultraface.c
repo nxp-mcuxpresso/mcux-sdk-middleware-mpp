@@ -146,6 +146,8 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
             if (ret != kStatus_Success)
                 PRINTF("mpp_event_listener: process output error!");
 
+            app_priv->inference_time_ms = inf_output->inference_time_ms;
+
             app_priv->detected_count = 0;
             /* count valid results */
             for (uint32_t i = 0; i < NUM_BOXES_MAX; i++)
@@ -185,6 +187,7 @@ void stat_task(void *param)
         mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
         if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
         {
+            PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
             if (user_data->detected_count == 0)
             {
                 PRINTF("No face detected! \r\n");

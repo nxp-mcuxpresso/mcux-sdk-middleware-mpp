@@ -21,7 +21,7 @@
 
 /* MPP version */
 #define MPP_VERSION_MAJOR 3
-#define MPP_VERSION_MINOR 3
+#define MPP_VERSION_MINOR 4
 #ifdef MPP_COMMIT
 #define MPP_VERSION_COMMIT MPP_COMMIT
 #else

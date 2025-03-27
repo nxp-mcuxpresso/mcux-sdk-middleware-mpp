@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -94,6 +94,7 @@ struct _display_dev_private_capability
     void **frameBuffers;        /*!< array of pointers to frame buffer */
     mpp_callback_t callback;    /*!< callback */
     void *user_data;            /*!< parameter for the callback */
+    void *handle;               /*!< Handle to the LVGL widget 'image' */
 };
 
 /** @brief Attributes of a display device. */

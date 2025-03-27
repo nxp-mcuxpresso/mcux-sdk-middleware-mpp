@@ -12,9 +12,14 @@ mcux-freertos-drivers
 mcu-sdk-test
 mcu-sdk-examples-int
 mcu-sdk-devices-int
-mcux-devices-int
 mcux-devices-rt
 mcux-devices-imx
 mcux-devices-mcx
 mcu-sdk-components
 mcuxsdk-middleware-executorch
+mcu-sdk-ecosystem
+sdk_generator
+MIR
+cmsis-pack-rev
+tfm
+lvgl

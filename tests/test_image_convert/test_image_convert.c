@@ -58,7 +58,7 @@
 #define IMG_CONVERT_DEV_NAME "gfx_CPU"
 #endif
 
-/* set this flag to perform image color conversion (0: RGB565, 1: RGB888, 2: BGR888) */
+/* set this flag to perform image color conversion (0: RGB565, 1: RGB888, 2: BGR888, 3: GRAY) */
 #ifndef IMG_COLOR_CONVERT
 #define IMG_COLOR_CONVERT 0
 #endif
@@ -79,6 +79,14 @@ typedef struct _args_t {
    Tasks created by the application have a lower priority than pipeline tasks by default.
    Pipeline_task_max_prio in mpp_api_params_t structure should be adjusted with other application tasks.*/
 #define APP_DEFAULT_PRIO        1
+
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_convert_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_convert"
+#endif
 
 /*******************************************************************************
  * Prototypes
@@ -104,6 +112,8 @@ static void set_img_convert_params(mpp_element_params_t *elem_params)
     elem_params->convert.pixel_format = MPP_PIXEL_RGB;
 #elif (IMG_COLOR_CONVERT == IMG_COLOR_BGR888)
     elem_params->convert.pixel_format = MPP_PIXEL_BGR;
+#elif (IMG_COLOR_CONVERT == IMG_COLOR_GRAY)
+    elem_params->convert.pixel_format = MPP_PIXEL_GRAY;
 #endif
 
 #if (IMG_SCALE != 1)
@@ -146,13 +156,15 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
         {
             chksm_done = true;
             chksm_ok = (chksm->value == EXPECTED_CHECKSUM);
+            PRINTF("\r\nStart %s\r\n", TC_NAME);
             if (chksm_ok)
-                PRINTF("\r\nTEST PASS\r\n");
+                PRINTF("%s - PASSED\r\n", TC_NAME);
             else
             {
-                PRINTF("\r\nBad checksum 0x%08x\r\n", chksm->value);
-                PRINTF("\r\nTEST FAIL\r\n");
+                PRINTF("Bad checksum 0x%08x\r\n", chksm->value);
+                PRINTF("%s - FAILED\r\n", TC_NAME);
             }
+            PRINTF("%s finished\r\n", TC_NAME);
         }
         count++;
         break;

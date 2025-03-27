@@ -1,6 +1,6 @@
 # eIQ MCU Media Processing Pipeline API
 
-<a name="_page0_x0.00_y841.89"></a>MPP VERSION 3.3
+<a name="_page0_x0.00_y841.89"></a>MPP VERSION 3.4
 
 1. **MPP API**
 
@@ -135,7 +135,9 @@ This function adds a display to the pipeline. **Parameters**
 
 [Return_codes](#_page29_x70.87_y444.70)
 
-6. **mpp\_nullsink\_add()<a name="_page10_x70.87_y705.84"></a><a name="_page10_x70.87_y690.73"></a>**int mpp\_nullsink\_add (
+6. **mpp\_nullsink\_add()<a name="_page10_x70.87_y705.84"></a><a name="_page10_x70.87_y690.73"></a>**
+
+int mpp\_nullsink\_add (
 
 [mpp_t ](#_page25_x70.87_y384.91)mpp )
 
@@ -423,6 +425,10 @@ pointer to the MPP version string
   [MPP_PIXEL_BGRA ,](#_page27_x102.17_y739.98)
 
   [MPP_PIXEL_RGBA ,](#_page27_x102.17_y753.72)
+  
+  [MPP_PIXEL_BGRX ,](#_page28_x102.17_y503.25)
+
+  [MPP_PIXEL_RGBX , ](#_page28_x102.17_y516.99)
 
   [MPP_PIXEL_RGB ,](#_page28_x108.15_y86.20)
 
@@ -576,10 +582,10 @@ mpp labeled rectangle element structure **Data Fields**
 | - | - | - |
 |uint16\_t|line\_width|rectangle line thickness|
 |[mpp_color_t](#_page19_x70.87_y500.52)|line\_color|rectangle line color|
-|uint16\_t|top|rectangle top position|
-|uint16\_t|left|rectangle left position|
-|uint16\_t|bottom|rectangle bottom position|
-|uint16\_t|right|rectangle right position|
+|int16\_t|top|rectangle top position|
+|int16\_t|left|rectangle left position|
+|int16\_t|bottom|rectangle bottom position|
+|int16\_t|right|rectangle right position|
 |uint16\_t|tag|labeled rectangle tag|
 |uint16\_t|reserved|pad for 32 bits alignment|
 |bool|stripe|stripe mode|
@@ -932,6 +938,8 @@ The convert operations selector flags. **Enumerator**
 | - | - |
 |<a name="_page27_x102.17_y739.98"></a>MPP\_PIXEL\_BGRA|BGRA 32 bits.|
 |<a name="_page27_x102.17_y753.72"></a>MPP\_PIXEL\_RGBA|RGBA 32 bits.|
+|<a name="_page28_x102.17_y503.25"></a>MPP\_PIXEL\_BGRX|BGRX 32 bits.|
+|<a name="_page28_x102.17_y516.99"></a>MPP\_PIXEL\_RGBX|RGBX 32 bits.|
 
 **Enumerator**
 

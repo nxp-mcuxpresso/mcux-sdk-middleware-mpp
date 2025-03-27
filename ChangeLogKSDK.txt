@@ -2,8 +2,22 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-  Current version is 3.3.0
-
+  Current version is 3.4.0
+  - 3.4.0
+    - Bugfixes
+      - fix Coverity "Medium and High Impact" issues.
+    - Known issues
+      - camera_view on the mimxrt700evk(when built with west): visible artifacts in the bottom of the screen in debug mode. Distorted image in release mode.
+    - New Features
+      - added infra red support 
+      - support conversion from and to the format MPP_PIXEL_GRAY
+      - support a new display: LVGL
+      - added BGRX and RGBX 32bits inputs formats
+    - RFP version
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170 (CM7 only)
+      - mimxrt700evk
   - 3.3.0
     - Bugfixes
       - fix flashing issue on RT700 with Linkserver by moving models to Flash then copy them to SRAM
@@ -16,7 +30,7 @@
     - RFP version
     - Supported evaluation boards:
       - frdmmcxn947
-      - evkbmimxrt1170 (CM7 only),
+      - evkbmimxrt1170 (CM7 only)
       - mimxrt700evk
   - 3.2.0
     - Bugfixes
@@ -32,8 +46,8 @@
     - RFP version
     - Supported evaluation boards:
       - frdmmcxn947
-      - evkmimxrt1170 (CM7 only),
-      - evkbmimxrt1170 (CM7 only),
+      - evkmimxrt1170 (CM7 only)
+      - evkbmimxrt1170 (CM7 only)
       - evkbimxrt1050
       - mimxrt700evk
   - 3.1.0
@@ -44,8 +58,8 @@
     - RFP version
     - Supported evaluation boards:
       - frdmmcxn947
-      - evkmimxrt1170 (CM7 only),
-      - evkbmimxrt1170 (CM7 only),
+      - evkmimxrt1170 (CM7 only)
+      - evkbmimxrt1170 (CM7 only)
       - evkbimxrt1050
       - mimxrt700evk
   - 3.0.0
@@ -63,8 +77,8 @@
     - RFP version
     - Supported evaluation boards:
       - frdmmcxn947
-      - evkmimxrt1170 (CM7 only),
-      - evkbmimxrt1170 (CM7 only),
+      - evkmimxrt1170 (CM7 only)
+      - evkbmimxrt1170 (CM7 only)
       - evkbimxrt1050
   - 2.1.0
     - Bugfixes
@@ -74,8 +88,8 @@
       - Removed mpp_element_split() API function
     - RFP version
     - Supported evaluation boards:
-      - evkmimxrt1170 (CM7 only),
-      - evkbmimxrt1170 (CM7 only),
+      - evkmimxrt1170 (CM7 only)
+      - evkbmimxrt1170 (CM7 only)
       - evkbimxrt1050
   - 2.0.0
      - Bugfixes
@@ -88,8 +102,8 @@
       - Implemented new CPU backend for image conversion element.
     - RFP version
     - Supported evaluation boards:
-      - evkmimxrt1170 (CM7 only),
-      - evkbmimxrt1170 (CM7 only),
+      - evkmimxrt1170 (CM7 only)
+      - evkbmimxrt1170 (CM7 only)
       - evkbimxrt1050
   - 1.0.0
     - Bugfixes
@@ -103,8 +117,8 @@
       - The examples now print the inference's results and statistics in the main task at a configurable rate.
     - RFP version
     - Supported evaluation boards:
-      - evkmimxrt1170 (CM7 only),
-      - evkbmimxrt1170 (CM7 only),
+      - evkmimxrt1170 (CM7 only)
+      - evkbmimxrt1170 (CM7 only)
       - evkbimxrt1050
 
   - 0.9.1

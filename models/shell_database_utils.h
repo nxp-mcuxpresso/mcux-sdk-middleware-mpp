@@ -26,9 +26,9 @@
 /* Shell delay */
 #define SHELL_TASK_DELAY vTaskDelay(1000)
 
-void init_database(person * db);
+void init_database(face_t * db);
 
-void set_new_person_embeddings(const float *person_embeddings);
+void set_new_face_embeddings(const float *person_embeddings);
 
 /*
  * get registration status.

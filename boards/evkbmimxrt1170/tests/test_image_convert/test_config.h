@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 NXP
+ * Copyright 2023, 2025 NXP
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -28,6 +28,7 @@
 #define IMG_COLOR_RGB565             0
 #define IMG_COLOR_RGB888             1
 #define IMG_COLOR_BGR888             2
+#define IMG_COLOR_GRAY               3
 
 /* Set to the image type used for testing. */
 #ifndef IMAGE_TYPE
@@ -46,6 +47,8 @@
 #define EXPECTED_CHECKSUM 0xf348b351
 #elif (IMG_COLOR_CONVERT == IMG_COLOR_BGR888)
 #define EXPECTED_CHECKSUM 0xa671510
+#elif (IMG_COLOR_CONVERT == IMG_COLOR_GRAY)
+#define EXPECTED_CHECKSUM 0x5b73ee5a
 #endif
 #elif (IMAGE_TYPE == IMG_dogs_COCO_320_320_bgra)
 #include "images/dogs_COCO_320_320_bgra.h"
@@ -66,6 +69,8 @@
 #define EXPECTED_CHECKSUM 0xc9ec213d
 #elif (IMG_COLOR_CONVERT == IMG_COLOR_BGR888)
 #define EXPECTED_CHECKSUM 0x11bd5213
+#elif (IMG_COLOR_CONVERT == IMG_COLOR_GRAY)
+#define EXPECTED_CHECKSUM 0xf33c1d54
 #endif
 #elif (IMAGE_TYPE == IMG_stopwatch168_208_uyvy422)
 #include "images/stopwatch168_208_uyvy422.h"

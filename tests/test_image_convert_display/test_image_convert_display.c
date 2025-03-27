@@ -118,6 +118,13 @@
     #define DISP_BUF_HEIGHT APP_DISPLAY_HEIGHT;
 #endif  /* (APP_DISPLAY_REMOTE_FB == 1) && (IMG_FULL_SCREEN != 1)) */
 
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_convert_display_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_convert_display"
+#endif
 
 typedef struct _args_t {
     char display_name[32];
@@ -235,15 +242,17 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
         /* verify checksum if needed */
         if (!chksm_done && count > 1)
         {
+            PRINTF("\r\nStart %s\r\n", TC_NAME);
             chksm_done = true;
             chksm_ok = ((chksm->value == EXPECTED_CHECKSUM) || (APP_STRIPE_MODE > 0));  /* ignore checksum for stripes */
             if (chksm_ok)
-                PRINTF("\r\nTEST PASS\r\n");
+                PRINTF("%s - PASSED\r\n", TC_NAME);
             else
             {
-                PRINTF("\r\nBad checksum 0x%08x\r\n", chksm->value);
-                PRINTF("\r\nTEST FAIL\r\n");
+                PRINTF("Bad checksum 0x%08x\r\n", chksm->value);
+                PRINTF("%s - FAILED\r\n", TC_NAME);
             }
+            PRINTF("%s finished\r\n", TC_NAME);
         }
         count++;
         break;

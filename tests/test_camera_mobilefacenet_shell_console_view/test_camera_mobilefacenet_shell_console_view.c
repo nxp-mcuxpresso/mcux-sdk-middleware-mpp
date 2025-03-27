@@ -251,7 +251,7 @@ static void shell_database_init(void *params)
         return;
     }
 
-    init_database(Embedding_database);
+    init_database(g_embedding_db);
 
     /* Add new command to commands list */
     /* Definition of shell commands */
@@ -318,8 +318,8 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 
 		MOBILEFACENET_ProcessOutput(
                 inf_output,
-                Embedding_database,
-                DATABASE_MAX_PEOPLE,
+                g_embedding_db,
+                NUM_FACES,
                 &result);
 
 		/* check that we can modify the user data (not accessed by other task) */
@@ -331,7 +331,7 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 			if (app_priv->result.recognized_name[0]=='\0')
 			{
 				/* set embeddings */
-				set_new_person_embeddings(result.embedding);
+				set_new_face_embeddings(result.embedding);
 				if (task_status == -1) /* task suspended */
 				{
 					vTaskResume(shell_task_handle);

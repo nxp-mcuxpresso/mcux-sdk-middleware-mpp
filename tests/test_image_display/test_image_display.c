@@ -81,6 +81,15 @@ typedef struct _args_t {
    Tasks created by the application have a lower priority than pipeline tasks by default.
    Pipeline_task_max_prio in mpp_api_params_t structure should be adjusted with other application tasks.*/
 #define APP_DEFAULT_PRIO        1
+
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_display_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_display"
+#endif
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -209,15 +218,16 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
         if (chksm->value != 0 && !test_done)    /* ignore first black frame */
         {
             test_done = true;
+            PRINTF("\r\nStart %s\r\n", TC_NAME);
             if ((chksm->value == EXPECTED_CHECKSUM)
                 || (APP_STRIPE_MODE > 0))   /* ignore checksum for stripes */
             {
-                PRINTF("\r\nTEST PASS");
-
+                PRINTF("%s - PASSED\r\n", TC_NAME);
             } else {
-                PRINTF("\r\nBad checksum 0x%08x", chksm->value);
-                PRINTF("\r\nTEST FAIL");
+                PRINTF("Bad checksum 0x%08x", chksm->value);
+                PRINTF("%s - FAILED\r\n", TC_NAME);
             }
+            PRINTF("%s finished\r\n", TC_NAME);
         }
         break;
     case MPP_EVENT_INVALID:

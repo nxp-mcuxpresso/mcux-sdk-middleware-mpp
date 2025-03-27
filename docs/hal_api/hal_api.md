@@ -1,6 +1,6 @@
 # eIQ MPP Hardware Abstraction Layer API
 
-<a name="_page0_x0.00_y841.89"></a>MPP-HAL VERSION 3.3
+<a name="_page0_x0.00_y841.89"></a>MPP-HAL VERSION 3.4
 
 <a name="_page4_x70.87_y70.87"></a>**Chapter 1**
 
@@ -42,19 +42,20 @@ Here is an overview:
 At present, the MPP HAL supports the following devices:
 
 - Cameras:
-- OV5640
-- MT9M114
-- OV7670
+    * OV5640
+    * MT9M114
+    * OV7670
 - Displays:
-- RK055AHD091
-- RK055MHD091
-- RK043FN02H-CT
-- Mikroe TFT Proto 5(SSD1963 controller)
-- NXP's LCD-PAR-S035 (ST7796S controller)
-- Graphics:
-- PXP
-- CPU
-- GPU
+    * LVGL
+    * RK055AHD091
+    * RK055MHD091
+    * RK043FN02H-CT
+    * Mikroe TFT Proto 5(SSD1963 controller)
+    * NXP's LCD-PAR-S035 (ST7796S controller)
+Graphics:
+    * PXP
+    * CPU
+    * GPU
 4. **Supported<a name="_page6_x70.87_y358.36"></a> boards:**
 
 Currently, the MPP HAL supports the following boards:
@@ -69,7 +70,7 @@ Currently, the MPP HAL supports the following boards:
 
 - evkbmimxrt1170 is supported by porting the following devices:
     * Cameras:  OV5640.
-    * Displays: RK055AHD091 and RK055MHD091.
+    * Displays: LVGL, RK055AHD091 and RK055MHD091.
     
 - frdmmcxn947 is supported by porting the following devices:
     * Cameras:  OV7670.
@@ -321,7 +322,9 @@ Structure passed to HAL as description of the binary model provided by user.
 - int(∗[evt_callback_f ](#_page16_x70.87_y531.05))(mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
 - void ∗[cb_userdata](#_page16_x70.87_y623.41)
 
-**Field Documentation <a name="_page15_x70.87_y369.23"></a>model\_data**
+**Field Documentation** 
+
+<a name="_page15_x70.87_y369.23"></a>**model\_data**
 
 const void∗ model\_param\_t::model\_data pointer to model binary
 
@@ -440,6 +443,7 @@ Structure that characterizes the display device. **Data Fields**
 |void ∗∗|frameBuffers|array of pointers to frame buffer|
 |[mpp_callback_t](#_page20_x70.87_y569.51)|callback|callback|
 |void ∗|user\_data|parameter for the callback|
+|void ∗|handle|Handle to the LVGL widget 'image'.|
 
 15. **struct<a name="_page18_x70.87_y209.08"></a><a name="_page18_x70.87_y193.84"></a> \_display\_dev**
 
@@ -473,8 +477,11 @@ the hardware specific buffer requirements **Data Fields**
 
 17. **struct<a name="_page18_x70.87_y695.11"></a><a name="_page18_x70.87_y679.87"></a> hal\_graphics\_setup\_t Data Fields**
 
-const char ∗ gfx\_dev\_name [graphic_setup_func_t ](#_page20_x70.87_y666.24)gfx\_setup\_func
 
+
+|const char ∗|gfx\_dev\_name||
+| - | - | :- |
+|[graphic_setup_func_t](#_page21_x70.87_y150.37)|gfx\_setup\_func||
 18. **struct<a name="_page19_x70.87_y70.87"></a> hal\_display\_setup\_t Data Fields**
 
  
@@ -750,11 +757,15 @@ Operation that needs to be implemented by a camera device.
 - [hal_camera_status_t(∗](#_page21_x70.87_y285.55)[dequeue )(const](#_page26_x70.87_y139.39) camera\_dev\_t ∗dev, void ∗∗data, int ∗stripe)
 - [hal_camera_status_t(∗](#_page21_x70.87_y285.55)[get_buf_desc )(const](#_page26_x70.87_y248.19) camera\_dev\_t ∗dev, [hw_buf_desc_t ∗](#_page18_x70.87_y458.65)out\_buf, [mpp_memory_policy_t ](#_page23_x70.87_y70.87)∗policy)
 
-**Field Documentation <a name="_page25_x70.87_y360.24"></a>init**
+**Field Documentation <a name="_page25_x70.87_y360.24"></a>**
+
+**init**
 
 [hal_camera_status_t(∗ ](#_page21_x70.87_y285.55)camera\_dev\_operator\_t::init) (camera\_dev\_t ∗dev, mpp\_camera\_params\_← t ∗config, [camera_dev_callback_t callback, ](#_page20_x70.87_y310.38)void ∗param)
 
-<a name="_page25_x70.87_y453.68"></a>initialize the dev **deinit**
+<a name="_page25_x70.87_y453.68"></a>initialize the dev 
+
+**deinit**
 
 [hal_camera_status_t(∗ ](#_page21_x70.87_y285.55)camera\_dev\_operator\_t::deinit) (camera\_dev\_t ∗dev) <a name="_page25_x70.87_y550.42"></a>deinitialize the dev
 
@@ -774,7 +785,9 @@ Operation that needs to be implemented by a camera device.
 
 [hal_camera_status_t(∗ ](#_page21_x70.87_y285.55)camera\_dev\_operator\_t::dequeue) (const camera\_dev\_t ∗dev, void ∗∗data, int ∗stripe)
 
-dequeue a buffer from the dev (blocking) <a name="_page26_x70.87_y248.19"></a>**get\_buf\_desc**
+dequeue a buffer from the dev (blocking) <a name="_page26_x70.87_y248.19"></a>**
+
+**get\_buf\_desc**
 
 [hal_camera_status_t(∗ ](#_page21_x70.87_y285.55)camera\_dev\_operator\_t::get\_buf\_desc) (const camera\_dev\_t ∗dev, [hw_buf_desc_t ](#_page18_x70.87_y458.65)∗out\_buf, [mpp_memory_policy_t ](#_page23_x70.87_y70.87)∗policy)
 
@@ -789,11 +802,15 @@ Operation that needs to be implemented by an image element.
 - [hal_image_status_t(∗](#_page21_x70.87_y644.20)[init )(static_image_t](#_page26_x70.87_y553.83) ∗elt, mpp\_img\_params\_t ∗config, void ∗param)
 - [hal_image_status_t(∗](#_page21_x70.87_y644.20)[dequeue )(static_image_t](#_page26_x70.87_y647.28) ∗elt, [hw_buf_desc_t ∗](#_page18_x70.87_y458.65)out\_buf, int ∗stripe\_num)
 
-**Field Documentation <a name="_page26_x70.87_y553.83"></a>init**
+**Field Documentation <a name="_page26_x70.87_y553.83"></a>**
+
+**init**
 
 [hal_image_status_t(∗ ](#_page21_x70.87_y644.20)static\_image\_operator\_t::init) (static\_image\_t ∗elt, mpp\_img\_params\_← t ∗config, void ∗param)
 
-<a name="_page26_x70.87_y647.28"></a>initialize the elt **dequeue**
+<a name="_page26_x70.87_y647.28"></a>initialize the elt 
+
+**dequeue**
 
 [hal_image_status_t(∗ ](#_page21_x70.87_y644.20)static\_image\_operator\_t::dequeue) (static\_image\_t ∗elt, [hw_buf_desc_t ](#_page18_x70.87_y458.65)∗out\_buf, int ∗stripe\_num)
 
@@ -824,11 +841,15 @@ Operation that needs to be implemented by a vision algorithm device.
 - [hal_valgo_status_t(∗](#_page22_x70.87_y234.70)r[un )(const](#_page27_x70.87_y766.94) vision\_algo\_dev\_t ∗dev, void ∗data)
 - [hal_valgo_status_t(∗](#_page22_x70.87_y234.70)[get_buf_desc )(const](#_page28_x70.87_y144.76) vision\_algo\_dev\_t ∗dev, [hw_buf_desc_t ∗](#_page18_x70.87_y458.65)in\_buf, [mpp_memory_policy_t ](#_page23_x70.87_y70.87)∗policy)
 
-**Field Documentation <a name="_page27_x70.87_y576.76"></a>init**
+**Field Documentation <a name="_page27_x70.87_y576.76"></a>**
+
+**init**
 
 [hal_valgo_status_t(∗ ](#_page22_x70.87_y234.70)vision\_algo\_dev\_operator\_t::init) (vision\_algo\_dev\_t ∗dev, [model_param_t ](#_page14_x70.87_y731.01)∗param)
 
-<a name="_page27_x70.87_y670.20"></a>initialize the dev **deinit**
+<a name="_page27_x70.87_y670.20"></a>initialize the dev 
+
+**deinit**
 
 [hal_valgo_status_t(∗ ](#_page22_x70.87_y234.70)vision\_algo\_dev\_operator\_t::deinit) (vision\_algo\_dev\_t ∗dev) <a name="_page27_x70.87_y766.94"></a>deinitialize the dev
 
@@ -839,7 +860,9 @@ Operation that needs to be implemented by a vision algorithm device.
 
 [hal_valgo_status_t(∗ ](#_page22_x70.87_y234.70)vision\_algo\_dev\_operator\_t::run) (const vision\_algo\_dev\_t ∗dev, void ∗data)
 
-<a name="_page28_x70.87_y144.76"></a>start the dev **get\_buf\_desc**
+<a name="_page28_x70.87_y144.76"></a>start the dev 
+
+**get\_buf\_desc**
 
 [hal_valgo_status_t(∗ ](#_page22_x70.87_y234.70)vision\_algo\_dev\_operator\_t::get\_buf\_desc) (const vision\_algo\_dev\_t ∗dev, [hw_buf_desc_t ](#_page18_x70.87_y458.65)∗in\_buf, [mpp_memory_policy_t ](#_page23_x70.87_y70.87)∗policy)
 
@@ -873,11 +896,15 @@ Operation that needs to be implemented by a display device.
 
 2. **HAL OPERATIONS** 
 
-**Field Documentation <a name="_page28_x70.87_y506.35"></a>init**
+**Field Documentation <a name="_page28_x70.87_y506.35"></a>**
+
+**init**
 
 [hal_display_status_t(∗ ](#_page22_x70.87_y613.60)display\_dev\_operator\_t::init) (display\_dev\_t ∗dev, mpp\_display\_params\_t ∗config, [mpp_callback_t callback,](#_page20_x70.87_y569.51) void ∗user\_data)
 
-<a name="_page28_x70.87_y592.59"></a>initialize the dev **deinit**
+<a name="_page28_x70.87_y592.59"></a>initialize the dev 
+
+**deinit**
 
 [hal_display_status_t(∗ ](#_page22_x70.87_y613.60)display\_dev\_operator\_t::deinit) (const display\_dev\_t ∗dev) <a name="_page28_x70.87_y681.86"></a>deinitialize the dev
 
@@ -894,7 +921,9 @@ Operation that needs to be implemented by a display device.
 
 [hal_display_status_t(∗ ](#_page22_x70.87_y613.60)display\_dev\_operator\_t::blit) (const display\_dev\_t ∗dev, void ∗frame, int stripe)
 
-<a name="_page29_x70.87_y246.30"></a>blit a buffer to the dev **get\_buf\_desc**
+<a name="_page29_x70.87_y246.30"></a>blit a buffer to the dev 
+
+**get\_buf\_desc**
 
 [hal_display_status_t(∗ ](#_page22_x70.87_y613.60)display\_dev\_operator\_t::get\_buf\_desc) (const display\_dev\_t ∗dev, [hw_buf_desc_t ](#_page18_x70.87_y458.65)∗in\_buf, [mpp_memory_policy_t ](#_page23_x70.87_y70.87)∗policy)
 

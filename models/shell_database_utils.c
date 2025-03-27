@@ -21,14 +21,14 @@
  * Prototypes
  ******************************************************************************/
 static int delete_person (char* Name, int size);
-static int calculate_size(person * people);
+static int calculate_size(face_t * face);
 static void add_person (char* Name, int position);
 
 /*******************************************************************************
  * Variables declaration
  ******************************************************************************/
-static person *embeddings_db;
-static float new_person_embeddings[SIZE_EMBEDDING];
+static face_t *embeddings_db;
+static float new_face_embeddings[SIZE_EMBEDDING];
 static int state = 0;
 /*******************************************************************************
  * Code
@@ -54,7 +54,7 @@ int reset_registration_state()
 /*
  * Get pointer to persons database.
  */
-void init_database(person * db)
+void init_database(face_t * db)
 {
 	embeddings_db = db;
 }
@@ -62,9 +62,9 @@ void init_database(person * db)
 /*
  * Set new persons embeddings.
  */
-void set_new_person_embeddings(const float *person_embeddings)
+void set_new_face_embeddings(const float *person_embeddings)
 {
-	memcpy(new_person_embeddings, person_embeddings, sizeof(new_person_embeddings));
+	memcpy(new_face_embeddings, person_embeddings, sizeof(new_face_embeddings));
 }
 
 /*
@@ -109,15 +109,15 @@ static int delete_person (char* Name, int size)
  * @param struct Person The database pointer.
  * @retval size of the database.
  */
-static int calculate_size(person * people)
+static int calculate_size(face_t * face)
 {
-	int num_persons = 0;
+	int num_faces = 0;
 
-	while (people[num_persons].name[0] != '\0'){
-		num_persons++;
+	while (face[num_faces].name[0] != '\0'){
+		num_faces++;
 	}
 
-	return num_persons;
+	return num_faces;
 }
 
 /*
@@ -131,7 +131,7 @@ static void add_person (char* Name, int position)
 	PRINTF("position:%d\r\n",position);
 
     for (int i = 0; i < SIZE_EMBEDDING ; i++) {
-        embeddings_db[position].embedding[i] = new_person_embeddings[i];
+        embeddings_db[position].embedding[i] = new_face_embeddings[i];
     }
 }
 

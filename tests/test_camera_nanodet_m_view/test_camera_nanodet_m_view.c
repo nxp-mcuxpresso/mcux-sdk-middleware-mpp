@@ -189,6 +189,14 @@ static const char s_camera_name[] = APP_CAMERA_NAME;
    Pipeline_task_max_prio in mpp_api_params_t structure should be adjusted with other application tasks.*/
 #define APP_DEFAULT_PRIO        1
 
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_camera_nanodet_m_view_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_camera_nanodet_m_view"
+#endif
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -347,12 +355,14 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
         infer_check = check_nanodet_inference_output(app_priv->boxes);
         if (chksm_done)
         {
+            PRINTF("\r\nStart %s\r\n", TC_NAME);
             if (infer_check == 1 && chksm_ok)
-                PRINTF("\r\nTEST PASS\r\n");
+                PRINTF("%s - PASSED\r\n", TC_NAME);
             else if(infer_check == -1 || !chksm_ok)
-                PRINTF("\r\nTEST FAIL\r\n");
+                PRINTF("%s - FAILED\r\n", TC_NAME);
             else /* infer_check == 0 */
                 {;/* do nothing */}
+            PRINTF("%s finished\r\n", TC_NAME);
         }
 
         /* update labeled rectangle */

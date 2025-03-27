@@ -1,12 +1,18 @@
 #!/bin/bash
 
 W_DIR=$(readlink -f $0 | xargs dirname)/
-SDK_DIR=$(realpath ${W_DIR}/../sdk-next/mcuxsdk/)
+if [ -d ${W_DIR}/../../../../mcuxsdk ] && [ -d ${W_DIR}/../../../../manifests ]; then
+    echo "Running script from sdk west repository"
+    SDK_DIR=$(realpath ${W_DIR}/../../../../mcuxsdk/)
+else
+    SDK_DIR=$(realpath ${W_DIR}/../sdk-next/mcuxsdk/)
+fi
 # for make -j option, do not use all CPUs
 NTASK=$(($(getconf _NPROCESSORS_ONLN) / 2))
 MPP_COMMIT_ID=$(git describe --dirty --always --exclude='*')
 GEN_DOC=false
 LAST_BUILT_ELF=""
+APP_CONFIG_INDEX=""
 
 setup_toolchain_and_sdk_dir()
 {
@@ -39,6 +45,25 @@ setup_toolchain_and_sdk_dir()
     esac
 }
 
+parse_app_config()
+{
+    CRT_DIR=${PWD}
+    cd ${W_DIR}
+    app_type=$1
+    app_name=$2
+    if [ "$APP_CONFIG_INDEX" != "" ] ; then
+        if [ -f "tools/mpp_parse_configs.sh" ] && [ -f "boards/${BOARD}/${app_type}/${app_name}/${app_name}.conf" ]; then
+            configs=$(/bin/bash tools/mpp_parse_configs.sh boards/${BOARD}/${app_type}/${app_name}/${app_name}.conf ${APP_CONFIG_INDEX})
+            if [[ "${configs}" != "" ]]; then
+                echo "Found app config ${APP_CONFIG_INDEX}: ${configs}"
+                EXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS} ${configs}"
+                echo "EXTRA_BUILD_FLAGS=${EXTRA_BUILD_FLAGS}"
+            fi
+        fi
+    fi
+    cd ${CRT_DIR}
+}
+
 build()
 {
     echo "BOARD=${BOARD}"
@@ -46,6 +71,7 @@ build()
     echo "BUILD_TYPE=${BUILD_TYPE}"
     echo "MPP_COMMIT_ID=${MPP_COMMIT_ID}"
     echo "EXTRA_BUILD_FLAGS=${EXTRA_BUILD_FLAGS}"
+    echo "APP_CONFIG_INDEX=${APP_CONFIG_INDEX}"
     echo "EXAMPLE=${EXP}"
     echo "TEST=${TEST}"
 
@@ -69,6 +95,13 @@ build()
     cd ${SDK_DIR}
     mkdir -p build_${BOARD}/${BUILD_REL_OR_DBG}
 
+    if [ "${BOARD}" == "frdmmcxn947" ] ; then
+        PANEL_CONFIG_DEFINE=""
+    else
+        PANELNAME=$(grep "define DEMO_PANEL_[[:alnum:]]* ${PANEL}" ${SDK_DIR}/examples/_boards/${BOARD}/display_support.h | cut -d ' ' -f 2)
+        PANEL_CONFIG_DEFINE=-DCONFIG_${PANELNAME}="y"
+    fi
+
     #build examples
     if [ -n "${EXPS}" ] ; then
         for APP in ${EXPS} ; do
@@ -77,12 +110,18 @@ build()
                        --config ${BUILD_TYPE} \
                        --toolchain armgcc \
                        -Dcore_id=${CORE_ID} \
-                       -DCONFIG_${PANEL}="y" \
+                       ${PANEL_CONFIG_DEFINE} \
                        -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
                        -DMPP_COMMIT=${MPP_COMMIT_ID} \
                        -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}"
-            cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
-            LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
+            if [ "$APP_CONFIG_INDEX" != "" ] ; then
+                cp build/${APP}_${CORE_ID}.elf build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf
+                cp build/${APP}_${CORE_ID}.bin build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.bin
+                LAST_BUILT_ELF="${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf"
+            else
+                cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
+                LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
+            fi
         done
     fi
 
@@ -90,16 +129,23 @@ build()
     if [ -n "${TESTS}" ] ; then
         for APP in ${TESTS} ; do
             rm -fr build
+            parse_app_config "tests" "${APP}"
             west build -b ${BOARD} middleware/eiq/mpp/tests/${APP} -p always \
                        --config ${BUILD_TYPE} \
                        --toolchain armgcc \
                        -Dcore_id=${CORE_ID} \
-                       -DCONFIG_${PANEL}="y" \
+                       ${PANEL_CONFIG_DEFINE} \
                        -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
                        -DMPP_COMMIT=${MPP_COMMIT_ID} \
                        -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}"
-            cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
-            LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
+            if [ "$APP_CONFIG_INDEX" != "" ] ; then
+                cp build/${APP}_${CORE_ID}.elf build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf
+                cp build/${APP}_${CORE_ID}.bin build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.bin
+                LAST_BUILT_ELF="${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf"
+            else
+                cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
+                LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
+            fi
         done
     fi
     cd ${W_DIR}
@@ -191,7 +237,7 @@ list_pannels()
 usage()
 {
     echo "usage:"
-    echo "$0 [-e:ih?vsb:d:Dp:]"
+    echo "$0 [-ab:e:h?id:Dp:c:f:t:s:g:v]"
     echo " -h|?: help"
     echo " -b <board name>: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk}"
     echo " -D: build mpp and hal APIs documentation"
@@ -203,7 +249,9 @@ usage()
     echo " -c: build/config type <build_type>: {debug, release}"
     echo " -f: extra build flags: as follow {\"-DFLAG1=1 -DFLAG2=1 -DFLAG3\"}"
     echo " -a: rebuild libtflm.a from source"
+    echo " -s <sdk_path>: specify the path to the mcuxsdk folder from sdk-next repo (DO NOT include mcuxsdk folder)"
     echo " -v: enable verbose for build"
+    echo " -g <app_config_index> - the index of the app_config to be used for building the app"
     exit 0
 }
 
@@ -223,7 +271,7 @@ panel_list=""
 
 #parse arguments
 OPTIND=1
-while getopts "ab:e:h?id:Dp:c:f:t:sv" opt; do
+while getopts "ab:e:h?id:Dp:c:f:t:s:g:v" opt; do
     case "$opt" in
     a)  TFLM_REBUILD=true
         ;;
@@ -247,10 +295,21 @@ while getopts "ab:e:h?id:Dp:c:f:t:sv" opt; do
         ;;
     f)  EXTRA_BUILD_FLAGS+=$OPTARG
         ;;
+    s)  SDK_DIR=$(realpath ${W_DIR}/$OPTARG/mcuxsdk/)
+        ;;
+    g)  APP_CONFIG_INDEX+=$OPTARG
+        ;;
     v)  verbose="VERBOSE=1"
         ;;
     esac
 done
+
+if [ ! -d ${SDK_DIR} ]; then
+    echo "sdk directory ${SDK_DIR} does not exist"
+    echo "specify the sdk dir using -s option (see ./build_mpp -h for more details)"
+    exit 1
+fi
+echo "SDK_DIR=${SDK_DIR}"
 
 if [ "${BOARDS}" == "all" ] ; then
 	BOARDS="frdmmcxn947 evkbmimxrt1170 mimxrt700evk"
@@ -274,7 +333,9 @@ for BOARD in ${BOARDS} ; do
 	#RT1170 and RT1050: Default Panel 0
 	if [ "${BOARD}" == "evkbmimxrt1170" -o "${BOARD}" == "mimxrt700evk" ] ; then
 		default_panel="DEMO_PANEL_RK055MHD091A0"
-	fi
+	else
+        default_panel=""
+    fi
 
 	#use default panel if not passed by user
 	PANEL="${PANEL:=${default_panel}}"

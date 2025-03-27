@@ -319,7 +319,9 @@ int mpp_api_init(mpp_api_params_t *params)
         hal_mutex_create(&stats_lock[grp]);
         if (!stats_lock[grp])
             return MPP_ERROR;
-        hal_sema_take(stats_lock[grp], 0);
+        ret = hal_sema_take(stats_lock[grp], 0);
+        if (true != ret)
+            return MPP_MUTEX_ERROR;
     }
 
     return MPP_SUCCESS;

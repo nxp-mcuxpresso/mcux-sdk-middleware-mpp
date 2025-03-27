@@ -8,6 +8,7 @@ mcux_add_source(
     BASE_PATH ${SdkRootDirPath}
     SOURCES middleware/eiq/mpp/tests/test_image_convert/test_image_convert.c
             middleware/eiq/mpp/boards/${board}/tests/test_image_convert/mpp_config.h
+            middleware/eiq/mpp/boards/${board}/tests/test_image_convert/test_config.h
 )
 
 mcux_add_include(

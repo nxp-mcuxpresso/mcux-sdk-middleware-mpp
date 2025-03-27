@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 NXP
+ * Copyright 2024-2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -8,7 +8,7 @@
 #ifndef _MOBILENETV1_MODEL_TFLITE_NPU16_INFO_H_
 #define _MOBILENETV1_MODEL_TFLITE_NPU16_INFO_H_
 
-/* This file provides information about the TFLite model mobilenetv1_model_data_tflite_npu16.h, such as width, heigth, etc.
+/* This file provides information about the TFLite model mobilenetv1_model_data_npu16_tflite.h, such as width, heigth, etc.
    Other parameters include input mean, output zero point, output scale, grid height and width,
    the number of channels, and the maximum number of boxes.
 */
