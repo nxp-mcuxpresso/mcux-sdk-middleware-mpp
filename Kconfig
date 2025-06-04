@@ -3,7 +3,6 @@ menu "MCU Vision Pipeline"
         bool "Component middleware.eiq.mpp"
         select MCUX_COMPONENT_middleware.eiq.tensorflow_lite_micro
         select MCUX_COMPONENT_middleware.freertos-kernel
-        select MCUX_COMPONENT_middleware.freertos-kernel.heap_4
 
     config FORCE_HAL_LOG_LEVEL
         depends on MCUX_COMPONENT_middleware.eiq.mpp
@@ -31,3 +30,9 @@ menu "MCU Vision Pipeline"
             default 1 if HAL_LOG_INFO
             default 2 if HAL_LOG_DEBUG
 endmenu
+
+if MCUX_COMPONENT_middleware.eiq.mpp
+    choice MCUX_MISC_middleware.freertos-kernel.dynamic_allocator.selection
+        default MCUX_COMPONENT_middleware.freertos-kernel.heap_4
+    endchoice
+endif

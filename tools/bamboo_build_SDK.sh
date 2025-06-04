@@ -26,6 +26,9 @@ SDK_DIR=${TOPDIR}/SDK_${BOARD}
 
 # extract SDK
 cd "$TOPDIR"
+if [ -d ${SDK_DIR} ]; then
+    rm -rf ${SDK_DIR}
+fi
 unzip ${bamboo_ARTIFACTS_DIR}/*.zip -d ${SDK_DIR}
 
 # Build MPP examples
@@ -179,5 +182,5 @@ done
 
 # Create build archive
 cd ${TOPDIR}
-tar zcf ${bamboo_ARTIFACTS_DIR}/MPP_BUILD_${BOARD}.tar.gz ${ARMGCC_BUILD_NAME} ${MCUX_BUILD_NAME} ${BUILD_LOG_NAME}
+tar zcf ${bamboo_ARTIFACTS_DIR}/MPP_BUILD_${BOARD}_${DISPLAY}.tar.gz ${ARMGCC_BUILD_NAME} ${MCUX_BUILD_NAME} ${BUILD_LOG_NAME}
 

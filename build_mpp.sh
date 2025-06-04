@@ -99,7 +99,11 @@ build()
         PANEL_CONFIG_DEFINE=""
     else
         PANELNAME=$(grep "define DEMO_PANEL_[[:alnum:]]* ${PANEL}" ${SDK_DIR}/examples/_boards/${BOARD}/display_support.h | cut -d ' ' -f 2)
-        PANEL_CONFIG_DEFINE=-DCONFIG_${PANELNAME}="y"
+        if [[ "${PANELNAME}" == "DEMO_PANEL_RK055MHD091" ]]; then
+            PANEL_CONFIG_DEFINE=-DCONFIG_${PANELNAME}A0="y"
+        else
+            PANEL_CONFIG_DEFINE=-DCONFIG_${PANELNAME}="y"
+        fi
     fi
 
     #build examples
@@ -332,7 +336,7 @@ for BOARD in ${BOARDS} ; do
 	#RT700: Default Panel 4 
 	#RT1170 and RT1050: Default Panel 0
 	if [ "${BOARD}" == "evkbmimxrt1170" -o "${BOARD}" == "mimxrt700evk" ] ; then
-		default_panel="DEMO_PANEL_RK055MHD091A0"
+		default_panel="2"
 	else
         default_panel=""
     fi

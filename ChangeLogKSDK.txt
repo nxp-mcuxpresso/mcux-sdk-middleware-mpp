@@ -8,6 +8,10 @@
       - fix Coverity "Medium and High Impact" issues.
     - Known issues
       - camera_view on the mimxrt700evk(when built with west): visible artifacts in the bottom of the screen in debug mode. Distorted image in release mode.
+      - static_image_nanodet_view on mimxrt700evk: application gets stuck after running the inference correctly several times
+      - static_image_mobilenet_view on mimxrt700evk: accuracy is lower than expected
+      - static_image_ultraface_view on mimxrt700evk: wrong detections
+      - camera_ultraface_view on frdmmcxn947: wrong detections (no box drawn when face is detected)
     - New Features
       - added infra red support 
       - support conversion from and to the format MPP_PIXEL_GRAY

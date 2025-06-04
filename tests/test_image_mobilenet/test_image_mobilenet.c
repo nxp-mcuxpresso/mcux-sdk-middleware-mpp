@@ -60,6 +60,7 @@ typedef struct _args_t {
 typedef struct _user_data_t {
     int inference_frame_num;
     mobilenet_post_proc_data_t inf_out;
+    int inference_time_ms;
     uint32_t accessing; /* boolean protecting access */
 } user_data_t;
 
@@ -179,9 +180,13 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
         ret = MOBILENETv1_ProcessOutput(inf_output, NULL, 0, NULL, &out_data);
         if (ret != kStatus_Success)
             PRINTF("mpp_event_listener: process output error!\r\n");
+
         /* check that we can modify the stats buffer (not accessed by other task) */
         if (Atomic_CompareAndSwap_u32(&app_priv->accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
         {
+        	/* get model inference time */
+        	app_priv->inference_time_ms = inf_output->inference_time_ms;
+
             /* copy inference output */
             app_priv->inf_out = out_data;
            __atomic_store_n(&app_priv->accessing, 0, __ATOMIC_SEQ_CST);
@@ -208,6 +213,7 @@ void print_result(mpp_stats_t *mobilenet_stats, user_data_t *user_data) {
 
     if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
     {
+    	PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
         PRINTF("mobilenet : %s (%d%%)\r\n", user_data->inf_out.label, user_data->inf_out.score);
         /* after reading, inference output should be cleared */
         user_data->inf_out.label = "No label detected";

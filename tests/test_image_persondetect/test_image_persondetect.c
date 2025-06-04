@@ -194,6 +194,7 @@ void stat_task(void *param)
 
 		if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
 		{
+			PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
 			if (user_data->detected_count == 0)
 			{
 				PRINTF("No person detected\n\r");
