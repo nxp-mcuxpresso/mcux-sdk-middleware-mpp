@@ -11,15 +11,15 @@
  *  xxd -i stopwatch168_208.gray > stopwatch168_208_gray.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_STOPWATCH168_208_GRAY_DATA_H__
+#define __IMAGE_STOPWATCH168_208_GRAY_DATA_H__
 
-#define SRC_IMAGE_WIDTH           168
-#define SRC_IMAGE_HEIGHT          208
-#define SRC_IMAGE_CHANNELS_NUMBER 1
-#define SRC_IMAGE_FORMAT          MPP_PIXEL_GRAY
+#define SRC_IMAGE_STOPWATCH168_208_GRAY_WIDTH           168
+#define SRC_IMAGE_STOPWATCH168_208_GRAY_HEIGHT          208
+#define SRC_IMAGE_STOPWATCH168_208_GRAY_CHANNELS_NUMBER 1
+#define SRC_IMAGE_STOPWATCH168_208_GRAY_FORMAT          MPP_PIXEL_GRAY
 
-static const uint8_t image_data[] = {
+static const uint8_t stopwatch168_208_gray_data[] = {
   0x9e, 0x9e, 0x9e, 0x9e, 0xa0, 0xa0, 0xa0, 0xa0, 0x9f, 0x9f, 0x9f, 0x9f,
   0xa1, 0xa1, 0xa1, 0xa1, 0xa2, 0xa2, 0xa2, 0xa2, 0xa3, 0xa3, 0xa3, 0xa2,
   0xa2, 0xa3, 0xa4, 0xa3, 0xa3, 0xa3, 0xa3, 0xa4, 0xa4, 0xa4, 0xa4, 0xa5,

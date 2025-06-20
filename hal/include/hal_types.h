@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP
+ * Copyright 2022-2025 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -51,6 +51,7 @@ typedef struct {
     int stride;             /*!< the number of bytes between 2 lines of image */
     int nb_lines;           /*!< the number of lines required (set to 0 if the element doesn't require a specific number of lines) */
     int alignment;          /*!< alignment requirement in bytes */
+    int max_image_size;     /*!< the number of bytes allocated */
     bool cacheable;         /*!< if true, HW will require cache maintenance */
     unsigned char *addr;    /*!< the aligned buffer address */
     unsigned char *heap_p;  /*!< pointer to the heap that should be freed */

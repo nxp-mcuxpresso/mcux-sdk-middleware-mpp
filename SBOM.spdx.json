@@ -1,0 +1,129 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "creationInfo": {
+    "created": "2025-08-04T04:48:44Z",
+    "creators": [
+      "Organization: NXP"
+    ],
+    "licenseListVersion": "3.20"
+  },
+  "name": "mcux-sdk-middleware-mpp-v25.09.00",
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://nxp.com/spdx/2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
+      "name": "mcux-sdk-middleware-mpp",
+      "versionInfo": "v25.09.00",
+      "licenseConcluded": "(Apache-2.0)",
+      "licenseDeclared": "(Apache-2.0)",
+      "downloadLocation": "https://github.com/nxp-mcuxpresso/mcux-sdk-middleware-mpp",
+      "originator": "Organization: NXP",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-384bea7d-9530-40af-9a11-f3217f1b705f",
+      "name": "COCO - Common Objects in Context",
+      "versionInfo": "1",
+      "licenseConcluded": "CC-BY-4.0",
+      "licenseDeclared": "CC-BY-4.0",
+      "downloadLocation": "https://cocodataset.org/",
+      "originator": "Organization: NXP",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-4ae5f197-d954-4200-a365-14ac904a5861",
+      "name": "FreeRTOS Real Time Kernel",
+      "versionInfo": "202406.00-LTS",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://sourceforge.net/projects/freertos",
+      "downloadLocation": "https://github.com/FreeRTOS",
+      "originator": "Organization: NXP",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-a47866e2-a2b8-42b1-be36-1efb5ddefbd9",
+      "name": "TensorFlow",
+      "versionInfo": "2.9.0",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "http://tensorflow.org",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: tensorflow",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:github/tensorflow/tensorflow@v2.9.0",
+          "referenceType": "purl"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceLocator": "244335c1-23c0-4340-aeff-9c501b9382b9",
+          "referenceType": "BlackDuck-ComponentOrigin"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:tensorflow:tensorflow:2.9.0:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:pypi_package:tensorflow:2.9.0:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:google:tensorflow:2.9.0:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:google:tensorflow:2.9.0:-:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        }
+      ],
+      "filesAnalyzed": false
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-a47866e2-a2b8-42b1-be36-1efb5ddefbd9"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
+      "relationshipType": "DYNAMIC_LINK",
+      "relatedSpdxElement": "SPDXRef-package-4ae5f197-d954-4200-a365-14ac904a5861"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-4ae5f197-d954-4200-a365-14ac904a5861"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
+      "relationshipType": "DYNAMIC_LINK",
+      "relatedSpdxElement": "SPDXRef-package-384bea7d-9530-40af-9a11-f3217f1b705f"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-384bea7d-9530-40af-9a11-f3217f1b705f"
+    }
+  ]
+}

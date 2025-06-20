@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 NXP
+ * Copyright 2022-2023, 2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -11,15 +11,15 @@
  *  xxd -i stopwatch128_128.rgb stopwatch128_128_rgb.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_STOPWATCH128_128_RGB_DATA_H__
+#define __IMAGE_STOPWATCH128_128_RGB_DATA_H__
 
-#define SRC_IMAGE_WIDTH           128
-#define SRC_IMAGE_HEIGHT          128
-#define SRC_IMAGE_CHANNELS_NUMBER 3
-#define SRC_IMAGE_FORMAT          MPP_PIXEL_RGB
+#define SRC_IMAGE_STOPWATCH128_128_RGB_WIDTH           128
+#define SRC_IMAGE_STOPWATCH128_128_RGB_HEIGHT          128
+#define SRC_IMAGE_STOPWATCH128_128_RGB_CHANNELS_NUMBER 3
+#define SRC_IMAGE_STOPWATCH128_128_RGB_FORMAT          MPP_PIXEL_RGB
 
-static const uint8_t image_data[] = {
+static const uint8_t stopwatch128_128_rgb_data[] = {
   0x9a, 0xa0, 0xa0, 0x9a, 0xa0, 0xa0, 0x9a, 0x9f, 0xa0, 0x9e, 0x9f, 0xa4,
   0x9e, 0x9f, 0xa4, 0x9e, 0x9f, 0xa3, 0x9e, 0x9f, 0xa1, 0x9e, 0x9f, 0xa1,
   0x9e, 0x9f, 0xa1, 0x9f, 0xa0, 0xa2, 0x9f, 0xa0, 0xa2, 0x9f, 0xa1, 0xa3,

@@ -6,6 +6,10 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  * convert skigirl.jpg -resize 320x256 skigirl_COCO_320_256.rgb
@@ -13,15 +17,15 @@
  *  xxd -i skigirl_COCO_320_256.rgb565  > skigirl_COCO_320_256.rgb565.h
  */
  
- #ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+ #ifndef __IMAGE_SKIGIRL_COCO_320_256_RGB565_DATA_H__
+#define __IMAGE_SKIGIRL_COCO_320_256_RGB565_DATA_H__
 
-#define SRC_IMAGE_WIDTH       320
-#define SRC_IMAGE_HEIGHT      256
-#define SRC_IMAGE_CHANNELS_NUMBER 3
-#define SRC_IMAGE_FORMAT      MPP_PIXEL_RGB565
+#define SRC_IMAGE_SKIGIRL_COCO_320_256_RGB565_WIDTH       320
+#define SRC_IMAGE_SKIGIRL_COCO_320_256_RGB565_HEIGHT      256
+#define SRC_IMAGE_SKIGIRL_COCO_320_256_RGB565_CHANNELS_NUMBER 3
+#define SRC_IMAGE_SKIGIRL_COCO_320_256_RGB565_FORMAT      MPP_PIXEL_RGB565
  
-static const unsigned char image_data[] = {
+static const unsigned char skigirl_COCO_320_256_rgb565_data[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

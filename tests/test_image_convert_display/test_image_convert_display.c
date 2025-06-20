@@ -409,7 +409,7 @@ static void app_task(void *params)
     img_params.width =  src_width;
     img_params.format = args->source_format;
     img_params.stripe = stripe_mode;
-    ret = mpp_static_img_add(mp, &img_params, (void *)image_data);
+    ret = mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
     if (ret) {
         PRINTF("Failed to add static image");
         goto err;

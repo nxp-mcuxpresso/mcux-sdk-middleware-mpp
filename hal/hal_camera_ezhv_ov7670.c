@@ -76,6 +76,13 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Init(
         return kStatus_HAL_CameraError;
     }
 
+    /*
+     * Set EZHV master to secure privileged mode, this is used when EZHV wants to
+     * configure some registers which must be accessed in secure privileged mode,
+     * such as GPIO registers.
+     */
+    BOARD_EZHV_SetSecurePriv();
+
     /* init FlexIO */
     CAMERA_Init();
 
@@ -111,6 +118,7 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Getbufdesc(const camera_dev_t *dev
     out_buf->cacheable = false;
     out_buf->stride = dev->config.pitch;
     out_buf->nb_lines = dev->config.height;
+    out_buf->max_image_size = out_buf->nb_lines * out_buf->stride;
     out_buf->addr = (uint8_t *)g_dvpTransfer.queue[g_dvpTransfer.userIdx].pBuf;
 
     HAL_LOGD("--HAL_CameraDev_EzhV_Ov7670_Getbufdesc\n");
@@ -168,13 +176,13 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Dequeue(const camera_dev_t *dev, v
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     HAL_LOGD("++HAL_CameraDev_EzhV_Ov7670_Dequeue\n");
 
+    uint8_t *pSrcBuf = (uint8_t *)g_dvpTransfer.queue[g_dvpTransfer.userIdx].pBuf;
+
     if (g_newVideoFrame == 1)
     {
         g_newVideoFrame = 0;
         g_dvpTransfer.userIdx = (g_dvpTransfer.userIdx+1)%QUEUE_SIZE;
     }
-    
-    uint8_t *pSrcBuf = (uint8_t *)g_stCamBuf->pBuf;
 
     *data   = (void *)pSrcBuf;
     *stripe = 0;

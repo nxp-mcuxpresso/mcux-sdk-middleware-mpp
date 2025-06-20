@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2025 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -165,6 +165,9 @@ static hal_display_status_t DISPLAY_InitDisplay(display_dev_private_capability_t
             case MPP_PIXEL_ARGB:
                 s_fbInfo.pixelFormat = kVIDEO_PixelFormatXRGB8888;
                 break;
+            case MPP_PIXEL_RGB:
+                s_fbInfo.pixelFormat = kVIDEO_PixelFormatRGB888;
+                break;
             default:
                 HAL_LOGE("DISPLAY_InitDisplay: invalid pixel format parameter.\n");
                 return kStatus_HAL_DisplayError;
@@ -243,6 +246,9 @@ hal_display_status_t HAL_DisplayDev_Lcdifv2Rk055_Init(
         break;
     case MPP_PIXEL_ARGB:
         dev->cap.pitch = dev->cap.width * 4;
+        break;
+    case MPP_PIXEL_RGB:
+        dev->cap.pitch = dev->cap.width * 3;
         break;
     default:
         HAL_LOGE("HAL_DisplayDev_Lcdifv2Rk055_Init: invalid pixel format parameter.\n");
@@ -378,6 +384,7 @@ hal_display_status_t HAL_DisplayDev_Lcdifv2Rk055_Getbufdesc(const display_dev_t 
         in_buf->nb_lines = DISPLAY_DEV_Lcdifv2Rk055_HEIGHT;  /* display requires a specific number of lines */
         in_buf->cacheable = false;
         in_buf->stride = dev->cap.pitch;
+        in_buf->max_image_size = in_buf->nb_lines * in_buf->stride;
         in_buf->addr = (unsigned char *) (s_LcdBuffer[s_lcdActiveFbIdx]);
     } while (false);
 

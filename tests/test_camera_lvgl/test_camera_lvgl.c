@@ -39,6 +39,11 @@
 /* static image data */
 #ifdef STATIC_IMAGE
 #include "images/dogs_COCO_320_320_bgra.h"
+#define SRC_IMAGE_FORMAT SRC_IMAGE_DOGS_COCO_320_320_BGRA_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_DOGS_COCO_320_320_BGRA_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_DOGS_COCO_320_320_BGRA_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_DOGS_COCO_320_320_BGRA_WIDTH
+void *image_data = (void *)dogs_COCO_320_320_bgra_data;
 #endif
 
 /*******************************************************************************
@@ -248,7 +253,7 @@ static void mpp_task(void *params)
     img_params.format = SRC_IMAGE_FORMAT;
     img_params.width = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
-    mpp_static_img_add(mp, &img_params, (void *)image_data);
+    mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
 #else
 	mpp_camera_params_t cam_params;
 	memset(&cam_params, 0 , sizeof(cam_params));

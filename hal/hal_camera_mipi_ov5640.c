@@ -369,6 +369,7 @@ hal_camera_status_t HAL_CameraDev_MipiOv5640_Getbufdesc(const camera_dev_t *dev,
         out_buf->alignment = CAMERA_DEV_BUFFER_ALIGN;
         out_buf->cacheable = false;
         out_buf->stride = dev->config.pitch;
+        out_buf->max_image_size = dev->config.height * out_buf->stride;
     } while (false);
     HAL_LOGD("--HAL_CameraDev_MipiOv5640_Getbufdesc\n");
     return ret;

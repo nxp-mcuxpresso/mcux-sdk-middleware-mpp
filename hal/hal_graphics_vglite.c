@@ -222,12 +222,14 @@ int HAL_GfxDev_VGLite_Getbufdesc(const gfx_dev_t *dev, hw_buf_desc_t *in_buf, hw
         in_buf->nb_lines = 0;
         in_buf->cacheable = false;
         in_buf->stride = hal_vglite_get_aligned_stride(dev->src.width, dev->src.format);
+        in_buf->max_image_size = 0;
 
         /* set output buffer hw requirement */
         /* Alignment is required for the output buffer address*/
         out_buf->alignment = hal_vglite_get_buffer_alignment(dev->dst.format);
         out_buf->cacheable = false;
         out_buf->stride = 0;
+        out_buf->max_image_size = 0;
 
     } while(false);
 
@@ -247,23 +249,23 @@ static int hal_vglite_set_input_buff_format(vg_lite_buffer_t *input_buffer, gfx_
     switch (src->format)
     {
     case MPP_PIXEL_ARGB:
-        input_buffer->format = VG_LITE_ABGR8888; /* This is a temporary workaround */
+        input_buffer->format = VG_LITE_ARGB8888; /* This is a temporary workaround */
         break;
 
     case MPP_PIXEL_BGRA:
-        input_buffer->format = VG_LITE_RGBA8888;
-        break;
-
-    case MPP_PIXEL_BGRX:
-        input_buffer->format = VG_LITE_RGBX8888;
-        break;
-
-    case MPP_PIXEL_RGBA:
         input_buffer->format = VG_LITE_BGRA8888;
         break;
 
-    case MPP_PIXEL_RGBX:
+    case MPP_PIXEL_BGRX:
         input_buffer->format = VG_LITE_BGRX8888;
+        break;
+
+    case MPP_PIXEL_RGBA:
+        input_buffer->format = VG_LITE_RGBA8888;
+        break;
+
+    case MPP_PIXEL_RGBX:
+        input_buffer->format = VG_LITE_RGBX8888;
         break;
 
     /* GRAY format is not supported on GC355 */
@@ -280,7 +282,7 @@ static int hal_vglite_set_input_buff_format(vg_lite_buffer_t *input_buffer, gfx_
         break;
 
     case MPP_PIXEL_RGB565:
-        input_buffer->format = VG_LITE_RGB565;
+        input_buffer->format = VG_LITE_BGR565;
         break;
 
     case MPP_PIXEL_YUYV:
@@ -291,7 +293,7 @@ static int hal_vglite_set_input_buff_format(vg_lite_buffer_t *input_buffer, gfx_
     {
         /* RGB888 format is still not supported on GC355 */
 #if (HAL_GPU_CHIPID == HAL_GPU_GC555_CHIP_ID)    /* GC555 */
-        input_buffer->format = VG_LITE_BGR888;  /* This is a temporary workaround */
+        input_buffer->format = VG_LITE_RGB888;  /* This is a temporary workaround */
 #elif (HAL_GPU_CHIPID == HAL_GPU_GC355_CHIP_ID) /* GC355 */
         HAL_LOGE("RGB888 format is not supported on GPU GC355\r\n");
         error = -1;
@@ -306,7 +308,7 @@ static int hal_vglite_set_input_buff_format(vg_lite_buffer_t *input_buffer, gfx_
     {
         /* BGR888 format is still not supported on GC355 */
 #if (HAL_GPU_CHIPID == HAL_GPU_GC555_CHIP_ID)    /* GC555 */
-        input_buffer->format = VG_LITE_RGB888;  /* This is a temporary workaround */
+        input_buffer->format = VG_LITE_BGR888;  /* This is a temporary workaround */
 #elif (HAL_GPU_CHIPID == HAL_GPU_GC355_CHIP_ID) /* GC355 */
         HAL_LOGE("BGR888 format is not supported on GPU GC355\r\n");
         error = -1;
@@ -404,7 +406,7 @@ static int hal_vglite_scale(vg_lite_buffer_t *input_buffer,
     vg_lite_float_t width_scaling_f = 1.0f, height_scaling_f = 1.0f;
 
     /* get scaling width/height factors */
-    if ((input_buffer->height != 0) && (input_buffer->width != 0))
+    if ((input_buffer->height != 0) || (input_buffer->width != 0))
     {
         width_scaling_f = (vg_lite_float_t)output_width / (vg_lite_float_t)input_buffer->width;
         height_scaling_f = (vg_lite_float_t)output_height / (vg_lite_float_t)input_buffer->height;
@@ -608,7 +610,7 @@ static int hal_vglite_set_output_buff_format(vg_lite_buffer_t *output_buffer, co
     switch (dst->format)
     {
     case MPP_PIXEL_RGB565:
-        output_buffer->format = VG_LITE_RGB565;
+        output_buffer->format = VG_LITE_BGR565;
         break;
 
     /* GRAY format is not supported on GC355 */
@@ -629,14 +631,14 @@ static int hal_vglite_set_output_buff_format(vg_lite_buffer_t *output_buffer, co
         break;
 
     case MPP_PIXEL_ARGB:
-        output_buffer->format = VG_LITE_ABGR8888;
+        output_buffer->format = VG_LITE_ARGB8888;
         break;
 
     case MPP_PIXEL_RGB:
     {
         /* RGB888 format is still not supported on GC355 */
 #if (HAL_GPU_CHIPID == HAL_GPU_GC555_CHIP_ID)    /* GC555 */
-        output_buffer->format = VG_LITE_BGR888;  /* This is a temporary workaround */
+        output_buffer->format = VG_LITE_RGB888;  /* This is a temporary workaround */
 #elif (HAL_GPU_CHIPID == HAL_GPU_GC355_CHIP_ID) /* GC355 */
         HAL_LOGE("RGB888 format is not supported on GPU GC355\r\n");
         return -1;
@@ -651,7 +653,7 @@ static int hal_vglite_set_output_buff_format(vg_lite_buffer_t *output_buffer, co
     {
         /* BGR888 format is still not supported on GC355 */
 #if (HAL_GPU_CHIPID == HAL_GPU_GC555_CHIP_ID)    /* GC555 */
-        output_buffer->format = VG_LITE_RGB888;  /* This is a temporary workaround */
+        output_buffer->format = VG_LITE_BGR888;  /* This is a temporary workaround */
 #elif (HAL_GPU_CHIPID == HAL_GPU_GC355_CHIP_ID) /* GC355 */
         HAL_LOGE("BGR888 format is not supported on GPU GC355\r\n");
         return -1;
@@ -734,7 +736,7 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
     }
 
     input_buff_alignment = hal_vglite_get_buffer_alignment(gfx_src->format);
-    if ( (input_buff_alignment == 0) || (((unsigned int)(gfx_src->buf) % input_buff_alignment) != 0) )
+    if ((input_buff_alignment != 0) && (((unsigned int)(gfx_src->buf) % input_buff_alignment) != 0))
     {
         HAL_LOGE("Input buffer at addr=0x%x is not %d bytes aligned\n", (unsigned int)gfx_src->buf, input_buff_alignment);
     }

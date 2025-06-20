@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -26,6 +26,7 @@
 #include "hal_display_dev.h"
 #include "hal_graphics_dev.h"
 #include "hal_valgo_dev.h"
+#include "hal_vdec_dev.h"
 #include "hal_static_image.h"
 #include "hal_types.h"
 #include "stddef.h"
@@ -142,6 +143,7 @@ typedef struct
     int height;     /* image width */
     int stripe_num; /* stripe number. 0 means no stripe*/
     int status;     /* status of the buffer */
+    int compressed_size;       /* size in bytes of compressed image */
     hw_buf_desc_t hw_req_prod;  /* buffer hw requirement from producer */
     hw_buf_desc_t hw_req_cons;  /* buffer hw requirement from consumer */
     hw_buf_desc_t *hw;          /* pointer to above producer/consumer buffer requirement finally selected */
@@ -257,6 +259,7 @@ struct _elem_s {
         _camera_dev_t *cam;
         _display_dev_t *disp;
         _static_image_t *img;
+        vdec_dev_t *vdec;
     } dev;
 
     /* the IO buffers descriptors */
@@ -279,11 +282,15 @@ static inline int can_add(mpp_element_id_t id)
     case MPP_ELEMENT_TEST:
     case MPP_ELEMENT_CONVERT:
     case MPP_ELEMENT_INFERENCE:
+    case MPP_ELEMENT_IMG_DECODE:
         return 1;
     default:
         return 0;
     }
 }
+
+/* Update static image source */
+uint32_t mpp_static_image_update(_elem_t *elem, mpp_element_params_t *params);
 
 /* labeled rectangle update function */
 uint32_t mpp_lbl_rectangle_update (_elem_t *elem, mpp_element_params_t *params);

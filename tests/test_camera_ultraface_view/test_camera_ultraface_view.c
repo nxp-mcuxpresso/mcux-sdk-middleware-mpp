@@ -435,7 +435,7 @@ static void app_task(void *params)
     img_params.format = SRC_IMAGE_FORMAT;
     img_params.width = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
-    mpp_static_img_add(mp, &img_params, (void *)image_data);
+    mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
 #else
     mpp_camera_params_t cam_params;
     memset(&cam_params, 0 , sizeof(cam_params));
@@ -614,21 +614,24 @@ static void app_task(void *params)
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = OUTPUT_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
     xLastWakeTime = xTaskGetTickCount();
+    uint32_t last_inf_frame_num = user_data.inference_frame_num;
     for (;;) {
         xTaskDelayUntil( &xLastWakeTime, xFrequency );
         if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0)) {
-            PRINTF("inference time %d ms \r\n", user_data.inference_time_ms);
-            if (user_data.detected_count <= 0) {
-                PRINTF("ultraface : no face detected\r\n");
-            } else {
-                for (int i = 0; i < NUM_BOXES_MAX; i++)
-                    if (user_data.boxes[i].area > 0)
-                    {
-                        PRINTF("ultraface : box %d label %s score %d(%%)\r\n", i,
-                                ULTRAFACE_DETECTION_LABEL, (int)(user_data.boxes[i].score * 100.0f));
-                    }
+            if (last_inf_frame_num != user_data.inference_frame_num) {
+                PRINTF("inference time %d ms \r\n", user_data.inference_time_ms);
+                if (user_data.detected_count <= 0) {
+                    PRINTF("ultraface : no face detected\r\n");
+                } else {
+                    for (int i = 0; i < NUM_BOXES_MAX; i++)
+                        if (user_data.boxes[i].area > 0)
+                        {
+                            PRINTF("ultraface : box %d label %s score %d(%%)\r\n", i,
+                                    ULTRAFACE_DETECTION_LABEL, (int)(user_data.boxes[i].score * 100.0f));
+                        }
+                }
+                last_inf_frame_num = user_data.inference_frame_num;
             }
-
             __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
         }
     }

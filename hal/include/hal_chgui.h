@@ -55,8 +55,8 @@ extern "C" {
  * @param width: LCD width
  * @param x drawing position on X axe
  * @param y drawing position on Y axe
- * @param format C string pointed by format
- * @return The return number of written chars to the buffer
+ * @param label C string pointed by label
+ * @return
 
  */
 void GUI_DrawText(uint16_t *lcd_buf, uint16_t fcolor, uint16_t bcolor, uint32_t width,

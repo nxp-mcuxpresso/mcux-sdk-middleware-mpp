@@ -43,6 +43,19 @@
 
 /* test image include file */
 #include APP_STATIC_IMAGE_NAME
+#ifndef USE_NAS_OPTIMIZED_MODEL
+void *image_data = (void *)skigirl_COCO_160_128_rgb_data;
+#define SRC_IMAGE_FORMAT SRC_IMAGE_SKIGIRL_COCO_160_128_RGB_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_SKIGIRL_COCO_160_128_RGB_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_SKIGIRL_COCO_160_128_RGB_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_SKIGIRL_COCO_160_128_RGB_WIDTH
+#else
+void *image_data = (void *)couple_COCO_220_220_rgb_data;
+#define SRC_IMAGE_FORMAT SRC_IMAGE_COUPLE_COCO_220_220_RGB_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_COUPLE_COCO_220_220_RGB_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_COUPLE_COCO_220_220_RGB_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_COUPLE_COCO_220_220_RGB_WIDTH
+#endif
 
 /*******************************************************************************
  * Definitions
@@ -185,41 +198,46 @@ void stat_task(void *param)
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
 	xLastWakeTime = xTaskGetTickCount();
+	uint32_t last_inf_frame_num = user_data->inference_frame_num;
 	for (;;) {
 		xTaskDelayUntil( &xLastWakeTime, xFrequency );
-		mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-		PRINTF("\nElement stats --------------------------\r\n");
-		PRINTF("Persondetect : exec_time %u ms\r\n", persondetect_stats.elem.elem_exec_time);
-		mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
-
-		if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
+		if (last_inf_frame_num != user_data->inference_frame_num) 
 		{
-			PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
-			if (user_data->detected_count == 0)
-			{
-				PRINTF("No person detected\n\r");
-			}
-			else {
-				PRINTF("Number of detections : %d\n\r", user_data->detected_count);
+			mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+			PRINTF("\nElement stats --------------------------\r\n");
+			PRINTF("Persondetect : exec_time %u ms\r\n", persondetect_stats.elem.elem_exec_time);
+			mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
 
-				for (int i = 0; i < NUM_BOXES_MAX; i++)
+			if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
+			{
+				PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+				if (user_data->detected_count == 0)
 				{
-					if (user_data->final_boxes[i].area > 0 && user_data->final_boxes[i].score > 0.0)
+					PRINTF("No person detected\n\r");
+				}
+				else {
+					PRINTF("Number of detections : %d\n\r", user_data->detected_count);
+
+					for (int i = 0; i < NUM_BOXES_MAX; i++)
 					{
-						if (user_data->final_boxes[i].area > 0) {
-							printf("box %d --> score %u %%\r\n Left=%d, Top=%d, Right=%d, Bottom=%d\r\n"
-									"-------------------------------------------\r\n",
-									i,
-									(uint8_t)((user_data->final_boxes[i].score)*100),
-									user_data->final_boxes[i].left,
-									user_data->final_boxes[i].top,
-									user_data->final_boxes[i].right,
-									user_data->final_boxes[i].bottom);
+						if (user_data->final_boxes[i].area > 0 && user_data->final_boxes[i].score > 0.0)
+						{
+							if (user_data->final_boxes[i].area > 0) {
+								printf("box %d --> score %u %%\r\n Left=%d, Top=%d, Right=%d, Bottom=%d\r\n"
+										"-------------------------------------------\r\n",
+										i,
+										(uint8_t)((user_data->final_boxes[i].score)*100),
+										user_data->final_boxes[i].left,
+										user_data->final_boxes[i].top,
+										user_data->final_boxes[i].right,
+										user_data->final_boxes[i].bottom);
+							}
 						}
 					}
 				}
+				__atomic_store_n(&user_data->accessing, 0, __ATOMIC_SEQ_CST);
 			}
-			__atomic_store_n(&user_data->accessing, 0, __ATOMIC_SEQ_CST);
+			last_inf_frame_num = user_data->inference_frame_num;
 		}
 	}
 	return;
@@ -252,7 +270,7 @@ static void app_task(void *params)
 	img_params.format = SRC_IMAGE_FORMAT;
 	img_params.width = SRC_IMAGE_WIDTH;
 	img_params.height = SRC_IMAGE_HEIGHT;
-	mpp_static_img_add(mp, &img_params, (void *)image_data);
+	mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
 	if (ret) {
 		PRINTF("Failed to add static image\r\n");
 		goto err;

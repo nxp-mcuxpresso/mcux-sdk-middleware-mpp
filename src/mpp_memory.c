@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP.
+ * Copyright 2022-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -30,6 +30,7 @@ static int mpp_alloc_input_buf(_elem_t *elem)
 {
     int i, ret = MPP_SUCCESS;
     int height;
+    int buffer_size;
    /* allocate input buffers */
     for(i = 0; i < elem->io.nb_in_buf; i++)
     {
@@ -44,23 +45,32 @@ static int mpp_alloc_input_buf(_elem_t *elem)
             continue;   /* yes: move to next input */
 
         /*** buffer allocation ***/
-        /* time to set stride */
-        if (elem->io.in_buf[i]->hw->stride == 0)
-            elem->io.in_buf[i]->hw->stride = elem->io.in_buf[i]->width * get_bitpp(elem->io.in_buf[i]->format) / 8;
+        if (elem->io.in_buf[i]->compressed_size == 0)  /* uncompressed image */
+        {
+            /* time to set stride */
+            if (elem->io.in_buf[i]->hw->stride == 0)
+                elem->io.in_buf[i]->hw->stride = elem->io.in_buf[i]->width * get_bitpp(elem->io.in_buf[i]->format) / 8;
 
-        if (elem->io.in_buf[i]->stripe_num > 0)
-            height = elem->io.in_buf[i]->height / MPP_STRIPE_NUM;
-        else
-            height = elem->io.in_buf[i]->height;
+            if (elem->io.in_buf[i]->stripe_num > 0)
+                height = elem->io.in_buf[i]->height / MPP_STRIPE_NUM;
+            else
+                height = elem->io.in_buf[i]->height;
 
-        elem->io.in_buf[i]->hw->heap_p = hal_malloc(height * elem->io.in_buf[i]->hw->stride + elem->io.in_buf[i]->hw->alignment);
+            buffer_size = height * elem->io.in_buf[i]->hw->stride;
+        }
+        else   /* compressed image */
+        {
+            buffer_size = elem->io.in_buf[i]->compressed_size;
+        }
 
+        elem->io.in_buf[i]->hw->heap_p = hal_malloc(buffer_size + elem->io.in_buf[i]->hw->alignment);
         if (elem->io.in_buf[i]->hw->heap_p == NULL)
         {
             MPP_LOGE("Allocation failed\n");
             ret = MPP_MALLOC_ERROR;
             break;
         }
+        elem->io.in_buf[i]->hw->max_image_size = buffer_size;
 
         /* get buffer aligned address */
         unsigned char *heap_p = elem->io.in_buf[i]->hw->heap_p;

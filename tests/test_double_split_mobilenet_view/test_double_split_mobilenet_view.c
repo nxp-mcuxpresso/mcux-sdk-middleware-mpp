@@ -81,6 +81,11 @@ typedef struct _user_data_t {
 #define RECT_LINE_WIDTH 2
 #if (SOURCE_STATIC_IMAGE == 1)
 #include "images/stopwatch168_208_vuyx.h"
+#define SRC_IMAGE_FORMAT SRC_IMAGE_STOPWATCH168_208_VUYX_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_STOPWATCH168_208_VUYX_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_STOPWATCH168_208_VUYX_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_STOPWATCH168_208_VUYX_WIDTH
+void *image_data = (void *)stopwatch168_208_vuyx_data;
 #define SRC_WIDTH  SRC_IMAGE_WIDTH
 #define SRC_HEIGHT SRC_IMAGE_HEIGHT
 #else  /* SOURCE_STATIC_IMAGE */
@@ -274,7 +279,7 @@ static void app_task(void *params)
     img_params.format = SRC_IMAGE_FORMAT;
     img_params.width  = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
-    mpp_static_img_add(mp, &img_params, (void *)image_data);
+    mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
 #else
     mpp_camera_params_t cam_params;
     memset(&cam_params, 0 , sizeof(cam_params));
@@ -475,17 +480,22 @@ static void app_task(void *params)
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
     xLastWakeTime = xTaskGetTickCount();
+    uint32_t last_inf_frame_num = user_data.inference_frame_num;
     for (;;) {
         xTaskDelayUntil( &xLastWakeTime, xFrequency );
-        mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-        PRINTF("Element stats --------------------------\r\n");
-        PRINTF("mobilenet : exec_time %u (ms)\r\n", mobilenet_stats.elem.elem_exec_time);
-        mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
-
-        if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
+        if (last_inf_frame_num != user_data.inference_frame_num) 
         {
-            PRINTF("mobilenet : %s (%d%%)\r\n", user_data.inf_out.label, user_data.inf_out.score);
-            __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
+            mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+            PRINTF("Element stats --------------------------\r\n");
+            PRINTF("mobilenet : exec_time %u (ms)\r\n", mobilenet_stats.elem.elem_exec_time);
+            mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+
+            if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
+            {
+                PRINTF("mobilenet : %s (%d%%)\r\n", user_data.inf_out.label, user_data.inf_out.score);
+                __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
+            }
+            last_inf_frame_num = user_data.inference_frame_num;
         }
     }
 

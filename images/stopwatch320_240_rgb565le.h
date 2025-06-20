@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 NXP
+ * Copyright 2023, 2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -11,14 +11,14 @@
  *  xxd -i stopwatch320_240_rgb565.raw stopwatch320_240_rgb565le.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_STOPWATCH320_240_RGB565LE_DATA_H__
+#define __IMAGE_STOPWATCH320_240_RGB565LE_DATA_H__
 
-#define SRC_IMAGE_WIDTH           320
-#define SRC_IMAGE_HEIGHT          240
-#define SRC_IMAGE_FORMAT          MPP_PIXEL_RGB565
+#define SRC_IMAGE_STOPWATCH320_240_RGB565LE_WIDTH           320
+#define SRC_IMAGE_STOPWATCH320_240_RGB565LE_HEIGHT          240
+#define SRC_IMAGE_STOPWATCH320_240_RGB565LE_FORMAT          MPP_PIXEL_RGB565
 
-const static uint8_t image_data[] __attribute__((aligned(4)))= {
+const static uint8_t stopwatch320_240_rgb565le_data[] __attribute__((aligned(4)))= {
   0x14, 0x9d, 0xf4, 0x9c, 0x14, 0x9d, 0xf4, 0x9c, 0x14, 0x9d, 0x14, 0x9d,
   0x14, 0x9d, 0x15, 0x9d, 0x14, 0xa5, 0xf5, 0x9c, 0x14, 0xa5, 0xf5, 0x9c,
   0x14, 0xa5, 0xf5, 0x9c, 0x14, 0xa5, 0xf5, 0x9c, 0x14, 0xa5, 0xf4, 0x9c,

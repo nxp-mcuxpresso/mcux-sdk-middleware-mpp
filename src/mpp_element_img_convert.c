@@ -233,6 +233,10 @@ static int check_convert_params(_elem_t *elem)
             || (elem->params.convert.out_window.left + elem->params.convert.scale.width > elem->params.convert.out_buf.width))
     {
         MPP_LOGE("Invalid output window parameter\n");
+        MPP_LOGE("Window %dx%d at pos %d,%d cannot fit in %dx%d buffer\n",
+            elem->params.convert.scale.width, elem->params.convert.scale.height,
+            elem->params.convert.out_window.top, elem->params.convert.out_window.left,
+            elem->params.convert.out_buf.width, elem->params.convert.out_buf.height);
         return MPP_INVALID_PARAM;
     }
     return ret;

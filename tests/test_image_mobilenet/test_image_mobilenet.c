@@ -75,6 +75,11 @@ typedef enum {
  ******************************************************************************/
 
 #include "images/stopwatch128_128_rgb.h"
+#define SRC_IMAGE_FORMAT SRC_IMAGE_STOPWATCH128_128_RGB_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_STOPWATCH128_128_RGB_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_STOPWATCH128_128_RGB_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_STOPWATCH128_128_RGB_WIDTH
+void *image_data = (void *)stopwatch128_128_rgb_data;
 #define CROP_TOP 0
 #define CROP_LEFT 0
 #define CROP_SIZE SRC_IMAGE_WIDTH
@@ -249,7 +254,7 @@ static void app_task(void *params)
     img_params.format = SRC_IMAGE_FORMAT;
     img_params.width = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
-    mpp_static_img_add(mp, &img_params, (void *)image_data);
+    mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
     if (ret) {
         PRINTF("Failed to add static image\r\n");
         goto err;
@@ -314,9 +319,13 @@ static void app_task(void *params)
 
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
+    uint32_t last_inf_frame_num = user_data.inference_frame_num;
     for (;;) {
         xTaskDelayUntil(&xLastWakeTime, xFrequency);
-        print_result(&mobilenet_stats, &user_data);
+        if (last_inf_frame_num != user_data.inference_frame_num) {
+            print_result(&mobilenet_stats, &user_data);
+            last_inf_frame_num = user_data.inference_frame_num;
+        }
 #if (CONFIG_STOP_MPP == 1)
         print_count ++;
         if (print_count == MPP_STOP_FREQ_FACTOR) {

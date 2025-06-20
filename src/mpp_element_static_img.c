@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022,2024 NXP.
+ * Copyright 2020-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -41,7 +41,7 @@ static inline int image_dequeue(_mpp_t *mpp)
     return ret;
 }
 
-int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr)
+int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr, mpp_elem_handle_t *elem_h)
 {
     int ret = MPP_SUCCESS;
     if (!mpp)
@@ -105,6 +105,7 @@ int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr)
     elem->io.out_buf[0]->format = params->format;
     elem->io.out_buf[0]->width = params->width;
     elem->io.out_buf[0]->height = params->height;
+    elem->io.out_buf[0]->compressed_size = params->compressed_size;
     /* init stripes */
     if (img->params.stripe)
         elem->io.out_buf[0]->stripe_num = 1;
@@ -115,6 +116,58 @@ int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr)
     elem->io.out_buf[0]->hw_req_prod.alignment = 0;
     elem->io.out_buf[0]->hw_req_prod.cacheable = false;
     elem->io.out_buf[0]->hw_req_prod.stride = 0;
+
+    if (elem_h != NULL) {
+        *elem_h = (mpp_elem_handle_t) elem;
+    }
+
+    return ret;
+}
+
+uint32_t mpp_static_image_update(_elem_t *elem, mpp_element_params_t *params)
+{
+    volatile uint32_t ret = MPP_SUCCESS;
+    int height, img_size;
+    mpp_img_params_t *img_params = &params->static_image.img_params;
+
+    /* Compute input image size */
+    int image_stride = img_params->width * get_bitpp(img_params->format) / 8;
+
+    if (img_params->stripe)
+        height = img_params->height / MPP_STRIPE_NUM;
+    else
+        height = img_params->height;
+
+    img_size = height * image_stride;
+
+    /* Check if new image fits in the allocated buffer */
+    if (img_size > elem->io.out_buf[0]->hw->max_image_size) {
+        MPP_LOGE("Input image size is bigger than the allocated output buffer size\n");
+        MPP_LOGE("input image size = %d, allocated buffer size = %d\n",
+                  img_size, elem->io.out_buf[0]->hw->max_image_size);
+        MPP_LOGE("Image will not be changed\r\n");
+        return MPP_ERROR;
+    }
+
+    /* Update element config params */
+    elem->dev.img->elt.config.width = img_params->width;
+    elem->dev.img->elt.config.height = img_params->height;
+    elem->dev.img->elt.config.format = img_params->format;
+    elem->dev.img->elt.config.stripe = img_params->stripe;
+    elem->dev.img->elt.buffer = params->static_image.img_buffer;
+
+    /* Update output buffer params */
+    elem->io.out_buf[0]->width = img_params->width;
+    elem->io.out_buf[0]->height = img_params->height;
+    elem->io.out_buf[0]->format = img_params->format;
+    /* set stripes */
+    if (img_params->stripe)
+        elem->io.out_buf[0]->stripe_num = 1;
+    else
+        elem->io.out_buf[0]->stripe_num = 0;
+
+    /* Update image params */
+    memcpy(&elem->dev.img->params, img_params, sizeof(mpp_img_params_t));
 
     return ret;
 }

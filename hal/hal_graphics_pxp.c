@@ -212,9 +212,11 @@ int HAL_GfxDev_Pxp_Getbufdesc(const gfx_dev_t *dev, hw_buf_desc_t *in_buf, hw_bu
         in_buf->nb_lines = 0;
         in_buf->cacheable = false;
         in_buf->stride = 0;
+        in_buf->max_image_size = 0;
         out_buf->alignment = 0;
         out_buf->cacheable = false;
         out_buf->stride = 0;
+        out_buf->max_image_size = 0;
     } while(false);
     return error;
 }

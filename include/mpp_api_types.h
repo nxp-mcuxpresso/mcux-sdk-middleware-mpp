@@ -168,6 +168,9 @@ typedef enum {
     MPP_PIXEL_DEPTH8,       /*!< depth 8 bits */
 
     MPP_PIXEL_YUV420P,      /*!< YUV planar 4:2:0 */
+    
+    /* compressed format */
+    MPP_PIXEL_JPEG,         /*!< JPEG */
 
     MPP_PIXEL_INVALID       /*!< invalid pixel format */
 } mpp_pixel_format_t;
@@ -187,6 +190,7 @@ typedef struct {
     int width;  /*!< buffer width */
     mpp_pixel_format_t format;  /*!< pixel format */
     bool stripe; /*!< stripe mode */
+    int compressed_size;   /*!< size in bytes for compressed format */
 } mpp_img_params_t;
 
 /** Display parameters */
@@ -212,6 +216,7 @@ typedef enum {
     MPP_ELEMENT_TEST,       /*!< Test inplace element - NOT FOR USE */
     MPP_ELEMENT_INFERENCE,  /*!< Inference engine */
     MPP_ELEMENT_CONVERT,    /*!< Image conversion: resolution, orientation, color format */
+    MPP_ELEMENT_IMG_DECODE,     /*!< Image decompression: JPEG, PNG */
     MPP_ELEMENT_NUM         /*!< DO NOT USE */
 } mpp_element_id_t;
 
@@ -324,9 +329,14 @@ typedef struct {
     mpp_tensor_type_t model_input_tensors_type; /*!< type of input buffer */
 } mpp_inference_params_t;
 
-/** Processing element parameters */
+/** Static image and Processing elements parameters */
 typedef struct {
 union {
+    /** Static Image element's parameters */
+    struct {
+        mpp_img_params_t img_params;        /*!< static image parameters */
+        void *img_buffer;                   /*!< static image buffer address */
+    } static_image;
     /** Compose element's parameters - NOT IMPLEMENTED YET */
     struct {
         float a;
@@ -373,6 +383,14 @@ union {
         unsigned int height;
         mpp_pixel_format_t format;
     } test;
+    /** Decoder element's parameters */
+    struct {
+        const char* dev_name;               /*!< device name used for decoder */
+        /* output parameters. TODO remove: parser should auto-detect */
+        unsigned int width;
+        unsigned int height;
+        mpp_pixel_format_t out_format;
+    } decode;
     /** ML inference element's parameters */
     struct {
         const void *model_data; /*!< pointer to model binary */

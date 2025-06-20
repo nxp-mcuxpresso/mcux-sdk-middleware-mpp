@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 NXP
+ * Copyright 2023, 2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -11,15 +11,15 @@
  *  xxd -i stopwatch168_208_uyvy422.YUV stopwatch168_208_uyvy422.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_STOPWATCH168_208_UYVY422_DATA_H__
+#define __IMAGE_STOPWATCH168_208_UYVY422_DATA_H__
 
-#define SRC_IMAGE_WIDTH           168
-#define SRC_IMAGE_HEIGHT          208
-#define SRC_IMAGE_CHANNELS_NUMBER 2
-#define SRC_IMAGE_FORMAT          MPP_PIXEL_UYVY1P422
+#define SRC_IMAGE_STOPWATCH168_208_UYVY422_WIDTH           168
+#define SRC_IMAGE_STOPWATCH168_208_UYVY422_HEIGHT          208
+#define SRC_IMAGE_STOPWATCH168_208_UYVY422_CHANNELS_NUMBER 2
+#define SRC_IMAGE_STOPWATCH168_208_UYVY422_FORMAT          MPP_PIXEL_UYVY1P422
 
-static const uint8_t image_data[] = {
+static const uint8_t stopwatch168_208_uyvy422_data[] = {
   0x81, 0x9e, 0x7d, 0x9e, 0x81, 0x9e, 0x7d, 0x9e, 0x82, 0x9f, 0x7e, 0x9f,
   0x82, 0x9f, 0x7f, 0x9f, 0x81, 0x9f, 0x7f, 0x9f, 0x81, 0x9f, 0x7f, 0x9f,
   0x81, 0xa1, 0x7f, 0xa1, 0x81, 0xa1, 0x7e, 0xa1, 0x81, 0xa2, 0x7d, 0xa2,

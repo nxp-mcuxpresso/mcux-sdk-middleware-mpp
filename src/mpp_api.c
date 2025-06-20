@@ -70,9 +70,6 @@ const static char mpp_version[] = "MPP_VERSION_"STRING(MPP_VERSION_MAJOR)"."STRI
 
 void mpp_execute_heap(_mpp_t *rc_prio_lst[]);
 
-static mpp_elem_handle_t mpp_scramble_h(mpp_elem_handle_t handle);
-static mpp_elem_handle_t mpp_unscramble_h(mpp_elem_handle_t scramble);
-
 static mpp_stats_t *api_stats;
 hal_mutex_t stats_lock[MPP_STATS_GRP_NUM];
 
@@ -515,8 +512,8 @@ int mpp_element_add(mpp_t mpp, mpp_element_id_t id, mpp_element_params_t *params
     if (ret != MPP_SUCCESS)
         return ret;
 
-    if (elem_h != MPP_INVALID) {
-        *elem_h = mpp_scramble_h((mpp_elem_handle_t)elem);
+    if (elem_h != NULL) {
+        *elem_h = (mpp_elem_handle_t) elem;
     }
 
     return ret;
@@ -791,7 +788,7 @@ int mpp_stop(mpp_t mpp)
 int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t *params)
 {
     int ret = MPP_SUCCESS;
-    _elem_t *elem = (_elem_t *)mpp_unscramble_h(elem_h);
+    _elem_t *elem = (_elem_t *) elem_h;
 
     do {
         if (!mpp) {
@@ -814,25 +811,43 @@ int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t
             break;
         }
 
-        /* Copy the pointer to stats to the new params structure */
-        if (params->stats == NULL) params->stats = elem->params.stats;
+        /* Check element type */
+        switch (elem->type) {
+        case MPP_TYPE_SOURCE:
+            /* Check source type */
+            switch (elem->src_typ) {
+            case MPP_SRC_STATIC_IMAGE:
+                ret = mpp_static_image_update(elem, params);
+                break;
+            default:
+                MPP_LOGI("Nothing to update for source type %d\n", elem->src_typ);
+                break;
+            }
+            break;
+        case MPP_TYPE_PROC:
+            /* Copy the pointer to stats to the new params structure */
+            if (params->stats == NULL) params->stats = elem->params.stats;
 
-        /* set element id */
-        switch (elem->proc_typ) {
-        case MPP_ELEMENT_LABELED_RECTANGLE:
-            ret = mpp_lbl_rectangle_update(elem, params);
-            break;
-        case MPP_ELEMENT_CONVERT:
-            ret = mpp_convert_update(elem, params);
-            break;
-        case MPP_ELEMENT_INFERENCE:
-            ret = mpp_inference_update(elem, params);
+            /* check processing element id */
+            switch (elem->proc_typ) {
+            case MPP_ELEMENT_LABELED_RECTANGLE:
+                ret = mpp_lbl_rectangle_update(elem, params);
+                break;
+            case MPP_ELEMENT_CONVERT:
+                ret = mpp_convert_update(elem, params);
+                break;
+            case MPP_ELEMENT_INFERENCE:
+                ret = mpp_inference_update(elem, params);
+                break;
+            default:
+                MPP_LOGI("Nothing to update for element %s\n", elem_name(elem->proc_typ));
+                break;
+            }
             break;
         default:
-            MPP_LOGI("Nothig to update for element %s\n", elem_name(elem->proc_typ));
+            MPP_LOGI("Nothing to update for element type %d\n", elem->type);
             break;
         }
-
     } while (false);
 
     return ret;
@@ -841,43 +856,4 @@ int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t
 char* mpp_get_version(void)
 {
     return (char*)mpp_version;
-}
-
-/** scrambling functions */
-typedef union _scr_s {
-    mpp_elem_handle_t raw;
-    struct {
-        uint8_t a;
-        uint8_t b;
-        uint8_t c;
-        uint8_t d;
-    } bytes;
-} _scr_t;
-
-static mpp_elem_handle_t mpp_scramble_h(mpp_elem_handle_t handle)
-{
-    _scr_t ret = {.raw = handle};
-    /* xor the address */
-    _scr_t temp = {.raw = handle ^ 0xffffffffUL};
-
-    /* scramble bytes: 4321 => 2413 */
-    ret.bytes.a = temp.bytes.c;
-    ret.bytes.b = temp.bytes.a;
-    ret.bytes.c = temp.bytes.d;
-    ret.bytes.d = temp.bytes.b;
-    return ret.raw;
-}
-
-static mpp_elem_handle_t mpp_unscramble_h(mpp_elem_handle_t scramble)
-{
-    _scr_t ret = {.raw = scramble};
-    /* xor the address */
-    _scr_t temp = {.raw = scramble ^ 0xffffffffUL};
-
-    /* unscramble bytes: 2413 => 4321 */
-    ret.bytes.a = temp.bytes.b;
-    ret.bytes.b = temp.bytes.d;
-    ret.bytes.c = temp.bytes.a;
-    ret.bytes.d = temp.bytes.c;
-    return ret.raw;
 }

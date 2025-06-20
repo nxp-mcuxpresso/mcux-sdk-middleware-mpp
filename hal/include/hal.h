@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP
+ * Copyright 2022-2025 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -40,6 +40,7 @@
 #include "hal_debug.h"
 #include "hal_display_dev.h"
 #include "hal_camera_dev.h"
+#include "hal_vdec_dev.h"
 
 /*!
  * @brief Implementation of hal labeled rectangle component that draws a rectangle and a text on an input image.
@@ -100,6 +101,20 @@ int hal_camera_setup(const char *name, camera_dev_t *dev);
  *
  */
 int hal_gfx_setup(const char *name, gfx_dev_t *dev);
+
+/*!
+ * @brief Register with an image decoder device specified by name.
+ *        If name is NULL, the first available decoder supported by Hw
+ *        will be selected.
+ *        The decoder device using CPU operations will be selected if
+ *        name is not specified and if no decoder is available for the Hw.
+ *
+ * @param[in] name image decoding device name
+ * @param[in] dev decoder device to register
+ * @return error code (0: success, otherwise: failure)
+ *
+ */
+int hal_img_decoder_setup(const char *name, vdec_dev_t *dev);
 
 /** @} */
 

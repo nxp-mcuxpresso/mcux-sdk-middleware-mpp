@@ -20,12 +20,12 @@ if [ "${CONVERTER_MCXN_PATH}" == "" ]; then
     exit 1
 fi
 
-for MODEL_BASENAME in "ultraface_slim_ultraslim" "nanodet_m_0.5x_nhwc_nopermute" "mobilenet_v1_0.25_128_quant_int8" "persondetect_160_128" "persondetect_220_220"; do
+for MODEL_BASENAME in "ultraface_slim_ultraslim" "nanodet_m_0.5x_nhwc_nopermute" "mobilenet_v1_0.25_128_quant_int8" "persondetect_160_128" "persondetect_220_220" "antispoofing" "mobilefacenet_96_96"; do
     for CHIP in "mcxn94x" "imxrt700"; do
         if [ $CHIP == "mcxn94x" ]; then
             NPU_VERSION="npu16"
             CONVERTER=${CONVERTER_MCXN_PATH}
-            if [ ${MODEL_BASENAME} == "nanodet_m_0.5x_nhwc_nopermute" -o ${MODEL_BASENAME} == "persondetect_220_220" ]; then
+            if [ ${MODEL_BASENAME} == "nanodet_m_0.5x_nhwc_nopermute" -o ${MODEL_BASENAME} == "persondetect_220_220" -o ${MODEL_BASENAME} == "antispoofing" -o ${MODEL_BASENAME} == "mobilefacenet_96_96" ]; then
                 continue
             fi
         elif [ $CHIP == "imxrt700" ]; then
@@ -38,24 +38,30 @@ for MODEL_BASENAME in "ultraface_slim_ultraslim" "nanodet_m_0.5x_nhwc_nopermute"
 
         #manage directory/tflite/header naming inconsistency :-(
         if [ ${MODEL_BASENAME} == "ultraface_slim_ultraslim" ]; then
-            MODEL_DIR="ultraface_slim_quant_int8"
+            MODEL_DIR="models/ultraface_slim_quant_int8"
             MODEL_H_NAME=${MODEL_BASENAME}
         elif [ ${MODEL_BASENAME} == "nanodet_m_0.5x_nhwc_nopermute" ]; then
-            MODEL_DIR="nanodet_m_320_quant_int8"
+            MODEL_DIR="models/nanodet_m_320_quant_int8"
             MODEL_H_NAME=${MODEL_BASENAME}
         elif [ ${MODEL_BASENAME} == "mobilenet_v1_0.25_128_quant_int8" ]; then
-            MODEL_DIR=${MODEL_BASENAME}
+            MODEL_DIR="models/${MODEL_BASENAME}"
             MODEL_H_NAME="mobilenetv1_model_data"
         elif [ ${MODEL_BASENAME} == "persondetect_160_128" -o ${MODEL_BASENAME} == "persondetect_220_220" ]; then
-            MODEL_DIR="persondetect"
+            MODEL_DIR="models/persondetect"
+            MODEL_H_NAME=${MODEL_BASENAME}
+        elif [ ${MODEL_BASENAME} == "antispoofing" ]; then
+            MODEL_DIR="internal/models/antispoofing"
+            MODEL_H_NAME=${MODEL_BASENAME}
+        elif [ ${MODEL_BASENAME} == "mobilefacenet_96_96" ]; then
+            MODEL_DIR="internal/models/mobilefacenet"
             MODEL_H_NAME=${MODEL_BASENAME}
         else
             exit 1;
         fi
 
-        ORI_TFLITE=${MPP_DIR}/models/${MODEL_DIR}/${MODEL_BASENAME}.tflite
-        CONV_TFLITE=${MPP_DIR}/models/${MODEL_DIR}/${MODEL_BASENAME}_${NPU_VERSION}.tflite
-        CONV_HEADER=${MPP_DIR}/models/${MODEL_DIR}/${MODEL_H_NAME}_${NPU_VERSION}_tflite.h
+        ORI_TFLITE=${MPP_DIR}/${MODEL_DIR}/${MODEL_BASENAME}.tflite
+        CONV_TFLITE=${MPP_DIR}/${MODEL_DIR}/${MODEL_BASENAME}_${NPU_VERSION}.tflite
+        CONV_HEADER=${MPP_DIR}/${MODEL_DIR}/${MODEL_H_NAME}_${NPU_VERSION}_tflite.h
         TEMP_HEADER="temp_model.h"
 
         VERSION="$( $CONVERTER/neutron-converter --version )"

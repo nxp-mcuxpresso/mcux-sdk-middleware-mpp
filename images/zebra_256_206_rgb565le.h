@@ -7,14 +7,19 @@
  * (NO COMMERCIAL USE OF THE IMAGE)
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+/* 
+ * Modifications Copyright 2025 NXP
+ */
 
-#define SRC_IMAGE_WIDTH		256
-#define SRC_IMAGE_HEIGHT	206
-#define SRC_IMAGE_FORMAT	MPP_PIXEL_RGB565
+#ifndef __IMAGE_ZEBRA_256_206_RGB565LE_DATA_H__
+#define __IMAGE_ZEBRA_256_206_RGB565LE_DATA_H__
 
-static const uint8_t image_data[] = {
+#define SRC_IMAGE_ZEBRA_256_206_RGB565LE_WIDTH	256
+#define SRC_IMAGE_ZEBRA_256_206_RGB565LE_HEIGHT	206
+#define SRC_IMAGE_ZEBRA_256_206_RGB565LE_CHANNELS_NUMBER 3
+#define SRC_IMAGE_ZEBRA_256_206_RGB565LE_FORMAT	MPP_PIXEL_RGB565
+
+static const uint8_t zebra_256_206_rgb565le_data[] = {
   0xab, 0x6b, 0x6b, 0x63, 0xac, 0x73, 0x8c, 0x6b, 0xac, 0x6b, 0x6b, 0x63,
   0xcc, 0x73, 0x6b, 0x63, 0x6b, 0x63, 0x0a, 0x53, 0x8b, 0x63, 0x6b, 0x63,
   0x6a, 0x63, 0x8b, 0x63, 0x8a, 0x63, 0xab, 0x63, 0x8a, 0x63, 0x6a, 0x5b,

@@ -28,12 +28,22 @@
 #if (APP_CONFIG==1) /* default app config */
 /* TFlite is enabled by default */
 #include "images/skigirl_COCO_320_320_bgra.h"
+#define SRC_IMAGE_FORMAT SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_WIDTH
+void *image_data = (void *)skigirl_COCO_320_320_bgra_data;
 #define EXPECTED_CONFIDENCE_MIN         79
 #define EXPECTED_NUM_DETECTED_OBJECTS   1
 const char* expected_labels[] =         {"person"};
 #define EXPECTED_CHECKSUM 0xa7d4a04a
 #elif (APP_CONFIG==3)
 #include "images/skigirl_COCO_320_320_bgra.h"
+#define SRC_IMAGE_FORMAT SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_WIDTH
+void *image_data = (void *)skigirl_COCO_320_320_bgra_data;
 #define EXPECTED_CONFIDENCE_MIN         79
 #define EXPECTED_NUM_DETECTED_OBJECTS   2
 const char* expected_labels[] =         {"person", "person"};

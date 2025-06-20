@@ -5,21 +5,25 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  *  python3 ./tools/image_operation.py -i skigirl.jpg -o  skigirl_COCO_320_320.bgra -C 4 --rsz_w 320 --rsz_h 320 --rsz_mode exact/pad --img_op conv_JPEG2FMT --pix_fmt bgra
  *  xxd -i skigirl_COCO_320_320.bgra > skigirl_COCO_320_320_bgra.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_SKIGIRL_COCO_320_320_BGRA_DATA_H__
+#define __IMAGE_SKIGIRL_COCO_320_320_BGRA_DATA_H__
 
-#define SRC_IMAGE_WIDTH       320
-#define SRC_IMAGE_HEIGHT      320
-#define SRC_IMAGE_CHANNELS_NUMBER 4
-#define SRC_IMAGE_FORMAT      MPP_PIXEL_BGRA
+#define SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_WIDTH       320
+#define SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_HEIGHT      320
+#define SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_CHANNELS_NUMBER 4
+#define SRC_IMAGE_SKIGIRL_COCO_320_320_BGRA_FORMAT      MPP_PIXEL_BGRA
 
-static const uint8_t image_data[] = {
+static const uint8_t skigirl_COCO_320_320_bgra_data[] = {
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
@@ -34156,4 +34160,4 @@ static const uint8_t image_data[] = {
   0x00, 0x00, 0x00, 0xff
 };
 unsigned int skigirl_COCO_320_320_bgra_len = 409600;
-#endif /* __IMAGE_DATA_H__ */
+#endif /* __IMAGE_SKIGIRL_COCO_320_320_BGRA_DATA_H__ */

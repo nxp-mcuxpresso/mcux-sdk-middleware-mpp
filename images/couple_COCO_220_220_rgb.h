@@ -5,21 +5,25 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  * convert couple.jpg -resize 220x220 -depth 8 couple_160_128.rgb
  *  xxd -i couple_rgb > couple_COCO_220_220_rgb.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_COUPLE_COCO_220_220_RGB_DATA_H__
+#define __IMAGE_COUPLE_COCO_220_220_RGB_DATA_H__
 
-#define SRC_IMAGE_WIDTH       		220
-#define SRC_IMAGE_HEIGHT     		220
-#define SRC_IMAGE_CHANNELS_NUMBER	3
-#define SRC_IMAGE_FORMAT     		MPP_PIXEL_RGB
+#define SRC_IMAGE_COUPLE_COCO_220_220_RGB_WIDTH       		220
+#define SRC_IMAGE_COUPLE_COCO_220_220_RGB_HEIGHT     		220
+#define SRC_IMAGE_COUPLE_COCO_220_220_RGB_CHANNELS_NUMBER	3
+#define SRC_IMAGE_COUPLE_COCO_220_220_RGB_FORMAT     		MPP_PIXEL_RGB
 
-static const unsigned char image_data[]= {
+static const unsigned char couple_COCO_220_220_rgb_data[]= {
   0xe8, 0xd2, 0xc5, 0xe9, 0xd3, 0xc5, 0xe9, 0xd4, 0xc4, 0xea, 0xd5, 0xc4,
   0xea, 0xd5, 0xc5, 0xea, 0xd5, 0xc4, 0xeb, 0xd5, 0xc2, 0xeb, 0xd4, 0xc2,
   0xeb, 0xd4, 0xc2, 0xec, 0xd5, 0xc2, 0xec, 0xd5, 0xc3, 0xeb, 0xd5, 0xc3,

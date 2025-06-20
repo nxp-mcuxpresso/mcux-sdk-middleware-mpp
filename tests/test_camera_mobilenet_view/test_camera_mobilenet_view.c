@@ -378,7 +378,7 @@ static void app_task(void *params)
     img_params.format = SRC_IMAGE_FORMAT;
     img_params.width  = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
-    mpp_static_img_add(mp, &img_params, (void *)image_data);
+    mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
 #else
     mpp_camera_params_t cam_params;
     memset(&cam_params, 0 , sizeof(cam_params));
@@ -576,19 +576,23 @@ static void app_task(void *params)
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
     xLastWakeTime = xTaskGetTickCount();
+    uint32_t last_inf_frame_num = user_data.inference_frame_num;
 #if (configGENERATE_RUN_TIME_STATS == 1)
     static char task_stats_buf[512];
 #endif
     for (;;) {
         xTaskDelayUntil( &xLastWakeTime, xFrequency );
-        mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-        PRINTF("Element stats --------------------------\r\n");
-        PRINTF("mobilenet : exec_time %u (ms)\r\n", mobilenet_stats.elem.elem_exec_time);
-        mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
-
         if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
         {
-            PRINTF("mobilenet : %s (%d%%)\r\n", user_data.inf_out.label, user_data.inf_out.score);
+            if (last_inf_frame_num != user_data.inference_frame_num)
+            {
+                mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+                PRINTF("Element stats --------------------------\r\n");
+                PRINTF("mobilenet : exec_time %u (ms)\r\n", mobilenet_stats.elem.elem_exec_time);
+                mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+                PRINTF("mobilenet : %s (%d%%)\r\n", user_data.inf_out.label, user_data.inf_out.score);
+                last_inf_frame_num = user_data.inference_frame_num;
+            }
             __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
         }
 #if (configGENERATE_RUN_TIME_STATS == 1)

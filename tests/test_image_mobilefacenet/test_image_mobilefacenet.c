@@ -44,6 +44,21 @@
 
 /* Input image */
 #include APP_STATIC_IMAGE_NAME
+#if defined(SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_RGB_FORMAT)
+void *image_data = (void *)thispersondoesnotexist_4_96_rgb_data;
+#define SRC_IMAGE_FORMAT SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_RGB_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_RGB_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_RGB_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_RGB_WIDTH
+#elif defined(SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_BGR_FORMAT)
+void *image_data = (void *)thispersondoesnotexist_4_96_bgr_data;
+#define SRC_IMAGE_FORMAT SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_BGR_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_BGR_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_BGR_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_THISPERSONDOESNOTEXIST_4_96_BGR_WIDTH
+#else
+#error "Image params not defined for this image. Check the APP_STATIC_IMAGE_NAME value"
+#endif
 
 
 /*******************************************************************************
@@ -135,27 +150,11 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 		if (Atomic_CompareAndSwap_u32(&app_priv->accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
 		{
 			app_priv->inference_time_ms = inf_output->inference_time_ms;
+			app_priv->inference_frame_num += 1;
 			/* copy recognition results */
 			app_priv->result = result;
 			__atomic_store_n(&app_priv->accessing, 0, __ATOMIC_SEQ_CST);
 		}
-
-		mpp_element_params_t params;
-		memset(&params, 0, sizeof(params));
-		uint8_t label_size = sizeof(params.labels.rectangles[0].label);
-
-		const char* label = "\0";
-		// Update the label in the first rectangle
-		params.labels.detected_count = 1;
-		params.labels.max_count = 1;
-		params.labels.rectangles = app_priv->labels;
-		strncpy((char *)params.labels.rectangles[0].label, label, label_size);
-		params.labels.rectangles[0].label[label_size - 1] = '\0';
-        if ( (app_priv->elem != 0) && ( app_priv->mp != NULL ) )
-        {
-            mpp_element_update(app_priv->mp, app_priv->elem, &params);
-        }
-
 		break;
 	case MPP_EVENT_INVALID:
 	default:
@@ -172,23 +171,29 @@ void stat_task(void *param)
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
 	xLastWakeTime = xTaskGetTickCount();
+	uint32_t last_inf_frame_num = user_data->inference_frame_num;
 	for (;;) {
 		xTaskDelayUntil( &xLastWakeTime, xFrequency );
-		mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-		PRINTF("Element stats --------------------------\r\n");
-		PRINTF("Mobilefacenet : exec_time %u (ms)\r\n", mobilefacenet_stats.elem.elem_exec_time);
-		mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
 		if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
 		{
-			PRINTF("Similarity percentage %d\r\n", user_data->result.similarity_percentage);
-			PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
-			if (user_data->result.recognized_name[0]=='\0')
+			if (user_data->inference_frame_num != last_inf_frame_num)
 			{
-				PRINTF("face not recognized! \r\n");
+				mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+				PRINTF("Element stats --------------------------\r\n");
+				PRINTF("Mobilefacenet : exec_time %u (ms)\r\n", mobilefacenet_stats.elem.elem_exec_time);
+				mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+				PRINTF("Similarity percentage %d\r\n", user_data->result.similarity_percentage);
+				PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+				if (user_data->result.recognized_name[0]=='\0')
+				{
+					PRINTF("face not recognized! \r\n");
+				}
+				else
+				{
+					PRINTF("Recognized face: %s with similarity percentage: %d%%\r\n", user_data->result.recognized_name, user_data->result.similarity_percentage);
+				}
+				last_inf_frame_num = user_data->inference_frame_num;
 			}
-			else
-			{
-				PRINTF("Recognized face: %s with similarity percentage: %d%%\r\n", user_data->result.recognized_name, user_data->result.similarity_percentage);			}
 			__atomic_store_n(&user_data->accessing, 0, __ATOMIC_SEQ_CST);
 		}
 	}
@@ -222,7 +227,7 @@ static void app_task(void *param)
 	img_params.format = SRC_IMAGE_FORMAT;
 	img_params.width = SRC_IMAGE_WIDTH;
 	img_params.height = SRC_IMAGE_HEIGHT;
-	mpp_static_img_add(mp, &img_params, (void *)image_data);
+	mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
 	if (ret) {
 		PRINTF("Failed to add static image\r\n");
 		goto err;

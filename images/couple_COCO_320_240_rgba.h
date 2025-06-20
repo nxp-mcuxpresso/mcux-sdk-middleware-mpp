@@ -5,21 +5,25 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  *  convert couple.jpg -resize 320x240 -background black -gravity center -extent 320x240 -depth 8 couple_COCO_320_240.rgba
  *  xxd -i couple_COCO_320_240.rgba > couple_COCO_320_240_rgba.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_COUPLE_COCO_320_240_RGBA_DATA_H__
+#define __IMAGE_COUPLE_COCO_320_240_RGBA_DATA_H__
 
-#define SRC_IMAGE_WIDTH       320
-#define SRC_IMAGE_HEIGHT      240
-#define SRC_IMAGE_CHANNELS_NUMBER 4
-#define SRC_IMAGE_FORMAT      MPP_PIXEL_RGBA
+#define SRC_IMAGE_COUPLE_COCO_320_240_RGBA_WIDTH       320
+#define SRC_IMAGE_COUPLE_COCO_320_240_RGBA_HEIGHT      240
+#define SRC_IMAGE_COUPLE_COCO_320_240_RGBA_CHANNELS_NUMBER 4
+#define SRC_IMAGE_COUPLE_COCO_320_240_RGBA_FORMAT      MPP_PIXEL_RGBA
 
-static const uint8_t image_data[] = {
+static const uint8_t couple_COCO_320_240_rgba_data[] = {
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
@@ -25623,4 +25627,4 @@ static const uint8_t image_data[] = {
 };
 unsigned int couple_COCO_320_240_rgba_len = 307200;
 
-#endif /* __IMAGE_DATA_H__ */
+#endif /* __IMAGE_COUPLE_COCO_320_240_RGBA_DATA_H__ */

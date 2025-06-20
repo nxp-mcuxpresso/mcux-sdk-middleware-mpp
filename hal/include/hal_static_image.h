@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -66,9 +66,10 @@ typedef struct
     int bottom;                /*!< bottom position */
     mpp_pixel_format_t format; /*!< pixel format */
     bool stripe;               /*!< stripe mode */
+    int compressed_size;       /*!< compressed size in bytes */
 } static_image_static_config_t;
 
-/** @brief Attributes of a an image element. */
+/** @brief Attributes of an image element. */
 struct _static_image
 {
     int id;                              /*!< unique id which is assigned by image manager */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2025 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -187,6 +187,38 @@ int setup_camera_dev(hal_camera_setup_t camera_setup[], int camera_nb,
     cam_setup_f = camera_setup[i].camera_setup_func;
     if (cam_setup_f)
         return cam_setup_f(name, dev);
+
+    return MPP_ERROR;
+}
+
+int setup_vdec_dev(hal_img_decoder_setup_t decoder_setup[], int vdec_nb,
+                      const char *name, vdec_dev_t *dev)
+{
+    int i, found = 0;
+
+    /* search name */
+    if ((name == NULL) && (vdec_nb)) {
+        /* pick prefered first image decoder device of the list */
+        found = 1;
+        i = 0;
+    }
+    else {
+        for (i = 0; i < vdec_nb; i++)
+            if (!strcmp(name, decoder_setup[i].vdec_dev_name)) {
+                found = 1;
+                break;
+            }
+    }
+    if (!found) {
+        HAL_LOGE("Image decoder device %s not found\n", name);
+        return MPP_INVALID_PARAM;
+    }
+
+    /* call name-specific decoder setup function*/
+    img_decoder_setup_func_t dec_setup_f;
+    dec_setup_f = decoder_setup[i].decoder_setup_func;
+    if (dec_setup_f)
+        return dec_setup_f(dev);
 
     return MPP_ERROR;
 }

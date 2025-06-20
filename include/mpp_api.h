@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 NXP
+ * Copyright 2021-2025 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -75,13 +75,14 @@ int mpp_camera_add(mpp_t mpp, const char *name, mpp_camera_params_t *params);
  * @param [in] mpp input pipeline
  * @param [in] params static image parameters
  * @param [in] addr image buffer
+ * @param [out] elem_h element handle in pipeline
  * @return \ref return_codes
  *
  * @pre
  * - Image buffer allocation/free is the responsibility of the user.
  *
  */
-int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr);
+int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr, mpp_elem_handle_t *elem_h);
 
 /**
  * Display addition

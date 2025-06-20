@@ -23,3 +23,6 @@ MIR
 cmsis-pack-rev
 tfm
 lvgl
+sgi_pkc
+libjpeg
+usb

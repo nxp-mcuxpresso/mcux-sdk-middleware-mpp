@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 NXP
+ * Copyright 2023, 2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -11,15 +11,15 @@
  *  xxd -i stopwatch168_208_rgb565.raw stopwatch168_208_rgb565.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_STOPWATCH168_208_RGB565_DATA_H__
+#define __IMAGE_STOPWATCH168_208_RGB565_DATA_H__
 
-#define SRC_IMAGE_WIDTH           168
-#define SRC_IMAGE_HEIGHT          208
-#define SRC_IMAGE_CHANNELS_NUMBER 2
-#define SRC_IMAGE_FORMAT          MPP_PIXEL_RGB565
+#define SRC_IMAGE_STOPWATCH168_208_RGB565_WIDTH           168
+#define SRC_IMAGE_STOPWATCH168_208_RGB565_HEIGHT          208
+#define SRC_IMAGE_STOPWATCH168_208_RGB565_CHANNELS_NUMBER 2
+#define SRC_IMAGE_STOPWATCH168_208_RGB565_FORMAT          MPP_PIXEL_RGB565
 
-const static uint8_t image_data[] = {
+const static uint8_t stopwatch168_208_rgb565_data[] = {
   0x14, 0x9d, 0x14, 0x9d, 0x14, 0x9d, 0xf4, 0x9c, 0x14, 0xa5, 0xf5, 0x9c,
   0x14, 0xa5, 0xf5, 0x9c, 0x14, 0xa5, 0xf4, 0x9c, 0x14, 0xa5, 0xf4, 0x9c,
   0x14, 0xa5, 0x15, 0xa5, 0x14, 0xa5, 0x15, 0x9d, 0x34, 0xa5, 0x35, 0x9d,

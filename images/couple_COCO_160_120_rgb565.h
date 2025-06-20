@@ -5,6 +5,10 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  * convert couple.jpg -resize 160x120 couple_COCO_160_120.rgb
@@ -12,15 +16,15 @@
  *  xxd -i couple_COCO_160_120.rgb565  > couple_COCO_160_120.rgb565.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_COUPLE_COCO_160_120_RGB565_DATA_H__
+#define __IMAGE_COUPLE_COCO_160_120_RGB565_DATA_H__
 
-#define SRC_IMAGE_WIDTH       160
-#define SRC_IMAGE_HEIGHT      120
-#define SRC_IMAGE_CHANNELS_NUMBER 3
-#define SRC_IMAGE_FORMAT      MPP_PIXEL_RGB565
+#define SRC_IMAGE_COUPLE_COCO_160_120_RGB565_WIDTH       160
+#define SRC_IMAGE_COUPLE_COCO_160_120_RGB565_HEIGHT      120
+#define SRC_IMAGE_COUPLE_COCO_160_120_RGB565_CHANNELS_NUMBER 3
+#define SRC_IMAGE_COUPLE_COCO_160_120_RGB565_FORMAT      MPP_PIXEL_RGB565
 
-static const unsigned char image_data[] = {
+static const unsigned char couple_COCO_160_120_rgb565_data[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x98, 0xee, 0xb8, 0xee, 0xb8, 0xee, 0xb8, 0xee,
   0xb8, 0xee, 0xb8, 0xee, 0xb8, 0xee, 0xb8, 0xee, 0xb8, 0xee, 0x97, 0xee,
@@ -3223,5 +3227,5 @@ static const unsigned char image_data[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00
 };
-unsigned int image_data_len = 38402;
+unsigned int couple_COCO_160_120_rgb565_data_len = 38402;
 #endif

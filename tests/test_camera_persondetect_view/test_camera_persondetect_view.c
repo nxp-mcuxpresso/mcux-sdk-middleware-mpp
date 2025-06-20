@@ -452,7 +452,7 @@ static void app_task(void *params)
 	img_params.width = SRC_IMAGE_WIDTH;
 	img_params.height = SRC_IMAGE_HEIGHT;
 	img_params.stripe = stripe_mode;
-	mpp_static_img_add(mp, &img_params, (void *)image_data);
+	mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
 #else
 	mpp_camera_params_t cam_params;
 	memset(&cam_params, 0 , sizeof(cam_params));
@@ -667,29 +667,34 @@ static void app_task(void *params)
 	TickType_t xLastWakeTime;
 	const TickType_t xFrequency = OUTPUT_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
 	xLastWakeTime = xTaskGetTickCount();
+	uint32_t last_inf_frame_num = user_data.inference_frame_num;
 	for (;;) {
 		xTaskDelayUntil( &xLastWakeTime, xFrequency );
 		if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0)) {
-			PRINTF("inference time %d ms \r\n", user_data.inference_time_ms);
-			if (user_data.detected_count <= 0) {
-				PRINTF("Persondetect : No person detected\n\r");
-			} else {
-				PRINTF("Number of detections : %d\n\r", user_data.detected_count);
-				for (int i = 0; i < NUM_BOXES_MAX; i++){
-					if (user_data.final_boxes[i].area > 0 && user_data.final_boxes[i].score > 0.0)
-					{
-						if (user_data.final_boxes[i].area > 0) {
-							PRINTF("box %d --> score %u %%\r\n Left=%d, Top=%d, Right=%d, Bottom=%d\r\n"
-									"-------------------------------------------\r\n",
-									i,
-									(uint8_t)((user_data.final_boxes[i].score)*100),
-									user_data.final_boxes[i].left,
-									user_data.final_boxes[i].top,
-									user_data.final_boxes[i].right,
-									user_data.final_boxes[i].bottom);
+			if (last_inf_frame_num != user_data.inference_frame_num)
+			{
+				PRINTF("inference time %d ms \r\n", user_data.inference_time_ms);
+				if (user_data.detected_count <= 0) {
+					PRINTF("Persondetect : No person detected\n\r");
+				} else {
+					PRINTF("Number of detections : %d\n\r", user_data.detected_count);
+					for (int i = 0; i < NUM_BOXES_MAX; i++){
+						if (user_data.final_boxes[i].area > 0 && user_data.final_boxes[i].score > 0.0)
+						{
+							if (user_data.final_boxes[i].area > 0) {
+								PRINTF("box %d --> score %u %%\r\n Left=%d, Top=%d, Right=%d, Bottom=%d\r\n"
+										"-------------------------------------------\r\n",
+										i,
+										(uint8_t)((user_data.final_boxes[i].score)*100),
+										user_data.final_boxes[i].left,
+										user_data.final_boxes[i].top,
+										user_data.final_boxes[i].right,
+										user_data.final_boxes[i].bottom);
+							}
 						}
 					}
 				}
+				last_inf_frame_num = user_data.inference_frame_num;
 			}
 			__atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
 		}

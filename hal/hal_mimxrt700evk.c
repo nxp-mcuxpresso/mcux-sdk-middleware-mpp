@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 NXP.
+ * Copyright 2024-2025 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -24,8 +24,22 @@
 #include "fsl_cache.h"
 
 #include "hal_graphics_dev.h"
+#include "hal_vdec_dev.h"
 #include "hal_utils.h"
 #include "mpp_config.h"
+
+/* Decoder setup */
+hal_img_decoder_setup_t decoder_setup[] =
+{
+    {"jpeg_CPU", HAL_JPEG_CPU_Register},
+};
+
+int setup_vdec_dev(hal_img_decoder_setup_t decoder_setup[], int vdec_nb,
+                      const char *name, vdec_dev_t *dev);
+int hal_img_decoder_setup(const char *name, vdec_dev_t *dev)
+{
+    return setup_vdec_dev(decoder_setup, ARRAY_SIZE(decoder_setup), name, dev);
+}
 
 /* Graphics setup */
 int HAL_GfxDev_VGLite_Register(gfx_dev_t *dev);
@@ -59,9 +73,12 @@ int hal_display_setup(const char *name, display_dev_t *dev)
 }
 
 int HAL_CameraDev_EzhV_Ov7670_setup(const char *name, camera_dev_t *dev);
+int HAL_CameraDev_USB_setup(const char *name, camera_dev_t *dev);
+
 hal_camera_setup_t camera_setup[] =
 {
     {"EzhV_Ov7670", HAL_CameraDev_EzhV_Ov7670_setup},
+    {"USB_cam", HAL_CameraDev_USB_setup},
 };
 
 int setup_camera_dev(hal_camera_setup_t camera_setup[], int camera_nb,

@@ -5,6 +5,10 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  *  convert skigirl.jpg -crop 536x536+104+0 -resize 128x128 skigirl_COCO_128_128.rgb
@@ -13,15 +17,15 @@
  *  xxd -i couple_COCO_128_128.rgb couple_COCO_128_128_rgb.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_SKIGIRL_COCO_128_128_BGR_DATA_H__
+#define __IMAGE_SKIGIRL_COCO_128_128_BGR_DATA_H__
 
-#define SRC_IMAGE_WIDTH           128
-#define SRC_IMAGE_HEIGHT          128
-#define SRC_IMAGE_CHANNELS_NUMBER 3
-#define SRC_IMAGE_FORMAT          MPP_PIXEL_RGB
+#define SRC_IMAGE_SKIGIRL_COCO_128_128_BGR_WIDTH           128
+#define SRC_IMAGE_SKIGIRL_COCO_128_128_BGR_HEIGHT          128
+#define SRC_IMAGE_SKIGIRL_COCO_128_128_BGR_CHANNELS_NUMBER 3
+#define SRC_IMAGE_SKIGIRL_COCO_128_128_BGR_FORMAT          MPP_PIXEL_RGB
 
-static const uint8_t image_data[] = {
+static const uint8_t skigirl_COCO_128_128_bgr_data[] = {
   0xd5, 0xcc, 0xc9, 0xd5, 0xcc, 0xc9, 0xd6, 0xcb, 0xc9, 0xd5, 0xcc, 0xc9,
   0xd4, 0xcb, 0xc8, 0xd5, 0xcb, 0xc9, 0xd4, 0xcb, 0xc8, 0xd4, 0xcb, 0xc7,
   0xd5, 0xcb, 0xc8, 0xd4, 0xcb, 0xc8, 0xd5, 0xcc, 0xc9, 0xd5, 0xcb, 0xc7,
@@ -4119,5 +4123,5 @@ static const uint8_t image_data[] = {
   0xd2, 0xcd, 0xce, 0xd1, 0xcd, 0xcc, 0xd7, 0xd3, 0xd3, 0xce, 0xc6, 0xc4,
   0xcc, 0xc3, 0xc3, 0xcc, 0xc3, 0xc1, 0xcc, 0xc3, 0xc0, 0xcb, 0xc2, 0xbf
 };
-unsigned int image_data_len = 49152;
-#endif /* __IMAGE_DATA_H__ */
+unsigned int skigirl_COCO_128_128_bgr_data_len = 49152;
+#endif /* __IMAGE_SKIGIRL_COCO_128_128_BGR_DATA_H__ */

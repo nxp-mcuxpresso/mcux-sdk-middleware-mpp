@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 NXP
+ * Copyright 2022-2023, 2025 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -10,15 +10,15 @@
   * $ xxd -i output_image.rgb output_image.h
   */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_90_160_RGB565LE_DATA_H__
+#define __IMAGE_90_160_RGB565LE_DATA_H__
 
-#define SRC_IMAGE_WIDTH           90
-#define SRC_IMAGE_HEIGHT          160
-#define SRC_IMAGE_CHANNELS_NUMBER 2
-#define SRC_IMAGE_FORMAT          MPP_PIXEL_RGB565
+#define SRC_IMAGE_90_160_RGB565LE_WIDTH           90
+#define SRC_IMAGE_90_160_RGB565LE_HEIGHT          160
+#define SRC_IMAGE_90_160_RGB565LE_CHANNELS_NUMBER 2
+#define SRC_IMAGE_90_160_RGB565LE_FORMAT          MPP_PIXEL_RGB565
 
-static const uint8_t image_data[] = {
+static const uint8_t image_90_160_rgb565le_data[] = {
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

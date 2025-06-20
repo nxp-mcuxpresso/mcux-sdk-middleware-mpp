@@ -5,6 +5,10 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  *  convert couple.jpg -scale 168x208! -depth 8 -colorspace Rec601YCbCr -sampling-factor 4:4:4 couple_COCO_320_320.YCbCrA
@@ -12,11 +16,11 @@
  *  xxd -i couple_COCO_320_320_vuyx.YCbCrA couple_COCO_320_320_vuyx.h
  */
 
-#define SRC_IMAGE_WIDTH       320
-#define SRC_IMAGE_HEIGHT      320
-#define SRC_IMAGE_CHANNELS_NUMBER 4
-#define SRC_IMAGE_FORMAT      MPP_PIXEL_YUV1P444
-static const uint8_t image_data[] = {
+#define SRC_IMAGE_COUPLE_COCO_320_320_VUYX_WIDTH       320
+#define SRC_IMAGE_COUPLE_COCO_320_320_VUYX_HEIGHT      320
+#define SRC_IMAGE_COUPLE_COCO_320_320_VUYX_CHANNELS_NUMBER 4
+#define SRC_IMAGE_COUPLE_COCO_320_320_VUYX_FORMAT      MPP_PIXEL_YUV1P444
+static const uint8_t couple_COCO_320_320_vuyx_data[] = {
   0x80, 0x80, 0x00, 0xff, 0x80, 0x80, 0x00, 0xff, 0x80, 0x80, 0x00, 0xff,
   0x80, 0x80, 0x00, 0xff, 0x80, 0x80, 0x00, 0xff, 0x80, 0x80, 0x00, 0xff,
   0x80, 0x80, 0x00, 0xff, 0x80, 0x80, 0x00, 0xff, 0x80, 0x80, 0x00, 0xff,

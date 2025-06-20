@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -63,6 +63,9 @@ char * elem_name(mpp_element_id_t id)
         break;
     case MPP_ELEMENT_TEST:
         str = "TEST";
+        break;
+    case MPP_ELEMENT_IMG_DECODE:
+        str = "IMG_DECODE";
         break;
     case MPP_ELEMENT_NUM:
     default:

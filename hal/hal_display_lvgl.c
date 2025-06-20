@@ -194,6 +194,7 @@ hal_display_status_t HAL_DisplayDev_LVGLIMG_Getbufdesc(const display_dev_t *dev,
         in_buf->nb_lines = s_display_cap->height;  /* number of lines in image widget */
         in_buf->cacheable = true;
         in_buf->stride = s_display_cap->width * LV_COLOR_DEPTH / 8;
+        in_buf->max_image_size = in_buf->nb_lines * in_buf->stride;
         in_buf->addr = NULL;
     } while (false);
 

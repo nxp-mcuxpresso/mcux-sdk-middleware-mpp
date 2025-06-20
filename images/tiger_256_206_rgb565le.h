@@ -5,14 +5,18 @@
  * visit https://creativecommons.org/publicdomain/zero/1.0/
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+/* 
+ * Modifications Copyright 2025 NXP
+ */
 
-#define SRC_IMAGE_WIDTH   256
-#define SRC_IMAGE_HEIGHT  206
-#define SRC_IMAGE_FORMAT  MPP_PIXEL_RGB565
+#ifndef __IMAGE_TIGER_256_206_RGB565LE_DATA_H__
+#define __IMAGE_TIGER_256_206_RGB565LE_DATA_H__
 
-static const uint8_t image_data[] = {
+#define SRC_IMAGE_TIGER_256_206_RGB565LE_WIDTH   256
+#define SRC_IMAGE_TIGER_256_206_RGB565LE_HEIGHT  206
+#define SRC_IMAGE_TIGER_256_206_RGB565LE_FORMAT  MPP_PIXEL_RGB565
+
+static const uint8_t tiger_256_206_rgb565le_data[] = {
   0xa3, 0x52, 0x83, 0x4a, 0x86, 0x63, 0xc3, 0x4a, 0x42, 0x32, 0x22, 0x2a,
   0x21, 0x2a, 0x01, 0x22, 0xa3, 0x42, 0x01, 0x2a, 0x80, 0x19, 0xe1, 0x21,
   0x01, 0x2a, 0xe1, 0x29, 0xa0, 0x19, 0xe1, 0x19, 0x02, 0x2a, 0x81, 0x11,

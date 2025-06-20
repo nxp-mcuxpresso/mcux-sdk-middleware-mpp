@@ -71,6 +71,11 @@ typedef struct _user_data_t {
 
 /* test image include file */
 #include "images/skigirl320_320_rgb.h"
+#define SRC_IMAGE_FORMAT SRC_IMAGE_SKIGIRL320_320_RGB_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_SKIGIRL320_320_RGB_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_SKIGIRL320_320_RGB_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_SKIGIRL320_320_RGB_WIDTH
+void *image_data = (void *)skigirl320_320_rgb_data;
 #define CROP_TOP      0
 #define CROP_LEFT     0
 #define CROP_SIZE     SRC_IMAGE_WIDTH
@@ -206,7 +211,7 @@ static void app_task(void *params)
     img_params.format = SRC_IMAGE_FORMAT;
     img_params.width = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
-    mpp_static_img_add(mp, &img_params, (void *)image_data);
+    mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
     if (ret) {
         PRINTF("Failed to add static image\r\n");
         goto err;
@@ -266,31 +271,36 @@ static void app_task(void *params)
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
     xLastWakeTime = xTaskGetTickCount();
+    uint32_t last_inf_frame_num = user_data.inference_frame_num;
     for (;;) {
         xTaskDelayUntil( &xLastWakeTime, xFrequency );
-        mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-        PRINTF("Element stats --------------------------\r\n");
-        PRINTF("nanodet : exec_time %u (ms)\r\n", nanodet_stats.elem.elem_exec_time);
-        mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
-        if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0))
+        if (last_inf_frame_num != user_data.inference_frame_num)
         {
-            /* ignore rectangle of the Detection zone (user_data.boxes[0]) */
-            for (int i = 0; i < NUM_BOXES_MAX; i++) {
-                if (user_data.boxes[i].area > 0)
-                {
-                    PRINTF("     -----------\r\n");
-                    PRINTF("     Box id: %d \r\n", i);
-                    PRINTF("Box label: %s \r\n", nanodet_labels[user_data.boxes[i].label]);
-                    PRINTF("Box score: %d%% \r\n", (int)(user_data.boxes[i].score * 100.0f));
-                    PRINTF("    Box coordinates: \r\n");
-                    PRINTF("Box left: %d \r\n", (int)(user_data.boxes[i].left));
-                    PRINTF("Box right: %d \r\n", (int)(user_data.boxes[i].right));
-                    PRINTF("Box top: %d \r\n", (int)(user_data.boxes[i].top));
-                    PRINTF("Box bottom: %d \r\n", (int)(user_data.boxes[i].bottom));
-                    PRINTF("     -----------\r\n");
+            mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+            PRINTF("Element stats --------------------------\r\n");
+            PRINTF("nanodet : exec_time %u (ms)\r\n", nanodet_stats.elem.elem_exec_time);
+            mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+            if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0))
+            {
+                /* ignore rectangle of the Detection zone (user_data.boxes[0]) */
+                for (int i = 0; i < NUM_BOXES_MAX; i++) {
+                    if (user_data.boxes[i].area > 0)
+                    {
+                        PRINTF("     -----------\r\n");
+                        PRINTF("     Box id: %d \r\n", i);
+                        PRINTF("Box label: %s \r\n", nanodet_labels[user_data.boxes[i].label]);
+                        PRINTF("Box score: %d%% \r\n", (int)(user_data.boxes[i].score * 100.0f));
+                        PRINTF("    Box coordinates: \r\n");
+                        PRINTF("Box left: %d \r\n", (int)(user_data.boxes[i].left));
+                        PRINTF("Box right: %d \r\n", (int)(user_data.boxes[i].right));
+                        PRINTF("Box top: %d \r\n", (int)(user_data.boxes[i].top));
+                        PRINTF("Box bottom: %d \r\n", (int)(user_data.boxes[i].bottom));
+                        PRINTF("     -----------\r\n");
+                    }
                 }
+                __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
             }
-            __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
+            last_inf_frame_num = user_data.inference_frame_num;
         }
     }
 

@@ -5,6 +5,10 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  *  convert dogs.jpg -resize 320x320 -background black -gravity center -extent 320x320 -depth 8 dogs_COCO_320_320.rgba
@@ -12,15 +16,15 @@
  *  xxd -i dogs_COCO_320_320.bgra > dogs_COCO_320_320_bgra.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_DOGS_COCO_320_320_BGRA_DATA_H__
+#define __IMAGE_DOGS_COCO_320_320_BGRA_DATA_H__
 
-#define SRC_IMAGE_WIDTH		320
-#define SRC_IMAGE_HEIGHT		320
-#define SRC_IMAGE_CHANNELS_NUMBER	4
-#define SRC_IMAGE_FORMAT		MPP_PIXEL_BGRA
+#define SRC_IMAGE_DOGS_COCO_320_320_BGRA_WIDTH		320
+#define SRC_IMAGE_DOGS_COCO_320_320_BGRA_HEIGHT		320
+#define SRC_IMAGE_DOGS_COCO_320_320_BGRA_CHANNELS_NUMBER	4
+#define SRC_IMAGE_DOGS_COCO_320_320_BGRA_FORMAT		MPP_PIXEL_BGRA
 
-static const uint8_t image_data[] = {
+static const uint8_t dogs_COCO_320_320_bgra_data[] = {
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
@@ -34157,4 +34161,4 @@ static const uint8_t image_data[] = {
   0x00, 0x00, 0x00, 0xff
 };
 unsigned int examples_dogs_COCO_320_320_argb_len = 409600;
-#endif /* __IMAGE_DATA_H__ */
+#endif /* __IMAGE_DOGS_COCO_320_320_BGRA_DATA_H__ */

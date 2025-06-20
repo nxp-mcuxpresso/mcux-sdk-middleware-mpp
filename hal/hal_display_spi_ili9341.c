@@ -438,6 +438,7 @@ hal_display_status_t HAL_DisplayDev_SpiIli9341_Getbufdesc(const display_dev_t *d
         in_buf->nb_lines = 0;  /* display adafruit is configurable */
         in_buf->cacheable = false;
         in_buf->stride = 0;
+        in_buf->max_image_size = 0;
         in_buf->addr = NULL;
     } while (false);
 

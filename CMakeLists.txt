@@ -9,6 +9,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES src/mpp_element_camera.c
         SOURCES src/mpp_element_display.c
         SOURCES src/mpp_element_img_convert.c
+        SOURCES src/mpp_element_img_decode.c
         SOURCES src/mpp_element_labeled_rectangle.c
         SOURCES src/mpp_element_static_img.c
         SOURCES src/mpp_element_inference.c
@@ -27,6 +28,11 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
             src
             .
     )
+    mcux_add_include(
+        BASE_PATH ${SdkRootDirPath}
+        INCLUDES middleware/libjpeg/template
+    )
+
     # macros
     mcux_add_macro(
         CC "-DSDK_OS_FREE_RTOS"
@@ -80,6 +86,8 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/hal_display_lvgl.c
         SOURCES hal/hal_graphics_vglite.c
         SOURCES hal/hal_camera_ezhv_ov7670.c
+        SOURCES hal/hal_jpegdec_cpu.c
+        SOURCES hal/hal_camera_usb.c
         SOURCES hal/include/*.h
         SOURCES hal/tflite/*.h
     )

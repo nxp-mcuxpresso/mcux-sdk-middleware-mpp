@@ -18,6 +18,7 @@ For the JPEG conversion the supported pixel formats include:
 - bgr888: 24-bit BGR [B, G, R]
 - rgb565: 16-bit compact RGB
 - bgra: 32-bit BGR with alpha channel
+- gray8: 8-bit grayscale "Y800"
 - yuyx, uyvy422, yuy422: YUV 4:2:2 packed formats
 
 The channel reordering applies with groups of 4 bytes [b0,b1,b2,b3].
@@ -55,7 +56,7 @@ def parse_args():
     parser.add_argument("--img_op", 
                         choices=[ 'conv_JPEG2FMT', 'swap_ch0_ch2', 'conv_RGB5652RGB', 'conv_RGB5652BGR', 'conv_RGB2BGR'], help="Image operation")
     parser.add_argument("--pix_fmt", 
-                        choices=['yuvx', 'vuyx', 'uyvy422', 'vyuy422', 'rgb888', 'bgr888', 'rgb565', 'bgra'], help="Input pixel format", required=True)
+                        choices=['yuvx', 'vuyx', 'uyvy422', 'vyuy422', 'rgb888', 'bgr888', 'rgb565', 'bgra', 'gray8'], help="Input pixel format", required=True)
 
     return parser.parse_args()
 
@@ -72,22 +73,21 @@ def conv_from_JPGToFORMAT(out_file, pix_fmt):
     :param out_file: output converted image file
     :param pix_fmt: pixel format of converted image
     """
-    # Reads the .jpg file in full resolution rgb888 before resize
+    # Reads the .jpg or .bmp file in full resolution rgb888 before resize
     # Sets values for width and height if resize values are not provided
     input_image = Image.open(args.input)
     args.width, args.height = input_image.size
-
 
     # Perform resize and maintains the aspect ratio with padding
     # Performes resize to desired (width, height) without aspect ratio 
     # Sets the width and height to the resized values to compute calc_checksum/display_with_cv
     if args.rsz_w and args.rsz_h:
-        
-    # Perform resize with padding to keep the aspect ratio 
+
+    # Perform resize without maintaining the aspect ratio
         if args.rsz_mode == 'exact':
             input_image = input_image.resize((args.rsz_w, args.rsz_h), Image.Resampling.BICUBIC)
         else:
-        # Perform default resize without maintaining the aspect ratio
+        # Perform resize with padding to maintain the aspect ratio
             input_image = ImageOps.pad(input_image, (args.rsz_w, args.rsz_h), method =Image.Resampling.BICUBIC, color=(0, 0, 0))
             
     args.width, args.height = args.rsz_w, args.rsz_h
@@ -95,22 +95,25 @@ def conv_from_JPGToFORMAT(out_file, pix_fmt):
     input_image = np.array(input_image)
     input_image = cv2.cvtColor(input_image, cv2.COLOR_RGB2BGR)
 
-# Convert to uncompressed pixel format
-# Sets the args.channels value according to the format to compute calc_checksum/display_with_cv
+    # Convert to uncompressed pixel format
+    # Sets the args.channels value according to the format to compute calc_checksum/display_with_cv
     if (pix_fmt == 'bgr888'):
         input_image.tofile(out_file, '')
     elif (pix_fmt == 'rgb888'):
         input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2RGB)
         input_image.tofile(out_file, '')
     elif (pix_fmt == 'rgb565'):
-        r = (input_image[:, :, 0] >> 3).astype(np.uint16)
+        b = (input_image[:, :, 0] >> 3).astype(np.uint16)
         g = (input_image[:, :, 1] >> 2).astype(np.uint16)
-        b = (input_image[:, :, 2] >> 3).astype(np.uint16)
+        r = (input_image[:, :, 2] >> 3).astype(np.uint16)
         input_image = (r << 11) | (g << 5) | b 
         input_image.tofile(out_file, '')
     elif (pix_fmt == 'bgra'):
         input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2BGRA)
         input_image.tofile(out_file, '')
+    elif(pix_fmt == 'gray8'):
+         input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
+         input_image.tofile(out_file, '')
     elif (pix_fmt == 'vuyx'):
         input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2YCrCb)
         y = input_image[:, :, 0:1]
@@ -232,14 +235,22 @@ def display_with_cv(file, pix_fmt, channels):
 
     # Color conversion should apply to display BGR format
     if (pix_fmt == 'rgb565'):
-        # this conversion is equivalent to RGB565 to BGR
-        cv2_cvtColor='cv2.COLOR_BGR5652RGB'
+        array = np.fromfile(file, dtype=np.uint16).reshape((args.height,args.width))
+        r = ((array >> 11) & 0x1F) << 3
+        g = ((array >> 5) & 0x3F) << 2
+        b = (array & 0x1F) << 3
+        array = np.stack((b, g, r), axis=-1).astype(np.uint8)
+        # Already stored in BGR above
+        cv2_cvtColor=''
     elif (pix_fmt == 'rgb888'):
          cv2_cvtColor='cv2.COLOR_RGB2BGR'
     elif (pix_fmt == 'bgr888'):
         cv2_cvtColor=''
     elif (pix_fmt == 'bgra'):
         cv2_cvtColor='cv2.COLOR_BGRA2BGR'
+    elif (pix_fmt == 'gray8'):
+        # grayscale display (1 channel, shape = [H,W])
+        cv2_cvtColor='cv2.COLOR_GRAY2BGR'
     elif (pix_fmt == 'uyvy422'):
         cv2_cvtColor='cv2.COLOR_YUV2BGR_Y422'
     elif (pix_fmt == 'vyuy422'):

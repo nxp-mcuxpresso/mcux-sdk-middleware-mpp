@@ -5,6 +5,10 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  *  convert couple.jpg -resize 160x128 -background black -gravity center -extent 160x128 -depth 8 couple_160_128.rgba
@@ -12,15 +16,15 @@
  *  xxd -i couple_160_128.bgra > couple_COCO_160_128_bgra.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_COUPLE_COCO_160_128_BGRA_DATA_H__
+#define __IMAGE_COUPLE_COCO_160_128_BGRA_DATA_H__
 
-#define SRC_IMAGE_WIDTH       160
-#define SRC_IMAGE_HEIGHT      128
-#define SRC_IMAGE_CHANNELS_NUMBER 4
-#define SRC_IMAGE_FORMAT      MPP_PIXEL_BGRA
+#define SRC_IMAGE_COUPLE_COCO_160_128_BGRA_WIDTH       160
+#define SRC_IMAGE_COUPLE_COCO_160_128_BGRA_HEIGHT      128
+#define SRC_IMAGE_COUPLE_COCO_160_128_BGRA_CHANNELS_NUMBER 4
+#define SRC_IMAGE_COUPLE_COCO_160_128_BGRA_FORMAT      MPP_PIXEL_BGRA
 
-static const unsigned char image_data[] = {
+static const unsigned char couple_COCO_160_128_bgra_data[] = {
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
   0x00, 0x00, 0x00, 0xff, 0xc4, 0xd2, 0xe8, 0xff, 0xc3, 0xd3, 0xe9, 0xff,
   0xc4, 0xd4, 0xea, 0xff, 0xc3, 0xd5, 0xe9, 0xff, 0xc2, 0xd6, 0xe9, 0xff,

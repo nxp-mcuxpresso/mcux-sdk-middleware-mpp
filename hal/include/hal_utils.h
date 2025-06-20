@@ -27,6 +27,15 @@
 #include "hal_display_dev.h"
 #include "hal_static_image.h"
 #include "hal_graphics_dev.h"
+#include "hal_vdec_dev.h"
+
+/** video decoder setup */
+typedef int (*img_decoder_setup_func_t) (vdec_dev_t *);
+typedef struct
+{
+    const char* vdec_dev_name;
+    img_decoder_setup_func_t decoder_setup_func;
+} hal_img_decoder_setup_t;
 
 /** graphics setup */
 typedef int (*graphic_setup_func_t) (gfx_dev_t *);
@@ -87,7 +96,6 @@ static inline int get_bitpp(mpp_pixel_format_t type)
     case MPP_PIXEL_RGBA:
     case MPP_PIXEL_BGRX:
     case MPP_PIXEL_RGBX:
-    case MPP_PIXEL_YUYV:
     case MPP_PIXEL_GRAY888X:
     case MPP_PIXEL_YUV1P444:
         ret = 32;
@@ -102,6 +110,7 @@ static inline int get_bitpp(mpp_pixel_format_t type)
     case MPP_PIXEL_GRAY16:
     case MPP_PIXEL_UYVY1P422:
     case MPP_PIXEL_VYUY1P422:
+    case MPP_PIXEL_YUYV:
         ret = 16;
         break;
     case MPP_PIXEL_GRAY:

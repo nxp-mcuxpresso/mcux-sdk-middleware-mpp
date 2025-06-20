@@ -2,7 +2,27 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-  Current version is 3.4.0
+  Current version is 3.5.0
+  - 3.5.0
+    - New features:
+      - Multi-source static image element
+      - JPEG software decoder
+      - USB camera support
+    - Bug fixes:
+      - camera view on RT700 fixed
+      - moved tensor arena in non-cacheable memory region
+      - print statistics only if the inference has run at least once
+      - updated ultraface_slim_ultraslim models
+      - YUYV to RGB565 conversion with VGlite fixed
+      - NPU models converted wiht neutron-converter version 2.1.3
+    - Known issues:
+      - static_image_mobilenet_view on mimxrt700evk: accuracy is lower than expected
+      - static_image_ultraface_view on mimxrt700evk: only one face is detected
+      - camera_ultraface_view on frdmmcxn947: wrong detections (no box drawn when face is detected)
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170 (CM7 only)
+      - mimxrt700evk
   - 3.4.0
     - Bugfixes
       - fix Coverity "Medium and High Impact" issues.

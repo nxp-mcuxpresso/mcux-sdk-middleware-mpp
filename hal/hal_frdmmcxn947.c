@@ -27,8 +27,20 @@
 
 #include "fsl_common.h"
 
-/* Graphics setup */
+/* Decoder setup */
+hal_img_decoder_setup_t decoder_setup[] =
+{
+    {"jpeg_CPU", HAL_JPEG_CPU_Register},
+};
 
+int setup_vdec_dev(hal_img_decoder_setup_t decoder_setup[], int vdec_nb,
+                      const char *name, vdec_dev_t *dev);
+int hal_img_decoder_setup(const char *name, vdec_dev_t *dev)
+{
+    return setup_vdec_dev(decoder_setup, ARRAY_SIZE(decoder_setup), name, dev);
+}
+
+/* Graphics setup */
 hal_graphics_setup_t gfx_setup[] =
 {
     {"gfx_CPU", HAL_GfxDev_CPU_Register},

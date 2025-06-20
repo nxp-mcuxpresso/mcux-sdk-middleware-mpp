@@ -5,6 +5,10 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  *  convert couple.jpg -resize 220x220 -background black -gravity center -extent 220x220 -depth 8 couple_220_220.rgba
@@ -12,15 +16,15 @@
  *  xxd -i couple_220_220.bgra > couple_COCO_220_220_bgra.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_COUPLE_COCO_220_220_BGRA_DATA_H__
+#define __IMAGE_COUPLE_COCO_220_220_BGRA_DATA_H__
 
-#define SRC_IMAGE_WIDTH       220
-#define SRC_IMAGE_HEIGHT      220
-#define SRC_IMAGE_CHANNELS_NUMBER 4
-#define SRC_IMAGE_FORMAT      MPP_PIXEL_BGRA
+#define SRC_IMAGE_COUPLE_COCO_220_220_BGRA_WIDTH       220
+#define SRC_IMAGE_COUPLE_COCO_220_220_BGRA_HEIGHT      220
+#define SRC_IMAGE_COUPLE_COCO_220_220_BGRA_CHANNELS_NUMBER 4
+#define SRC_IMAGE_COUPLE_COCO_220_220_BGRA_FORMAT      MPP_PIXEL_BGRA
 
-unsigned char image_data[]= {
+unsigned char couple_COCO_220_220_bgra_data[]= {
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,
   0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff,

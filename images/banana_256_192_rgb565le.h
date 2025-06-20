@@ -6,15 +6,19 @@
  * visit https://creativecommons.org/licenses/by/2.0/.
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
 
-#define SRC_IMAGE_WIDTH		256
-#define SRC_IMAGE_HEIGHT	192
-#define SRC_IMAGE_FORMAT	MPP_PIXEL_RGB565
+#ifndef __IMAGE_BANANA_256_192_RGB565LE_DATA_H__
+#define __IMAGE_BANANA_256_192_RGB565LE_DATA_H__
 
-static const uint8_t image_data[] = {
+#define SRC_IMAGE_BANANA_256_192_RGB565LE_WIDTH		256
+#define SRC_IMAGE_BANANA_256_192_RGB565LE_HEIGHT	192
+#define SRC_IMAGE_BANANA_256_192_RGB565LE_FORMAT	MPP_PIXEL_RGB565
+
+static const uint8_t banana_256_192_rgb565le_data[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

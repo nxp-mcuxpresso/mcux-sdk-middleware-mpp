@@ -279,6 +279,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_getBufDesc(const vision_algo_
     in_buf->cacheable = true;
     in_buf->stride = tflite_model_param->input_tensor.dims.data[2] * tflite_model_param->input_tensor.dims.data[3]; /* width * channels */
     in_buf->addr = (unsigned char *)tflite_model_param->input_tensor.data;
+    in_buf->max_image_size = in_buf->nb_lines * in_buf->stride;
 
     HAL_LOGD("--HAL_VisionAlgoDev_TFLite_getInput\n");
     return ret;

@@ -205,6 +205,7 @@ hal_camera_status_t HAL_CameraDev_EzhOv7670_Getbufdesc(const camera_dev_t *dev, 
     out_buf->cacheable = true;
     out_buf->stride = dev->config.pitch;
     out_buf->nb_lines = dev->config.height;
+    out_buf->max_image_size = out_buf->nb_lines * out_buf->stride;
     out_buf->addr = g_camera_buffer;
 
     HAL_LOGD("--HAL_CameraDev_EzhOv7670_Getbufdesc\n");

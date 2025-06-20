@@ -5,6 +5,10 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  *  convert skigirl.jpg -resize 427x284 -background black -gravity center -extent 427x284 -depth 8 skigirl_COCO_427_284.rgba
@@ -12,15 +16,15 @@
  *  xxd -i skigirl_COCO_427_284.bgra > skigirl_COCO_427_284_bgra.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_SKIGIRL_COCO_427_284_BGRA_DATA_H__
+#define __IMAGE_SKIGIRL_COCO_427_284_BGRA_DATA_H__
 
-#define SRC_IMAGE_WIDTH       427
-#define SRC_IMAGE_HEIGHT      284
-#define SRC_IMAGE_CHANNELS_NUMBER 4
-#define SRC_IMAGE_FORMAT      MPP_PIXEL_BGRA
+#define SRC_IMAGE_SKIGIRL_COCO_427_284_BGRA_WIDTH       427
+#define SRC_IMAGE_SKIGIRL_COCO_427_284_BGRA_HEIGHT      284
+#define SRC_IMAGE_SKIGIRL_COCO_427_284_BGRA_CHANNELS_NUMBER 4
+#define SRC_IMAGE_SKIGIRL_COCO_427_284_BGRA_FORMAT      MPP_PIXEL_BGRA
 
-static const uint8_t image_data[] = {
+static const uint8_t skigirl_COCO_427_284_bgra_data[] = {
   0xd4, 0xcd, 0xca, 0xff, 0xd5, 0xce, 0xcb, 0xff, 0xd4, 0xcd, 0xca, 0xff,
   0xd5, 0xcd, 0xca, 0xff, 0xd6, 0xce, 0xcb, 0xff, 0xd8, 0xce, 0xce, 0xff,
   0xd7, 0xcc, 0xcd, 0xff, 0xd6, 0xcd, 0xca, 0xff, 0xd5, 0xce, 0xcb, 0xff,
@@ -40447,4 +40451,4 @@ static const uint8_t image_data[] = {
 };
 unsigned int skigirl_COCO_427_284_bgra_len = 485072;
 
-#endif /* __IMAGE_DATA_H__ */
+#endif /* __IMAGE_SKIGIRL_COCO_427_284_BGRA_DATA_H__ */

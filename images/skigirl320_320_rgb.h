@@ -5,21 +5,25 @@
  * SPDX-License-Identifier: CC-BY-4.0
  */
 
+/* 
+ * Modifications Copyright 2025 NXP
+ */
+
 /*
  * converted with:
  *  convert skigirl.jpg -resize 320x320 -background black -gravity center -extent 320x320 -depth 8 skigirl320_320.rgb
  *  xxd -i skigirl320_320.rgb skigirl320_320_rgb.h
  */
 
-#ifndef __IMAGE_DATA_H__
-#define __IMAGE_DATA_H__
+#ifndef __IMAGE_SKIGIRL320_320_RGB_DATA_H__
+#define __IMAGE_SKIGIRL320_320_RGB_DATA_H__
 
-#define SRC_IMAGE_WIDTH       320
-#define SRC_IMAGE_HEIGHT      320
-#define SRC_IMAGE_CHANNELS_NUMBER 3
-#define SRC_IMAGE_FORMAT      MPP_PIXEL_RGB
+#define SRC_IMAGE_SKIGIRL320_320_RGB_WIDTH       320
+#define SRC_IMAGE_SKIGIRL320_320_RGB_HEIGHT      320
+#define SRC_IMAGE_SKIGIRL320_320_RGB_CHANNELS_NUMBER 3
+#define SRC_IMAGE_SKIGIRL320_320_RGB_FORMAT      MPP_PIXEL_RGB
 
-static const uint8_t image_data[] = {
+static const uint8_t skigirl320_320_rgb_data[] = {
   0xcb, 0xce, 0xd5, 0xca, 0xcd, 0xd4, 0xca, 0xcd, 0xd4, 0xcb, 0xce, 0xd6,
   0xcd, 0xcd, 0xd7, 0xca, 0xcc, 0xd5, 0xcb, 0xcd, 0xd5, 0xce, 0xce, 0xd6,
   0xcf, 0xcf, 0xd7, 0xcd, 0xd0, 0xd7, 0xcc, 0xd0, 0xd6, 0xcc, 0xce, 0xd5,

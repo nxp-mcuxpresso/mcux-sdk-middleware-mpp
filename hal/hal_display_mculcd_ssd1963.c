@@ -785,6 +785,7 @@ hal_display_status_t HAL_DisplayDev_McuLcdSsd1963_Getbufdesc(const display_dev_t
         in_buf->cacheable = false;
         in_buf->stride = 0;
         in_buf->addr = NULL;
+        in_buf->max_image_size = 0;
     } while (false);
 
     HAL_LOGD("--HAL_DisplayDev_McuLcdSsd1963_GetInput\n");

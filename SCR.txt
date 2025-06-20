@@ -2,7 +2,7 @@ NXP Software Content Register
 
 Package:                   eIQ Media Processing Pipelines library
 
-Version:                   3.4.0
+Version:                   3.5.0
 Outgoing License:          Apache-2.0
 License File:              LICENSE
 Type of content:           Source code, TFLite Machine Learning models
@@ -15,4 +15,5 @@ Origin:                	   NXP (Apache-2.0)
                            FreeRTOS (MIT) - https://github.com/FreeRTOS
                            TensorFlow (Apache-2.0) - https://github.com/tensorflow/tensorflow
                            COCO Common Objects in Context (CC-BY-4.0)- https://cocodataset.org/
+                           The Independent JPEG Group's software (IJG) - http://www.ijg.org/files/jpegsr9b.zip
 

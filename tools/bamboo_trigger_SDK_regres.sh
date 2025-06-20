@@ -19,6 +19,8 @@ RT1170_EXAMPLES="camera_mobilenet_view,camera_persondetect_view,camera_ultraface
 MCXN947_EXAMPLES="camera_mobilenet_view,camera_persondetect_view,camera_ultraface_view,camera_view"
 EXAMPLES=""
 JSON_CONFIG_FILE="dapeng_config.json"
+JUNIT_TEST_REPORT_FILE="dapeng_test_report.xml"
+DAPENG_TEST_REPORT_MD_FILE="dapeng_test_report.md"
 MAIL_LIST=""
 SDK_VERSION="main"
 MCU_SDK_TEST_VERSION="main"
@@ -110,6 +112,16 @@ if [ ! $(which dapeng) ]; then
     fi
 fi
 
+if [ ! $(which bc) ]; then
+    echo "bc is not installed. Installing it now"
+    sudo apt-get update
+    sudo apt-get install -y bc
+    if [ ! $(which bc) ]; then
+        echo "Failed to install bc"
+        exit 1
+    fi
+fi
+
 # Function used to search for an item in a list with elements spearated by comma
 search_item_in_list()
 {
@@ -140,7 +152,7 @@ create_header()
         },
         \"revision\": \"${SDK_VERSION}\",
         \"routing\": true,
-        \"run_token\": \"TEST_RUN\",
+        \"run_token\": \"TEST_RUN_EX\",
         \"sdk_location\": \"mcuxsdk-manifests\",
         \"type\": \"run\",
         \"extra\": {
@@ -203,6 +215,117 @@ close_json_file()
     echo "" >> ${JSON_CONFIG_FILE}
     echo "    ]" >> ${JSON_CONFIG_FILE}
     echo "}" >> ${JSON_CONFIG_FILE}
+}
+
+# Function used to create JUnit test report file
+create_junit_header()
+{
+    echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > ${JUNIT_TEST_REPORT_FILE}
+    echo "<testsuites>" >> ${JUNIT_TEST_REPORT_FILE}
+}
+
+# Function used to open a new test suite in the test report file
+add_new_junit_suite()
+{
+    suite_name=$1
+    total_tests=$2
+    failed_tests=$3
+    skipped_tests=$4
+    timestamp=$5
+    total_duration=$6
+
+    echo -n "  <testsuite name=\"${suite_name}\" " >> ${JUNIT_TEST_REPORT_FILE}
+    echo -n "tests=\"${total_tests}\" " >> ${JUNIT_TEST_REPORT_FILE}
+    echo -n "failures=\"${failed_tests}\" " >> ${JUNIT_TEST_REPORT_FILE} 
+    echo -n "skipped=\"${skipped_tests}\" " >> ${JUNIT_TEST_REPORT_FILE} 
+    echo "timestamp=\"${timestamp}\" time=\"${total_duration}\">" >> ${JUNIT_TEST_REPORT_FILE}
+}
+
+# Function used to add a new passed test case to the test report file
+add_new_junit_pass_test()
+{
+    classname=$1
+    test_name=$2
+    test_duration=$3
+
+    echo -n "    <testcase classname=\"${classname}\" " >> ${JUNIT_TEST_REPORT_FILE}
+    echo -n "name=\"${test_name}\" " >> ${JUNIT_TEST_REPORT_FILE}
+    echo "time=\"${test_duration}\"/>" >> ${JUNIT_TEST_REPORT_FILE}
+}
+
+# Function used to add a new failed test case to the test report file
+add_new_junit_fail_test()
+{
+    classname=$1
+    test_name=$2
+    failure_message=$3
+    failure_type=$4
+    test_duration=$5
+
+    echo -n "    <testcase classname=\"${classname}\" " >> ${JUNIT_TEST_REPORT_FILE}
+    echo -n "name=\"${test_name}\" " >> ${JUNIT_TEST_REPORT_FILE}
+    echo "time=\"${test_duration}\">" >> ${JUNIT_TEST_REPORT_FILE}
+    echo -n "      <failure message=\"${failure_message}\" " >> ${JUNIT_TEST_REPORT_FILE}
+    echo "type=\"${failure_type}\">" >> ${JUNIT_TEST_REPORT_FILE}
+    echo "        <![CDATA[${failure_message}]]>" >> ${JUNIT_TEST_REPORT_FILE}
+    echo "      </failure>" >> ${JUNIT_TEST_REPORT_FILE}
+    echo "    </testcase>" >> ${JUNIT_TEST_REPORT_FILE}
+}
+
+# Function used to add a new skipped test case to the test report file
+add_new_junit_skipped_test()
+{
+    classname=$1
+    test_name=$2
+    test_duration=$3
+
+    echo -n "    <testcase classname=\"${classname}\" " >> ${JUNIT_TEST_REPORT_FILE}
+    echo -n "name=\"${test_name}\" " >> ${JUNIT_TEST_REPORT_FILE}
+    echo "time=\"${test_duration}\">" >> ${JUNIT_TEST_REPORT_FILE}
+    echo "      <skipped/>" >> ${JUNIT_TEST_REPORT_FILE}
+    echo "    </testcase>" >> ${JUNIT_TEST_REPORT_FILE}
+}
+
+# Function used to close a test suite in the test report file
+close_junit_suite()
+{
+    echo "  </testsuite>"  >> ${JUNIT_TEST_REPORT_FILE}
+}
+
+# Function used to close a JUnit test report file
+close_junit_file()
+{
+    echo "</testsuites>"  >> ${JUNIT_TEST_REPORT_FILE}
+}
+
+# Function used to create MD test report file
+create_md_header()
+{
+    echo "# 🧪 DAPENG Test Report 📊" > ${DAPENG_TEST_REPORT_MD_FILE}
+    echo "" >> ${DAPENG_TEST_REPORT_MD_FILE}
+    echo "|  Board  | ✅ Passed | ❌ Failed | ⏭️ Skipped | Total |" >> ${DAPENG_TEST_REPORT_MD_FILE}
+    echo "|---------------|--------|--------|---------|-------|" >> ${DAPENG_TEST_REPORT_MD_FILE}
+}
+
+# Add new line in the MD test report table
+add_new_md_entry()
+{
+    board_name=$1
+    n_passed=$2
+    n_failed=$3
+    n_skipped=$4
+    n_total=$5
+
+    echo "| ${board_name} | ${n_passed} | ${n_failed} | ${n_skipped} | ${n_total} |" >> ${DAPENG_TEST_REPORT_MD_FILE}
+}
+
+# Function used to close a MD test report file
+close_md_file()
+{
+    job_url=$1
+
+    echo "" >> ${DAPENG_TEST_REPORT_MD_FILE}
+    echo "### [🔗 Full report on DAPENG](${job_url})" >> ${DAPENG_TEST_REPORT_MD_FILE}
 }
 
 # Create the header of the Dapeng json config file
@@ -298,7 +421,10 @@ set -e
 echo ""
 
 # Download job results
-dapeng_task_id=$(cat ${DAPENG_TMP_LOG_FILE} | grep "Dapeng Job URL" | cut -d "/" -f 6)
+dapeng_job_url_line=$(cat ${DAPENG_TMP_LOG_FILE} | grep "Dapeng Job URL")
+dapeng_job_url_clean=$(echo "${dapeng_job_url_line}" | sed -r 's/\x1B\[[0-9;]*[mK]//g')
+dapeng_job_url=$(echo "${dapeng_job_url_clean}" | grep -oE 'https?://[^ ]+')
+dapeng_task_id=$(echo "${dapeng_job_url_line}" | cut -d "/" -f 6)
 if [[ "${dapeng_task_id}" == "" ]]; then
     echo "Could not determine Dapeng task id"
     echo "Check log file ${DAPENG_TMP_LOG_FILE}"
@@ -323,41 +449,127 @@ if [[ "${n_na_tests}" != "0" ]]; then
     echo "Number of tests with status unavailable: ${n_na_tests}"
 fi
 
+# Start the JUnit test report file
+create_junit_header
+
+# Create the MD report file
+create_md_header
+
 # Check the exit code for dapeng new command
 if [[ "${dapeng_exit_code}" != 0 || "${n_na_tests}" != "0" ]]; then
     # If exit code is not 0, it means test job failed
     n_total_failed_tests=$(($n_failed_tests+$n_na_tests))
     echo "${n_total_failed_tests} test(s) FAILED"
     echo "Failed tests:"
-    task_output_path="${OUTPUT_DIR}/download_${dapeng_task_id}"
-    # Check which tests failed
-    for board_log in ${task_output_path}/*
+fi
+
+# Check which tests failed
+task_output_path="${OUTPUT_DIR}/download_${dapeng_task_id}"
+for board_log in ${task_output_path}/*
+do
+    board_output_path="${board_log}/eiq_examples"
+    board_name=$(echo "${board_log}" | awk -F '/' '{print $NF}')
+    board_total_tests=0
+    board_passed_tests=0
+    board_failed_tests=0
+    board_skipped_tests=0
+    suite_timestamp=""
+    total_suite_duration="0.0"
+
+    # Loop through all test for current board to check the status of the tests
+    for test_log in ${board_output_path}/*
     do
-        board_output_path="${board_log}/eiq_examples"
-        for test_log in ${board_output_path}/*
-        do
-            log_output_path="${test_log}/${COMPILER}/${BUILD_CFG}"
-            # If the file runresult_Fail.txt exists, it means test failed
-            if [ -f "${log_output_path}/runresult_Fail.txt" ]; then
-                echo "    ${test_log} - board ${board_log}" 
-                echo "          --> console log: ${log_output_path}/app_test.log"
+        test_name=$(echo "${test_log}" | awk -F '/' '{print $NF}')
+        log_output_path="${test_log}/${COMPILER}/${BUILD_CFG}"
+        
+        # Get the first timestamp from the log file; this will be the suitetimestamp
+        if [ -f "${log_output_path}/app_test.log" ]; then
+            crt_timestamp=$(grep -m 1 -oP '^\[\K[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}(?= [^]]+\])' "${log_output_path}/app_test.log")
+            crt_timestamp=$(echo "$crt_timestamp" | awk -F'[- :]' '{printf "%04d-%02d-%02dT%02d:%02d:%02d", $3, $2, $1, $4, $5, $6}')
+            crt_duration=$(grep -m 1 -oP 'TASK DURATION: \K[0-9]+\.[0-9]+' ${log_output_path}/app_test.log)
+        else
+            crt_timestamp=$(date +"%Y-%m-%dT%H:%M:%S")
+            crt_duration="0.0"
+        fi
+        if [[ "${suite_timestamp}" == "" ]]; then
+            suite_timestamp=${crt_timestamp}
+        else
+            suite_timestamp_ep=$(date -d "$suite_timestamp" +%s)
+            crt_timestamp_ep=$(date -d "$crt_timestamp" +%s)
+            if (( crt_timestamp_ep < suite_timestamp_ep )); then
+                suite_timestamp=${crt_timestamp}
             fi
-            # If the file runresult_NA.txt exists, it means no board available to run the test
-            if [ -f "${log_output_path}/runresult_NA.txt" ]; then
-                echo "    ${test_log} - board ${board_log}" 
-                echo "          --> No board available for this test"
-            fi
-            # If the file runresult_Not Support.txt exists, it means no test script was found for this test
-            if [ -f "${log_output_path}/runresult_Not Support.txt" ]; then
-                echo "    ${test_log} - board ${board_log}" 
-                echo "          --> No test script found for this example"
-                echo "          --> console log: ${log_output_path}/app_test.log"
-            fi
-        done
+        fi
+
+        # Compute total duration of the suite
+        total_suite_duration=$(echo "${total_suite_duration} + ${crt_duration}" | bc)
+
+        # If the file runresult_Fail.txt exists, it means test failed
+        if [ -f "${log_output_path}/runresult_Fail.txt" ]; then
+            echo "    ${test_name} - board ${board_name}" 
+            echo "          --> console log: ${log_output_path}/app_test.log"
+            board_failed_tests=$(($board_failed_tests+1))
+        # If the file runresult_NA.txt exists, it means no board available to run the test
+        elif [ -f "${log_output_path}/runresult_NA.txt" ]; then
+            echo "    ${test_name} - board ${board_name}" 
+            echo "          --> No board available for this test"
+            board_skipped_tests=$(($board_skipped_tests+1))
+        # If the file runresult_Not Support.txt exists, it means no test script was found for this test
+        elif [ -f "${log_output_path}/runresult_Not Support.txt" ]; then
+            echo "    ${test_name} - board ${board_name}" 
+            echo "          --> No test script found for this example"
+            echo "          --> console log: ${log_output_path}/app_test.log"
+            board_skipped_tests=$(($board_skipped_tests+1))
+        else
+            board_passed_tests=$(($board_passed_tests+1))
+        fi
+        board_total_tests=$(($board_total_tests+1))
     done
+
+    # Add new entry in the MD report file
+    add_new_md_entry ${board_name} ${board_passed_tests} ${board_failed_tests} ${board_skipped_tests} ${board_total_tests}
+
+    # Fill the JUnit test report
+    # Add a new suite per board
+    add_new_junit_suite ${board_name} ${board_total_tests} ${board_failed_tests} ${board_skipped_tests} ${suite_timestamp} ${total_suite_duration}
+    for test_log in ${board_output_path}/*
+    do
+        test_name=$(echo "${test_log}" | awk -F '/' '{print $NF}')
+        log_output_path="${test_log}/${COMPILER}/${BUILD_CFG}"
+        if [ -f "${log_output_path}/app_test.log" ]; then
+            crt_duration=$(grep -m 1 -oP 'TASK DURATION: \K[0-9]+\.[0-9]+' ${log_output_path}/app_test.log)
+        else
+            crt_duration="0.0"
+        fi
+        # If the file runresult_Fail.txt exists, it means test failed
+        if [ -f "${log_output_path}/runresult_Fail.txt" ]; then
+            add_new_junit_fail_test ${board_name} ${test_name} "Test failed. Check the log file ${log_output_path}/app_test.log" "generic test failure" ${crt_duration}
+        # If the file runresult_NA.txt exists, it means no board available to run the test
+        elif [ -f "${log_output_path}/runresult_NA.txt" ]; then
+            add_new_junit_skipped_test ${board_name} ${test_name} ${crt_duration}
+        # If the file runresult_Not Support.txt exists, it means no test script was found for this test
+        elif [ -f "${log_output_path}/runresult_Not Support.txt" ]; then
+            add_new_junit_skipped_test ${board_name} ${test_name} ${crt_duration}
+        else
+            add_new_junit_pass_test ${board_name} ${test_name} ${crt_duration}
+        fi
+    done
+    # Close the test suite
+    close_junit_suite
+done
+
+# Close the JUnit test report file
+close_junit_file
+
+# Close MD test report file
+close_md_file ${dapeng_job_url}
+
+if [[ "${dapeng_exit_code}" != 0 || "${n_na_tests}" != "0" ]]; then
     # Move json config file and output log file to test results directory
     mv ${DAPENG_TMP_LOG_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/
     mv ${JSON_CONFIG_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/
+    mv ${JUNIT_TEST_REPORT_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/
+    cp ${DAPENG_TEST_REPORT_MD_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/
     tar zcf ${OUTPUT_DIR}/test_results_${dapeng_task_id}.tar.gz ${OUTPUT_DIR}/download_${dapeng_task_id}/*
     echo "Check ${OUTPUT_DIR}/download_${dapeng_task_id} directory for full logs"
     # Exit the script with error
@@ -370,10 +582,14 @@ else
         rm -rf "${OUTPUT_DIR}/download_${dapeng_task_id}/"
         rm ${DAPENG_TMP_LOG_FILE}
         rm ${JSON_CONFIG_FILE}
+        rm ${JUNIT_TEST_REPORT_FILE}
+        rm ${DAPENG_TEST_REPORT_MD_FILE}
     else
         # Move json config file and output log file to test results directory
         mv ${DAPENG_TMP_LOG_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/
         mv ${JSON_CONFIG_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/
+        mv ${JUNIT_TEST_REPORT_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/
+        cp ${DAPENG_TEST_REPORT_MD_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/
         tar zcf ${OUTPUT_DIR}/test_results_${dapeng_task_id}.tar.gz ${OUTPUT_DIR}/download_${dapeng_task_id}/*
         echo "Check ${OUTPUT_DIR}/download_${dapeng_task_id} directory for full logs"
     fi

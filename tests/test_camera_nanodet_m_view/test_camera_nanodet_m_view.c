@@ -448,7 +448,7 @@ static void app_task(void *params)
     img_params.format = SRC_IMAGE_FORMAT;
     img_params.width = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
-    mpp_static_img_add(mp, &img_params, (void *)image_data);
+    mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
 #else
     mpp_camera_params_t cam_params;
     memset(&cam_params, 0 , sizeof(cam_params));
@@ -646,25 +646,31 @@ static void app_task(void *params)
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
     xLastWakeTime = xTaskGetTickCount();
+    uint32_t last_inf_frame_num = user_data.inference_frame_num;
     for (;;) {
         xTaskDelayUntil( &xLastWakeTime, xFrequency );
-        mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-        PRINTF("Element stats --------------------------\r\n");
-        PRINTF("nanodet : exec_time %u (ms)\r\n", nanodet_stats.elem.elem_exec_time);
-        mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
 
         if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
         {
-            if (user_data.detected_count <= 0)
-                PRINTF("nanodet : no object detected\r\n");
-            /* ignore rectangle of the Detection zone (user_data.boxes[0]) */
-            for (int i = 0; i < NUM_BOXES_MAX; i++)
+            if (last_inf_frame_num != user_data.inference_frame_num)
             {
-                if (user_data.boxes[i].area > 0)
+                mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+                PRINTF("Element stats --------------------------\r\n");
+                PRINTF("nanodet : exec_time %u (ms)\r\n", nanodet_stats.elem.elem_exec_time);
+                mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+                
+                if (user_data.detected_count <= 0)
+                    PRINTF("nanodet : no object detected\r\n");
+                /* ignore rectangle of the Detection zone (user_data.boxes[0]) */
+                for (int i = 0; i < NUM_BOXES_MAX; i++)
                 {
-                    PRINTF("nanodet : box %d label %s score %d(%%)\r\n", i,
-                            nanodet_labels[user_data.boxes[i].label], (int)(user_data.boxes[i].score * 100.0f));
+                    if (user_data.boxes[i].area > 0)
+                    {
+                        PRINTF("nanodet : box %d label %s score %d(%%)\r\n", i,
+                                nanodet_labels[user_data.boxes[i].label], (int)(user_data.boxes[i].score * 100.0f));
+                    }
                 }
+                last_inf_frame_num = user_data.inference_frame_num;
             }
             __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
         }
