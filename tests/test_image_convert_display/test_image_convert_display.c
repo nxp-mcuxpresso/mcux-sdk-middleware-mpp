@@ -279,15 +279,16 @@ int main(int argc, char *argv[])
     BOARD_Init();
 #endif
 
-    PRINTF("****** %s TEST test_image_convert_display ******\n", TEST_MODE);
-    PRINTF("****** PARAMS: IMG_CONVERT_CPU = [%d] ******\n", IMG_CONVERT_CPU);
-    PRINTF("****** PARAMS: IMG_CONVERT_GPU = [%d] ******\n", IMG_CONVERT_GPU);
-    PRINTF("****** PARAMS: IMAGE_NAME = [%s] ******\n", IMAGE_NAME);
-    PRINTF("****** PARAMS: IMG_ROTATE = [%d] ******\n", IMG_ROTATE);
-    PRINTF("****** PARAMS: IMG_FLIP = [%d] ******\n", IMG_FLIP);
-    PRINTF("****** PARAMS: IMG_CROP = [%d] ******\n", IMG_CROP);
-    PRINTF("****** PARAMS: IMG_FULL_SCREEN = [%d] ******\n", IMG_FULL_SCREEN);
-    PRINTF("\n");
+    PRINTF("****** %s TEST test_image_convert_display ******\r\n", TEST_MODE);
+    PRINTF("****** PARAMS: IMG_CONVERT_CPU = [%d] ******\r\n", IMG_CONVERT_CPU);
+    PRINTF("****** PARAMS: IMG_CONVERT_GPU = [%d] ******\r\n", IMG_CONVERT_GPU);
+    PRINTF("****** PARAMS: IMAGE_NAME = [%s] ******\r\n", IMAGE_NAME);
+    PRINTF("****** PARAMS: IMAGE_FORMAT = [%d] ******\r\n", SRC_IMAGE_FORMAT);
+    PRINTF("****** PARAMS: IMG_ROTATE = [%d] ******\r\n", IMG_ROTATE);
+    PRINTF("****** PARAMS: IMG_FLIP = [%d] ******\r\n", IMG_FLIP);
+    PRINTF("****** PARAMS: IMG_CROP = [%d] ******\r\n", IMG_CROP);
+    PRINTF("****** PARAMS: IMG_FULL_SCREEN = [%d] ******\r\n", IMG_FULL_SCREEN);
+    PRINTF("\r\n");
 
     args_t *args = pvPortMalloc(sizeof(args_t));
     if (!args) {
@@ -366,7 +367,7 @@ static int dyn_crop_loop(mpp_t mp, mpp_elem_handle_t convert_h, mpp_element_para
         pelem_params->convert.crop.bottom = crop_height + crop_y - 1;
         pelem_params->convert.crop.right = crop_width + crop_x - 1;
         pelem_params->convert.ops |= MPP_CONVERT_CROP;
-        ret = mpp_element_update(mp, convert_h, pelem_params);
+        ret = mpp_element_update(mp, convert_h, pelem_params, true);
         if (ret) {
             PRINTF("Failed mpp_element_update\r\n");
             break;
@@ -437,7 +438,7 @@ static void app_task(void *params)
 		goto err;
     }
 
-    ret = mpp_start(mp, 1);
+    ret = mpp_start(mp, 1, false);
     if (ret) {
         PRINTF("Failed to start pipeline\r\n");
         goto err;

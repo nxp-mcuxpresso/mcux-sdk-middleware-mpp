@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP.
+ * Copyright 2022-2025 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -220,7 +220,7 @@ hal_camera_status_t HAL_CameraDev_CsiMt9m114_Stop(const camera_dev_t *dev)
     return ret;
 }
 
-hal_camera_status_t HAL_CameraDev_CsiMt9m114_Dequeue(const camera_dev_t *dev, void **data, int *stripe)
+hal_camera_status_t HAL_CameraDev_CsiMt9m114_Dequeue(const camera_dev_t *dev, void **data, int *stripe, int *compressed_size)
 {
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     HAL_LOGD("++HAL_CameraDev_CsiMt9m114_Dequeue\n");
@@ -239,6 +239,7 @@ hal_camera_status_t HAL_CameraDev_CsiMt9m114_Dequeue(const camera_dev_t *dev, vo
 
     *data   = (void *)gCurrentBufferAddr;
     *stripe = 0;
+    *compressed_size = 0;
     HAL_LOGD("--HAL_CameraDev_CsiMt9m114_Dequeue\n");
     return ret;
 }
@@ -251,6 +252,8 @@ const static camera_dev_operator_t camera_dev_csi_mt9m114_ops = {
     .enqueue     = HAL_CameraDev_CsiMt9m114_Enqueue,
     .dequeue     = HAL_CameraDev_CsiMt9m114_Dequeue,
     .get_buf_desc = HAL_CameraDev_CsiMt9m114_Getbufdesc,
+    .lock         = NULL,
+    .unlock       = NULL
 };
 
 static camera_dev_t camera_dev_csi_mt9m114 = {

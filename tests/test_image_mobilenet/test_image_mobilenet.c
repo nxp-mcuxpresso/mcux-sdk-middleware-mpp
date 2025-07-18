@@ -306,7 +306,7 @@ static void app_task(void *params)
         goto err;
     }
 
-    ret = mpp_start(mp, 1);
+    ret = mpp_start(mp, 1, false);
     if (ret) {
         PRINTF("Failed to start pipeline\r\n");
         goto err;
@@ -337,7 +337,7 @@ static void app_task(void *params)
                 break;
             case TEST_MPP_MAIN_STOPPED:
                 PRINTF("MPP START\r\n");
-                ret = mpp_start(mp, 0);
+                ret = mpp_start(mp, 0, false);
                 if (ret) {
                     PRINTF("Failed to start pipeline\r\n");
                     goto err;

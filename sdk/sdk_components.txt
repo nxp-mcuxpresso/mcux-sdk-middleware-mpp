@@ -26,3 +26,6 @@ lvgl
 sgi_pkc
 libjpeg
 usb
+mcux-sdk-middleware-multicore
+rpmsg-lite
+mcux-mcmgr

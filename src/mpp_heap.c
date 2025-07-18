@@ -133,18 +133,57 @@ void mpp_execute(_mpp_t *mpp)
             MPP_LOGD("\nNo buffer dequeued from source\n");
             return;
         }
+
+        if (elem->src_typ == MPP_SRC_CAMERA)
+        {
+            /* Compute the minimum enqueue count for next dequeue call */
+            _camera_dev_t *cam = elem->dev.cam;
+            uint32_t min_req_cnt = 0;
+            mpp_exec_flag_t req_cnt_type = MPP_EXEC_RC;
+
+            /* Set the minum number of stream enqueue calls until the enqueue to camera is completed */
+            for (int i = 0; i < MPP_MAX_BRANCH_NUM; i++)
+            {
+                if ((elem->next[i]) && (elem->next[i]->mpp->oper_status == MPP_RUNNING) && (elem->next[i]->mpp->params.exec_flag == MPP_EXEC_RC))
+                    min_req_cnt++;
+            }
+
+            /* Check if there is no RC stream running */
+            if (min_req_cnt == 0)
+            {
+                /* In this case, set the min_req_cnt to the number of active PREEMPT streams */
+                for (int i = 0; i < MPP_MAX_BRANCH_NUM; i++)
+                {
+                    if ((elem->next[i]) && (elem->next[i]->mpp->oper_status == MPP_RUNNING) && (elem->next[i]->mpp->params.exec_flag == MPP_EXEC_PREEMPT))
+                        min_req_cnt++;
+                }
+                if (min_req_cnt == 0)
+                    MPP_LOGI("No active streams found for camera dequeue\r\n");
+                else
+                    req_cnt_type = MPP_EXEC_PREEMPT;
+            }
+
+            /* We can't have more streams than output buffers */
+            cam->dev.config.min_stream_req_cnt = min_req_cnt;
+            cam->dev.config.req_cnt_type = req_cnt_type;
+        }
+
         elem = elem->next[0];
     }
 
     bool rlmt_log_on = RLMT_CHECK(1);
     uint32_t start_time, end_time;
     mpp_stats_t *stats;
+    
+    /* if branch has an element that wants to force the update */
+    /* store value here, in case mpp gets updated while in processing loop */
+    bool force_update = mpp->force_update;
 
     /* loop over processing elements in mpp */
     while ((elem != NULL) && (elem->mpp == mpp) && (elem->type == MPP_TYPE_PROC))
     {
         busy = false;
-        update = false;
+        update = force_update;
         MPP_LOGD_IF(rlmt_log_on, "\t\telem@%p\n", elem);
 
         /* check and update buffer status in atomic block */
@@ -163,14 +202,14 @@ void mpp_execute(_mpp_t *mpp)
             if (busy)
             {
                 hal_atomic_exit();
-                MPP_LOGD("element %s: input or output buffer busy! skip processing.\n", elem_name(elem->proc_typ));
+                MPP_LOGD("element %s: input or output buffer busy! skip processing.\n", elem_name(elem));
                 elem = elem->next[0];
                 continue;
             }
             else if (!update)
             {
                 hal_atomic_exit();
-                MPP_LOGD("element %s: no input buffer update! skip processing.\n", elem_name(elem->proc_typ));
+                MPP_LOGD("element %s: no input buffer update! skip processing.\n", elem_name(elem));
                 elem = elem->next[0];
                 continue;
             }
@@ -179,7 +218,7 @@ void mpp_execute(_mpp_t *mpp)
                 for (i = 0; i < elem->io.nb_in_buf; i++)
                 {
                     elem->io.in_buf[i]->status = MPP_BUFFER_READING;
-                    MPP_LOGD("In mpp %d, Element %s starts processing input frame %d\n", mpp->prio, elem_name(elem->proc_typ), elem->io.in_buf[i]->frame_id);
+                    MPP_LOGD("In mpp %d, Element %s starts processing input frame %d\n", mpp->prio, elem_name(elem), elem->io.in_buf[i]->frame_id);
                 }
                 for (i = 0; i < elem->io.nb_out_buf; i++)
                 {
@@ -195,8 +234,12 @@ void mpp_execute(_mpp_t *mpp)
             /* cacheable buffer, read by CPU */
             if (elem->io.in_buf[i]->hw->cacheable)
             {
-                int bufsize = elem->io.in_buf[i]->hw->stride * elem->io.in_buf[i]->width;
-                HAL_DCACHE_CleanInvalidateByRange((uint32_t) elem->io.in_buf[i]->hw->heap_p, bufsize);
+                int bufsize = 0;
+                if (elem->io.in_buf[i]->compressed_size > 0)
+                    bufsize = elem->io.in_buf[i]->compressed_size;
+                else
+                    bufsize = elem->io.in_buf[i]->hw->stride * elem->io.in_buf[i]->height;
+                HAL_DCACHE_CleanInvalidateByRange((uint32_t) elem->io.in_buf[i]->hw->addr, bufsize);
             }
         }
 
@@ -218,8 +261,8 @@ void mpp_execute(_mpp_t *mpp)
             /* cacheable buffer, written by CPU */
             if (elem->io.out_buf[i]->hw->cacheable)
             {
-                int bufsize = elem->io.out_buf[i]->hw->stride * elem->io.out_buf[i]->width;
-                HAL_DCACHE_CleanInvalidateByRange((uint32_t) elem->io.out_buf[i]->hw->heap_p, bufsize);
+                int bufsize = elem->io.out_buf[i]->hw->stride * elem->io.out_buf[i]->height;
+                HAL_DCACHE_CleanInvalidateByRange((uint32_t) elem->io.out_buf[i]->hw->addr, bufsize);
             }
         }
 
@@ -230,6 +273,9 @@ void mpp_execute(_mpp_t *mpp)
             for (i = 0; i < elem->io.nb_in_buf; i++)
             {
                 elem->io.in_buf[i]->status = MPP_BUFFER_EMPTY;
+                /* Call callback if it's set and inplace processing is false */
+                if ((elem->io.inplace != true) && elem->io.in_buf[i]->callback != NULL)
+                    elem->io.in_buf[i]->callback(elem, elem->io.in_buf[i]);
                 /* record last input frame id processed */
                 elem->io.last_frame_id[i] = elem->io.in_buf[i]->frame_id;
                 /* output id will be most recent frame id */
@@ -248,10 +294,21 @@ void mpp_execute(_mpp_t *mpp)
         else
             elem = elem->next[0];
     }
+    
+    if (force_update)
+    {
+        /* forced update done, reset to false by default */
+        mpp->force_update = false;
+    }
 
     /* sink enqueue */
     MPP_LOGD_IF(rlmt_log_on, "Enqueue to sink @%p\n", elem);
-    if (elem != NULL && elem->type == MPP_TYPE_SINK && elem->sink_enqueue) elem->sink_enqueue(mpp);
+    if (elem != NULL && elem->type == MPP_TYPE_SINK )
+    {
+        if (elem->sink_enqueue) elem->sink_enqueue(mpp);
+        if (elem->io.in_buf[0]->callback != NULL)
+            elem->io.in_buf[0]->callback(elem, elem->io.in_buf[0]);
+    }
 
     released = hal_sema_give(mpp->status_sema);
     if (!released)

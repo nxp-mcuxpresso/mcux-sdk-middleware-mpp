@@ -1487,8 +1487,15 @@ static int HAL_GfxDev_any_OP(
     return error;
 }
 
+int HAL_GfxDev_Cpu_Finish(gfx_dev_t *dev)
+{
+    /* no need to wait for anything in CPU implementation */
+    return 0;
+}
+
 const static gfx_dev_operator_t s_GfxDevCpuOps = {
     .blit         = HAL_GfxDev_Cpu_Blit,
+    .finish       = HAL_GfxDev_Cpu_Finish,
     .get_buf_desc = HAL_GfxDev_Cpu_Getbufdesc,
 };
 

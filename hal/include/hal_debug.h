@@ -49,6 +49,23 @@ extern void LOGD(const char* module, const char* func, int line, const char* for
 #define HAL_LOGD(format, ...) \
     LOGD("HAL", __func__, __LINE__, format, ##__VA_ARGS__)
 
+// Error handling macros
+#define RETURN_ON_ERROR(condition, error_code, message, ...) \
+    do { \
+        if (condition) { \
+            HAL_LOGE(message, ##__VA_ARGS__); \
+            return error_code; \
+        } \
+    } while(0)
+
+#define GOTO_ON_ERROR(condition, label, message, ...) \
+    do { \
+        if (condition) { \
+            HAL_LOGE(message, ##__VA_ARGS__); \
+            goto label; \
+        } \
+    } while(0)
+
 #ifdef __cplusplus
 }
 #endif

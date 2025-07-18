@@ -18,6 +18,7 @@
 
 #include "mpp_api.h"
 #include "mpp_api_types_internal.h"
+#include "mpp_debug.h"
 
 int mpp_nullsink_add(mpp_t mpp)
 {
@@ -33,15 +34,19 @@ int mpp_nullsink_add(mpp_t mpp)
     if (ret != MPP_SUCCESS)
         return ret;
 
-    elem->io.in_buf[0] = elem->prev->io.out_buf[0];
+    /* store sink info */
+    elem->type = MPP_TYPE_SINK;
+    elem->sink_typ = MPP_SINK_NULL;
+
+    elem->io.in_buf[0] = get_in_buff_from_prev_elem(elem);
+    if (elem->io.in_buf[0] == NULL) {
+        MPP_LOGE("No input buffer found from previous element\n");
+        return MPP_ERROR;
+    }
     elem->io.inplace = false;
     elem->io.mem_policy = HAL_MEM_ALLOC_NONE;
     elem->io.nb_in_buf = 1;
     elem->io.nb_out_buf = 0;
-
-    /* store sink info */
-    elem->type = MPP_TYPE_SINK;
-    elem->sink_typ = MPP_SINK_NULL;
 
     /* pipeline has been closed */
     _mpp->status = MPP_CLOSED;

@@ -18,6 +18,8 @@
 #include "timers.h"
 #include "string.h"
 #include "stdbool.h"
+#include "stdio.h"
+#include "math.h"
 
 #ifndef EMULATOR
 /* Freescale includes. */
@@ -36,6 +38,7 @@
 /* MPP includes */
 #include "mpp_api.h"
 #include "mpp_config.h"
+#include "models/utils.h"
 
 /*******************************************************************************
  * Variables declaration
@@ -159,7 +162,15 @@ static void app_task(void *params) {
 
     PRINTF("[%s]\r\n", mpp_get_version());
 
-    ret = mpp_api_init(NULL);
+    /* init API */
+    static mpp_api_params_t api_param = {0};
+#if ((defined APP_RC_CYCLE_INC) && (defined APP_RC_CYCLE_MIN))
+    /* fine-tune RC cycle for stripe mode */
+    api_param.rc_cycle_inc = APP_RC_CYCLE_INC;
+    api_param.rc_cycle_min = APP_RC_CYCLE_MIN;
+#endif
+
+    ret = mpp_api_init(&api_param);
     if (ret)
         goto err;
 
@@ -177,7 +188,7 @@ static void app_task(void *params) {
     cam_params.width =  width;
     cam_params.format = args->camera_format;
     cam_params.fps    = 30;
-    ret = mpp_camera_add(mp, args->camera_name, &cam_params);
+    ret = mpp_camera_add(mp, args->camera_name, &cam_params, NULL);
     if (ret) {
         PRINTF("Failed to add camera %s\n", args->camera_name);
         goto err;
@@ -209,43 +220,79 @@ static void app_task(void *params) {
 #endif
 
     /* add three label rectangle */
-    mpp_element_params_t elem_params_rects;
-    memset(&elem_params_rects, 0, sizeof(mpp_element_params_t));
-    mpp_labeled_rect_t labels[3];
-    memset(&labels, 0, sizeof(labels));
+    mpp_element_params_t elem_params_shapes;
+    memset(&elem_params_shapes, 0, sizeof(mpp_element_params_t));
+    mpp_labeled_rect_t rects[4];
+    memset(&rects, 0, sizeof(rects));
 
     /* params init */
-    elem_params_rects.labels.max_count = 16;
-    elem_params_rects.labels.detected_count = 3;
-    elem_params_rects.labels.rectangles = labels;
+    elem_params_shapes.labels.max_rect = 16;
+    elem_params_shapes.labels.detected_rect = 4;
+    elem_params_shapes.labels.rectangles = rects;
 
     /* first */
-    labels[0].top = FRAME_HEIGHT * 0.1f;
-    labels[0].left = FRAME_WIDTH * 0.1f;
-    labels[0].bottom = FRAME_HEIGHT * 0.4f;
-    labels[0].right = FRAME_WIDTH * 0.3f;
-    labels[0].line_width = 2;
-    labels[0].line_color.rgb.B = 0xff;
-    strcpy((char *)labels[0].label, "toto");
+    rects[0].top = FRAME_HEIGHT * 0.1f;
+    rects[0].left = FRAME_WIDTH * 0.1f;
+    rects[0].bottom = FRAME_HEIGHT * 0.4f;
+    rects[0].right = FRAME_WIDTH * 0.3f;
+    rects[0].line_width = 2;
+    rects[0].line_color.rgb.B = 0xff;
+    strcpy((char *)rects[0].label, "toto");
     /* second */
-    labels[1].line_width = 2;
-    labels[1].top = FRAME_HEIGHT * 0.2f;
-    labels[1].left = FRAME_WIDTH * 0.2f;
-    labels[1].bottom = FRAME_HEIGHT * 0.5f;
-    labels[1].right = FRAME_WIDTH * 0.4f;
-    labels[1].line_color.rgb.G = 0xff;
-    strcpy((char *)labels[1].label, "titi");
+    rects[1].line_width = 2;
+    rects[1].top = FRAME_HEIGHT * 0.2f;
+    rects[1].left = FRAME_WIDTH * 0.2f;
+    rects[1].bottom = FRAME_HEIGHT * 0.5f;
+    rects[1].right = FRAME_WIDTH * 0.4f;
+    rects[1].line_color.rgb.G = 0xff;
+    strcpy((char *)rects[1].label, "titi");
     /* third */
-    labels[2].line_width = 2;
-    labels[2].top = FRAME_HEIGHT * 0.3f;
-    labels[2].left = FRAME_WIDTH * 0.3f;
-    labels[2].bottom = FRAME_HEIGHT * 0.6f;
-    labels[2].right = FRAME_WIDTH * 0.5f;
-    labels[2].line_color.rgb.R = 0xff;
-    strcpy((char *)labels[2].label, "tata");
+    rects[2].line_width = 2;
+    rects[2].top = FRAME_HEIGHT * 0.3f;
+    rects[2].left = FRAME_WIDTH * 0.3f;
+    rects[2].bottom = FRAME_HEIGHT * 0.6f;
+    rects[2].right = FRAME_WIDTH * 0.5f;
+    rects[2].line_color.rgb.R = 0xff;
+    strcpy((char *)rects[2].label, "tata");
+    /* fourth */
+    rects[3].line_width = 1;
+    rects[3].top = 0;
+    rects[3].left = 0;
+    rects[3].bottom = FRAME_HEIGHT - 1;
+    rects[3].right = FRAME_WIDTH - 1;
+    rects[3].line_color.raw = 0;
+    strcpy((char *)rects[3].label, "hello rectangles");
+
+    /* add 3 landmarks */
+    mpp_landmark_t marks[3];
+    memset(&marks, 0, sizeof(marks));
+
+    /* params init */
+    elem_params_shapes.labels.max_landmk = 16;
+    elem_params_shapes.labels.detected_landmk = 3;
+    elem_params_shapes.labels.landmarks = marks;
+
+    /* first */
+    marks[0].y = FRAME_HEIGHT * 0.25f;
+    marks[0].x = FRAME_WIDTH * 0.4f;
+    marks[0].width = 4;
+    marks[0].color.rgb.B = 0xff;
+    marks[0].color.rgb.R = 0xff;
+    /* second */
+    marks[1].y = FRAME_HEIGHT * 0.25f;
+    marks[1].x = FRAME_WIDTH * 0.6f;
+    marks[1].width = 4;
+    marks[1].color.rgb.B = 0xff;
+    marks[1].color.rgb.R = 0xff;
+    /* third */
+    marks[2].y = FRAME_HEIGHT * 0.5f;
+    marks[2].x = FRAME_WIDTH * 0.5f;
+    marks[2].width = 4;
+    marks[2].color.rgb.B = 0xff;
+    marks[2].color.rgb.R = 0xff;
 
     /* retrieve the element handle while add api */
-    ret = mpp_element_add(mp, MPP_ELEMENT_LABELED_RECTANGLE, &elem_params_rects, &elem);
+    ret = mpp_element_add(mp, MPP_ELEMENT_LABELED_RECTANGLE, &elem_params_shapes, &elem);
     if (ret) {
         PRINTF("Failed to add element LABELED_RECTANGLE (0x%x)\r\n", ret);
         goto err;
@@ -278,39 +325,76 @@ static void app_task(void *params) {
         goto err;
     }
 
-    ret = mpp_start(mp, 1);
+    ret = mpp_start(mp, 1, false);
     if (ret) {
         PRINTF("Failed to start pipeline\n");
         goto err;
     }
 
     /* update example */
-    elem_params_rects.labels.detected_count = 3;
+    elem_params_shapes.labels.detected_rect = 4;
     const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
     uint32_t var = 0;
     int step0 = FRAME_WIDTH / 100, step1 = FRAME_WIDTH / 100;
+    int steplk0, steplk1, steplk2;
+    steplk0 = steplk2 = FRAME_WIDTH / 100;
+    steplk1 = 0 - FRAME_WIDTH / 100;
 
     do {
         /* blink third rectangle */
-        labels[2].clear = var % 5;
+        rects[2].clear = var % 5;
 
         /* move first and second rectangles */
-        if (((int)labels[0].bottom + step0) > height) {
+        if (((int)rects[0].bottom + step0) > height) {
             step0 = -10;
-        } else if ((labels[0].top + step0) < 0) {
+        } else if ((rects[0].top + step0) < 0) {
             step0 = 10;
         }
-        labels[0].top += step0;
-        labels[0].bottom += step0;
-        if (((int)labels[1].right + step1) > width) {
+        rects[0].top += step0;
+        rects[0].bottom += step0;
+        if (((int)rects[1].right + step1) > width) {
             step1 = -10;
-        } else if ((labels[1].left + step1) < 0) {
+        } else if ((rects[1].left + step1) < 0) {
             step1 = 10;
         }
-        labels[1].left += step1;
-        labels[1].right += step1;
+        rects[1].left += step1;
+        rects[1].right += step1;
+        
+        /* move the landmarks */
+        /* 1st (right eye) move down then up on first half of screen */
+        if (((marks[0].y + steplk0) >= height/2) || ((marks[0].y + steplk0) <= 0)) {
+            steplk0 = 0 - steplk0;
+        }
+        marks[0].y += steplk0;
 
-        mpp_element_update(mp, elem, &elem_params_rects);
+        /* 2nd (left eye) move up then down on first half of screen  */
+        if (((marks[1].y + steplk1) >= height/2) || ((marks[1].y + steplk1) <= 0)) {
+            steplk1 = 0 - steplk1;
+        }
+        marks[1].y += steplk1;
+
+        /* 3rd (nose) move left then right */
+        if (((marks[2].x + steplk2) >= width) || ((marks[2].x + steplk2) <= 0)) {
+            steplk2 = 0 - steplk2;
+        }
+        marks[2].x += steplk2;
+
+        /* compute the tilt and yaw angles for virtual face */
+        face_data_t face = {0};
+        float tilt = 0.0f, yaw = 0.0f;
+        face.leye.x = marks[0].x;
+        face.leye.y = marks[0].y;
+        face.reye.x = marks[1].x;
+        face.reye.y = marks[1].y;
+        face.nose.x = marks[2].x;
+        face.nose.y = marks[2].y;
+        if (get_face_tilt_yaw(&face, &tilt, &yaw)) {
+            PRINTF("Error computing tilt and yaw\n\r");
+            goto err;
+        }
+        sprintf((char *)rects[3].label, "tilt=%d yaw=%d (degrees)", (int) (tilt*180.0f/M_PI), (int) (yaw*180.0f/M_PI));
+
+        mpp_element_update(mp, elem, &elem_params_shapes, true);
         var++;
         vTaskDelay(xDelay);
 

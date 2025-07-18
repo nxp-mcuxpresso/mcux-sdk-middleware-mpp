@@ -1,6 +1,6 @@
 # eIQ MPP Hardware Abstraction Layer API
 
-MPP-HAL VERSION 3.5
+MPP-HAL VERSION 3.6
 
 ## Chapter 1
 
@@ -300,6 +300,7 @@ Structure that characterize the image element.
 |int|bottom|bottom position|
 |mpp\_pixel\_format\_t|format|pixel format|
 |bool|stripe|stripe mode|
+|int|compressed\_size|compressed size in bytes|
 
 5. **struct<a name="_page13_x70.87_y454.72"></a><a name="_page13_x70.87_y439.48"></a> \_static\_image**
 
@@ -1157,6 +1158,7 @@ Swaps a buffer's MSB and LSB bytes.
 - int[ hal_camera_setup (const](#_page33_x70.87_y617.67) char ∗name, camera\_dev\_t ∗dev)
 - int[ hal_gfx_setup ](#_page34_x70.87_y194.37)(const char ∗name, gfx\_dev\_t ∗dev)
 - int[ hal_img_decoder_setup (const](#_page36_x70.87_y572.68) char ∗name, vdec\_dev\_t ∗dev)
+- int[ hal_landmark](#_page36_x70.87_y573.68)(uint8\_t *frame, int width, int height, mpp\_pixel\_format\_t format, mpp\_landmark\_t *lk, int stripe, int stripe\_max)
 
 #### 2.3.1 Detailed Description
 
@@ -1283,3 +1285,8 @@ If name is NULL, the first available decoder supported by Hw will be selected. T
 **Returns**
 
 error code (0: success, otherwise: failure)
+
+7. **hal\_landmark()**
+
+<a name="_page36_x70.87_y573.68"></a>int hal\_landmark(uint8\_t *frame, int width, int height, mpp\_pixel\_format\_t format, mpp\_landmark\_t *lk, int stripe, int stripe\_max)
+

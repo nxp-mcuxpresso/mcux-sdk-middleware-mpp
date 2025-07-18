@@ -130,6 +130,17 @@ static void vPipelineCtlTask( void *params )
             rc_task_prio = mpp_params->pipeline_task_max_prio - 1;
             pr_task_prio = mpp_params->pipeline_task_max_prio - 2;
         }
+
+        if (mpp_params->pipeline_rc_task_prio != 0)
+        {
+            rc_task_prio = mpp_params->pipeline_rc_task_prio;
+            pr_task_prio = mpp_params->pipeline_rc_task_prio - 1;
+        }
+
+        if (mpp_params->pipeline_pr_task_prio != 0)
+        {
+            pr_task_prio = mpp_params->pipeline_pr_task_prio;
+        }
     }
 
     /* wait until application finished pipeline construction for the first start */
@@ -215,7 +226,7 @@ static void vPipelineCtlTask( void *params )
                                             delay
                                             );
        unsigned int pr_slot = delay;
-       static unsigned int app_slot;
+       static int app_slot;
        static unsigned int pr_rounds_cnt = 0;
 
         /* get the actual sleep time */
@@ -226,7 +237,10 @@ static void vPipelineCtlTask( void *params )
                         delay , (end_ticks - start_ticks));
             /* available for app tasks : delay - (end_ticks - start_ticks) */
             app_slot = delay - (end_ticks - start_ticks);
-            hal_task_delay(app_slot);
+            if (app_slot > 0)
+                hal_task_delay(app_slot);
+            else
+                MPP_LOGI("Invalid value for app_slot (%d)\r\n", app_slot);
             pr_rounds_cnt = pr_rounds;
             pr_rounds = 0;
         } else {
@@ -239,6 +253,7 @@ static void vPipelineCtlTask( void *params )
             api_stats->api.pr_slot = hal_tick_to_ms(pr_slot);
             api_stats->api.pr_rounds = pr_rounds_cnt + 1;
             api_stats->api.app_slot = hal_tick_to_ms(app_slot);
+            api_stats->api.cpu_load = 100U - hal_get_idle_percent();
             hal_sema_give(stats_lock[MPP_STATS_GRP_API]);
         }
 
@@ -253,6 +268,7 @@ int mpp_api_init(mpp_api_params_t *params)
     /* controller task has max priority */
     /* default value is aligned with MIN_CTL_TASK_PRIO */
     int pipeline_ctl_task_prio = MIN_CTL_TASK_PRIO;
+    int rc_task_prio;
 
     /* mpp heap initialization */
     mpp_heap_init(rc_prio_lst);
@@ -292,6 +308,30 @@ int mpp_api_init(mpp_api_params_t *params)
             }
 
             pipeline_ctl_task_prio = params->pipeline_task_max_prio;
+        }
+
+        if (params->pipeline_rc_task_prio != 0)
+        {
+            if (params->pipeline_rc_task_prio >= pipeline_ctl_task_prio)
+            {
+                MPP_LOGE("pipeline rc task priority should not be greater than or equal to pipeline_ctl_task_prio: %d\r\n", pipeline_ctl_task_prio);
+                return MPP_INVALID_PARAM;
+            }
+
+            rc_task_prio = params->pipeline_rc_task_prio;
+        }
+        else
+        {
+            rc_task_prio = pipeline_ctl_task_prio - 1;
+        }
+
+        if (params->pipeline_pr_task_prio != 0)
+        {
+            if (params->pipeline_pr_task_prio >= rc_task_prio)
+            {
+                MPP_LOGE("pipeline preemptable task priority should not be greater than or equal to rc_task_prio: %d\r\n", rc_task_prio);
+                return MPP_INVALID_PARAM;
+            }
         }
     }
 
@@ -436,6 +476,100 @@ _elem_t *mpp_get_last_elem(_mpp_t *mpp)
         return mpp->hook;
     /* no parent: no last elem */
     return NULL;
+}
+
+/* Get previous element output buffer */
+buf_desc_t *get_in_buff_from_prev_elem(_elem_t *elem)
+{
+    _mpp_t *mpp = elem->mpp;
+    buf_desc_t *ret = NULL;
+    int out_buf_idx = 0;
+
+    /* Search in parent pipeline */
+    if (mpp->hook )
+    {
+        if (mpp->first_elem == elem)
+        {
+            /* If previous element has just one buffer, return that buffer */
+            if (elem->prev->io.nb_out_buf > 1)
+            {
+                /* This is the first element in this branch
+                 * Search the index of the element in the prev's element next list
+                 * We don't need to search in index 0 because that output is reserved for elements in the same branch 
+                 * This case refers to secondary branches of a pipeline (see mpp->hook check above) */
+                for (int i = 1; i < MPP_MAX_BRANCH_NUM; i++)
+                {
+                    if (elem->prev->next[i] == elem)
+                    {
+                        /* If there are more branches of a pipeline than output buffers, just use last output buffer */
+                        if ((i < MAX_OUTPUT_PORTS) && (i < elem->prev->io.nb_out_buf))
+                        {
+                            out_buf_idx = i;
+                            ret = elem->prev->io.out_buf[i];
+                        }
+                        else
+                        {
+                            out_buf_idx = MAX_OUTPUT_PORTS - 1;
+                            ret = elem->prev->io.out_buf[MAX_OUTPUT_PORTS - 1];
+                        }
+                    }
+                }
+            }
+            else
+            {
+                out_buf_idx = 0;
+                ret = elem->prev->io.out_buf[0];
+            }
+        }
+        else
+        {
+            /* This is not the first element in the current branch
+             * Take the first output buffer in this case */
+            out_buf_idx = 0;
+            ret = elem->prev->io.out_buf[0];
+        }
+    }
+    else
+    {
+        /* This is the main pipeline
+         * Check if this is the first element */
+        if (mpp->first_elem != elem)
+        {
+            /* This is not the first element in the current branch
+             * Take the first output buffer in this case */
+            out_buf_idx = 0;
+            ret = elem->prev->io.out_buf[0];
+        }
+    }
+
+    if (ret == NULL)
+    {
+        /* This is an error case - it means we didn't find the input buffer for current element 
+         * Either the element is the first element in the main pipeline (source type, camera or static image),
+         * Or the current element was not found in the previous element's next list */
+        MPP_LOGE("Current element: %s @ 0x%x\n\r", elem_name(elem), (uint32_t) elem);
+        MPP_LOGE("\tprevious element 0x%x\r\n", (uint32_t) elem->prev);
+        MPP_LOGE("\tinput buffer: NULL\r\n");
+    }
+    else
+    {
+        MPP_LOGI("Current element: %s @ 0x%x\r\n", elem_name(elem), (uint32_t) elem);
+        MPP_LOGI("\tprevious element %s @ 0x%x\r\n", elem_name(elem->prev), (uint32_t) elem->prev);
+        MPP_LOGI("\tinput buffer (prev elem out buf %d): 0x%x\r\n", out_buf_idx, (uint32_t) ret);
+    }
+
+    return ret;
+}
+
+uint32_t get_out_buff_index(_elem_t *elem, buf_desc_t *buf)
+{
+    for (int i = 0; i < elem->io.nb_out_buf; i++)
+    {
+        if (elem->io.out_buf[i] == buf)
+            return i;
+    }
+
+    return MAX_OUTPUT_PORTS;
 }
 
 /* allocate the element and link it to the mpp */
@@ -618,7 +752,16 @@ int mpp_background(mpp_t mpp, mpp_params_t *params, mpp_t *out_mpp)
     return ret;
 }
 
-int mpp_start(mpp_t mpp, int last)
+bool mpp_is_running(mpp_t mpp)
+{
+    if (mpp == MPP_INVALID)
+        return false;
+
+    _mpp_t *_mpp = (_mpp_t *)mpp;
+    return (_mpp->oper_status == MPP_RUNNING);
+}
+
+int mpp_start(mpp_t mpp, int last, bool force_update)
 {
     static int is_last = 0;
     int ret = MPP_SUCCESS;
@@ -640,12 +783,59 @@ int mpp_start(mpp_t mpp, int last)
     /* start source / sink */
     if ((_mpp->first_elem->type == MPP_TYPE_SOURCE) && (_mpp->first_elem->src_typ== MPP_SRC_CAMERA))
     {
-        _camera_dev_t *cam = _mpp->first_elem->dev.cam;
+        _elem_t *elem = _mpp->first_elem;
+        _camera_dev_t *cam = elem->dev.cam;
+        uint32_t min_req_cnt = 0;
+        mpp_exec_flag_t req_cnt_type = MPP_EXEC_RC;
+
+        /* Set the minimum number of stream enqueue calls until the enqueue to camera is completed */
+        for (int i = 0; i < MPP_MAX_BRANCH_NUM; i++)
+        {
+            if ((elem->next[i]) && (elem->next[i]->mpp->oper_status == MPP_RUNNING) && (elem->next[i]->mpp->params.exec_flag == MPP_EXEC_RC))
+                min_req_cnt++;
+        }
+
+        /* Check if there is no RC stream running */
+        if (min_req_cnt == 0)
+        {
+            /* In this case, set the min_req_cnt to the number of active PREEMPT streams */
+            for (int i = 0; i < MPP_MAX_BRANCH_NUM; i++)
+            {
+                if ((elem->next[i]) && (elem->next[i]->mpp->oper_status == MPP_RUNNING) && (elem->next[i]->mpp->params.exec_flag == MPP_EXEC_PREEMPT))
+                    min_req_cnt++;
+            }
+            if (min_req_cnt == 0)
+                MPP_LOGI("No active streams found for camera dequeue\r\n");
+            else
+                req_cnt_type = MPP_EXEC_PREEMPT;
+        }
+
+        cam->dev.config.min_stream_req_cnt = min_req_cnt;
+        cam->dev.config.req_cnt_type = req_cnt_type;
+
         /* start HAL function */
         if (cam->dev.ops->start != NULL) {
+            if (cam->dev.ops->lock != NULL) {
+                ret = cam->dev.ops->lock(&cam->dev);
+                if (ret != kStatus_HAL_CameraSuccess)
+                {
+                    MPP_LOGE("Failed to lock camera device\n");
+                    return MPP_ERROR;
+                }
+            }
+            for (int i = 0; i < cam->dev.config.n_streams; i++)
+                cam->dev.config.stream_requested[i] = cam->dev.config.stream[i].active;
             if (cam->dev.ops->start(&cam->dev) != 0) {
                 MPP_LOGE("camera fails to start\n");
                 return MPP_ERROR;
+            }
+            if (cam->dev.ops->unlock != NULL) {
+                ret = cam->dev.ops->unlock(&cam->dev);
+                if (ret != kStatus_HAL_CameraSuccess)
+                {
+                    MPP_LOGE("Failed to unlock camera device\n");
+                    return MPP_ERROR;
+                }
             }
         }
     }
@@ -661,6 +851,10 @@ int mpp_start(mpp_t mpp, int last)
         }
     }
 
+    /* If force update was requested before and 
+     * the pipeline did not run at least once, do not overwrite it */
+    if (!_mpp->force_update)
+        _mpp->force_update = force_update;
     _mpp->oper_status = MPP_RUNNING;
     bool released = hal_sema_give(_mpp->status_sema);
     if (!released)
@@ -725,10 +919,32 @@ int mpp_stop(mpp_t mpp)
                 /* stop HAL function */
                 if (cam->dev.ops->stop != NULL)
                 {
+                    if (cam->dev.ops->lock != NULL) {
+                        ret = cam->dev.ops->lock(&cam->dev);
+                        if (ret != kStatus_HAL_CameraSuccess)
+                        {
+                            MPP_LOGE("Failed to lock camera device\n");
+                            return MPP_ERROR;
+                        }
+                    }
                     if (cam->dev.ops->stop(&cam->dev) != 0)
                     {
                         MPP_LOGE("camera fails to stop\n");
                         ret = MPP_ERROR;
+                    }
+                    /* Reset camera stream configuration:
+                     * - Clear current stream request count
+                     * - Mark all streams as not requested */
+                    cam->dev.config.crt_stream_req_cnt = 0;
+                    for (int i = 0; i < NUM_STREAMS; i++)
+                        cam->dev.config.stream_requested[i] = false;
+                    if (cam->dev.ops->unlock != NULL) {
+                        ret = cam->dev.ops->unlock(&cam->dev);
+                        if (ret != kStatus_HAL_CameraSuccess)
+                        {
+                            MPP_LOGE("Failed to unlock camera device\n");
+                            return MPP_ERROR;
+                        }
                     }
                 }
                 break;
@@ -785,7 +1001,26 @@ int mpp_stop(mpp_t mpp)
     return ret;
 }
 
-int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t *params)
+int mpp_force_update(mpp_t mpp)
+{
+    int ret = MPP_SUCCESS;
+
+    if (mpp == MPP_INVALID)
+    {
+        MPP_LOGE("failed to force update mpp: invalid mpp object\r\n");
+        return MPP_INVALID_PARAM;
+    }
+    
+    _mpp_t *_mpp = (_mpp_t *)mpp;
+
+    /* If force update was requested before and 
+     * the pipeline did not run at least once, do not overwrite it */
+    _mpp->force_update = true;
+
+    return ret;
+}
+
+int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t *params, bool force_update)
 {
     int ret = MPP_SUCCESS;
     _elem_t *elem = (_elem_t *) elem_h;
@@ -811,11 +1046,20 @@ int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t
             break;
         }
 
+        /* force an update: ensures processing steps will not be skipped in this branch */
+        /* If force update was requested before and 
+        * the pipeline did not run at least once, do not overwrite it */
+        if (!elem->mpp->force_update)
+            elem->mpp->force_update = force_update;
+
         /* Check element type */
         switch (elem->type) {
         case MPP_TYPE_SOURCE:
             /* Check source type */
             switch (elem->src_typ) {
+            case MPP_SRC_CAMERA:
+                ret = mpp_camera_update(elem, params);
+                break;
             case MPP_SRC_STATIC_IMAGE:
                 ret = mpp_static_image_update(elem, params);
                 break;
@@ -836,11 +1080,14 @@ int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t
             case MPP_ELEMENT_CONVERT:
                 ret = mpp_convert_update(elem, params);
                 break;
+            case MPP_ELEMENT_IMG_COMPOSE:
+                ret = mpp_compose_update(elem, params);
+                break;
             case MPP_ELEMENT_INFERENCE:
                 ret = mpp_inference_update(elem, params);
                 break;
             default:
-                MPP_LOGI("Nothing to update for element %s\n", elem_name(elem->proc_typ));
+                MPP_LOGI("Nothing to update for element %s\n", elem_name(elem));
                 break;
             }
             break;

@@ -161,7 +161,7 @@ int mpp_memory_check(_mpp_t *mpp)
             /* set input buffers status */
             elem->io.in_buf[i]->status = MPP_BUFFER_EMPTY;
             /* check address for input buffers */
-            MPP_LOGI("Element %s: input buffer#%d address 0x%x \n", elem_name(elem->proc_typ), i, (unsigned int)elem->io.in_buf[i]->hw->addr);
+            MPP_LOGI("Element %s: input buffer#%d address 0x%x \n", elem_name(elem), i, (unsigned int)elem->io.in_buf[i]->hw->addr);
         }
 
         for(i = 0; i < elem->io.nb_out_buf; i++)
@@ -169,7 +169,7 @@ int mpp_memory_check(_mpp_t *mpp)
             /* set output buffers status */
             elem->io.out_buf[i]->status = MPP_BUFFER_EMPTY;
             /* check address for output buffers */
-            MPP_LOGI("Element %s: output buffer#%d address 0x%x \n", elem_name(elem->proc_typ), i, (unsigned int)elem->io.out_buf[i]->hw->addr);
+            MPP_LOGI("Element %s: output buffer#%d address 0x%x \n", elem_name(elem), i, (unsigned int)elem->io.out_buf[i]->hw->addr);
         }
         elem = elem->next[0];
     }
@@ -222,7 +222,7 @@ int mpp_memory_alloc(_mpp_t *mpp)
                         elem->io.in_buf[i]->hw = &elem->io.in_buf[i]->hw_req_cons;
                     }
                 }
-                MPP_LOGD("Element %s: Allocating missing input buffer\n", elem_name(elem->proc_typ));
+                MPP_LOGD("Element %s: Allocating missing input buffer\n", elem_name(elem));
                 /* input buffer missing: allocate it */
                 ret = mpp_alloc_input_buf(elem);
                 if (ret != MPP_SUCCESS)
@@ -236,7 +236,7 @@ int mpp_memory_alloc(_mpp_t *mpp)
                 {
                     elem->io.in_buf[i]->hw = &elem->io.in_buf[i]->hw_req_prod;
                 }
-                MPP_LOGD("Element %s: Reusing buffer from previous element\n", elem_name(elem->proc_typ));
+                MPP_LOGD("Element %s: Reusing buffer from previous element\n", elem_name(elem));
             }
             break;
         case HAL_MEM_ALLOC_INPUT:
@@ -251,13 +251,13 @@ int mpp_memory_alloc(_mpp_t *mpp)
                 {
                     elem->io.in_buf[i]->hw = &elem->io.in_buf[i]->hw_req_cons;
                 }
-                MPP_LOGD("Element %s: Using its own input buffer\n", elem_name(elem->proc_typ));
+                MPP_LOGD("Element %s: Using its own input buffer\n", elem_name(elem));
 
             } else if ( (prev_policy == HAL_MEM_ALLOC_BOTH)
                     || (prev_policy == HAL_MEM_ALLOC_OUTPUT) )
             {
                 /* input buffer conflict: need to resolve it! */
-                MPP_LOGD("Element %s: Buffer conflict between two elements!\n", elem_name(elem->proc_typ));
+                MPP_LOGD("Element %s: Buffer conflict between two elements!\n", elem_name(elem));
                 for(i = 0; i < elem->io.nb_in_buf; i++)
                 {
                     ret = solve_buf_req(elem->io.in_buf[i]);
@@ -267,7 +267,7 @@ int mpp_memory_alloc(_mpp_t *mpp)
             }
             break;
         default:
-            MPP_LOGE("Element %s: Unexpected memory policy\n", elem_name(elem->proc_typ));
+            MPP_LOGE("Element %s: Unexpected memory policy\n", elem_name(elem));
             return MPP_ERROR;
             break;
         }

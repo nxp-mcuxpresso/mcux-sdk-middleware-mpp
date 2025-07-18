@@ -206,7 +206,7 @@ static void app_task(void *params)
     cam_params.width =  APP_CAMERA_WIDTH;
     cam_params.format = APP_CAMERA_FORMAT;
     cam_params.fps    = 30;
-    ret = mpp_camera_add(mp, s_camera_name, &cam_params);
+    ret = mpp_camera_add(mp, s_camera_name, &cam_params, NULL);
     if (ret) {
         PRINTF("Failed to add camera %s\r\n", s_camera_name);
         goto err;
@@ -307,13 +307,13 @@ static void app_task(void *params)
     mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
 
     /* start 1st pipeline branch */
-    ret = mpp_start(mp_split, 0);
+    ret = mpp_start(mp_split, 0, false);
     if (ret) {
         PRINTF("Failed to start pipeline\r\n");
         goto err;
     }
     /* start 2nd pipeline branch */
-    ret = mpp_start(mp, 1);
+    ret = mpp_start(mp, 1, false);
     if (ret) {
         PRINTF("Failed to start pipeline\r\n");
         goto err;
@@ -345,7 +345,7 @@ static void app_task(void *params)
                 break;
             case TEST_MPP_FULL_STOPPED:
                 PRINTF("MPP START main branch\r\n");
-                ret = mpp_start(mp, 0);
+                ret = mpp_start(mp, 0, false);
                 if (ret) {
                     PRINTF("Failed to start main branch\r\n");
                     goto err;
@@ -354,7 +354,7 @@ static void app_task(void *params)
                 break;
             case TEST_MPP_SPLIT_STOPPED:
                 PRINTF("MPP START split branch\r\n");
-                ret = mpp_start(mp_split, 0);
+                ret = mpp_start(mp_split, 0, false);
                 if (ret) {
                     PRINTF("Failed to start split branch\r\n");
                     goto err;

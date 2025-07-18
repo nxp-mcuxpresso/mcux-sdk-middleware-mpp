@@ -48,6 +48,7 @@ typedef struct _libjpeg_ctx
 } libjpeg_ctx;
 
 typedef struct my_error_mgr *my_error_ptr;
+char buffer[JMSG_LENGTH_MAX];
 
 /* libjpeg error handler */
 void my_error_exit(j_common_ptr cinfo)
@@ -57,7 +58,9 @@ void my_error_exit(j_common_ptr cinfo)
 
     /* Always display the message. */
     /* We could postpone this until after returning, if we chose. */
-    (*cinfo->err->output_message) (cinfo);
+    /* Create the message */
+    (*cinfo->err->format_message) (cinfo, buffer);
+    HAL_LOGE("JPEG error message: %s\n\r", buffer);
 
     /* Return control to the setjmp point */
     longjmp(myerr->setjmp_buffer, 1);

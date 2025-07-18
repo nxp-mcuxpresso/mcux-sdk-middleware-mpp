@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2024 NXP
+ * Copyright 2019-2025 NXP
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -178,7 +178,7 @@ static inline uint16_t ConvRgb888Rgb565(mpp_color_t col)
 {
     uint16_t b = GET_MSB(col.rgb.B, 5, 0);
     uint16_t g = GET_MSB(col.rgb.G, 6, 5);
-    uint16_t r = GET_MSB(col.rgb.B, 5, 11);
+    uint16_t r = GET_MSB(col.rgb.R, 5, 11);
 
     return (uint16_t)(r | g | b);
 }
@@ -221,6 +221,43 @@ static inline void hal_draw_rect565(uint16_t *lcd_buf, hal_rect_t rect,
 static inline void hal_draw_pixel565(uint16_t *pDst, uint32_t x, uint32_t y, uint16_t color, uint32_t lcd_w)
 {
     pDst[y * (lcd_w) + x] = color;
+}
+
+int hal_landmark(uint8_t *frame, int width, int height, mpp_pixel_format_t format,
+                        mpp_landmark_t *lk, int stripe, int stripe_max)
+{
+    /* for now only support RGB565 format */
+    if (format != MPP_PIXEL_RGB565) return MPP_INVALID_PARAM;
+    
+    /* for now only support full frame */    
+    if (stripe) return MPP_INVALID_PARAM;
+
+    uint16_t color16 = ConvRgb888Rgb565(lk->color);
+
+    /* check landmark size versus image border */
+    if ( (lk->y <= lk->width) || (lk->y >= (height - (lk->width * 2))) 
+        || (lk->x <= lk->width) || (lk->x >= (width - (lk->width * 2))) )
+        return MPP_INVALID_PARAM;
+    
+    /* draw a 'cross' shape */
+    int x, y;
+    /* draw horizontal bar */
+    for (y = lk->y; y < lk->y + lk->width; y ++)
+    {
+        for (x = (lk->x - lk->width); x < (lk->x + (lk->width*2)); x++)
+        {
+            hal_draw_pixel565((uint16_t *) frame, x, y, color16, width);
+        }
+    }
+    /* draw vertical bar */
+    for (y = lk->y - lk->width; y < lk->y + (lk->width * 2); y++)
+    {
+        for (x = lk->x; x < (lk->x + lk->width); x++)
+        {
+            hal_draw_pixel565((uint16_t *) frame, x, y, color16, width);
+        }
+    }
+    return MPP_SUCCESS;
 }
 
 int hal_label_rectangle(uint8_t *frame, int width, int height, mpp_pixel_format_t format,

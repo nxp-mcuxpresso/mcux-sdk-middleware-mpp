@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022,2024 NXP.
+ * Copyright 2020-2022,2024-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -90,7 +90,11 @@ int mpp_display_add(mpp_t mpp, const char *name, mpp_display_params_t *params)
     elem->io.nb_out_buf = 0;
 
     /* get input parameters from previous element */
-    buf_desc_t *prev_buf = elem->prev->io.out_buf[0];
+    buf_desc_t *prev_buf = get_in_buff_from_prev_elem(elem);
+    if (prev_buf == NULL) {
+        MPP_LOGE("No input buffer found from previous element\n");
+        return MPP_ERROR;
+    }
 
     /* check previous element buff descriptor parameters compatibility with display parameters */
     if ((prev_buf->height > disp->dev.cap.height) || (prev_buf->width > disp->dev.cap.width)) {

@@ -20,12 +20,12 @@ if [ "${CONVERTER_MCXN_PATH}" == "" ]; then
     exit 1
 fi
 
-for MODEL_BASENAME in "ultraface_slim_ultraslim" "nanodet_m_0.5x_nhwc_nopermute" "mobilenet_v1_0.25_128_quant_int8" "persondetect_160_128" "persondetect_220_220" "antispoofing" "mobilefacenet_96_96"; do
+for MODEL_BASENAME in "ultraface_slim_ultraslim" "nanodet_m_0.5x_nhwc_nopermute" "mobilenet_v1_0.25_128_quant_int8" "persondetect_160_128" "persondetect_220_220" "antispoofing" "mobilefacenet_96_96" "scrfd_kps_500m_full_integer_quant_128x128" "scrfd_kps_500m_full_integer_quant_320x256"; do
     for CHIP in "mcxn94x" "imxrt700"; do
         if [ $CHIP == "mcxn94x" ]; then
             NPU_VERSION="npu16"
             CONVERTER=${CONVERTER_MCXN_PATH}
-            if [ ${MODEL_BASENAME} == "nanodet_m_0.5x_nhwc_nopermute" -o ${MODEL_BASENAME} == "persondetect_220_220" -o ${MODEL_BASENAME} == "antispoofing" -o ${MODEL_BASENAME} == "mobilefacenet_96_96" ]; then
+            if [ ${MODEL_BASENAME} == "nanodet_m_0.5x_nhwc_nopermute" -o ${MODEL_BASENAME} == "persondetect_220_220" -o ${MODEL_BASENAME} == "antispoofing" -o ${MODEL_BASENAME} == "mobilefacenet_96_96" -o ${MODEL_BASENAME} == "scrfd_kps_500m_full_integer_quant_128x128" -o ${MODEL_BASENAME} == "scrfd_kps_500m_full_integer_quant_320x256" ]; then
                 continue
             fi
         elif [ $CHIP == "imxrt700" ]; then
@@ -54,6 +54,9 @@ for MODEL_BASENAME in "ultraface_slim_ultraslim" "nanodet_m_0.5x_nhwc_nopermute"
             MODEL_H_NAME=${MODEL_BASENAME}
         elif [ ${MODEL_BASENAME} == "mobilefacenet_96_96" ]; then
             MODEL_DIR="internal/models/mobilefacenet"
+            MODEL_H_NAME=${MODEL_BASENAME}
+        elif [ ${MODEL_BASENAME} == "scrfd_kps_500m_full_integer_quant_128x128" -o ${MODEL_BASENAME} == "scrfd_kps_500m_full_integer_quant_320x256" ]; then
+            MODEL_DIR="internal/models/scrfd_kps_500m_full_integer_quant"
             MODEL_H_NAME=${MODEL_BASENAME}
         else
             exit 1;

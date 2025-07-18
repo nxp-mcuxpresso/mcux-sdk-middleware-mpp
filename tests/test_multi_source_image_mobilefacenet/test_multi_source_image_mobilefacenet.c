@@ -1,0 +1,566 @@
+/*
+* Copyright 2025 NXP
+* All rights reserved.
+*
+* SPDX-License-Identifier: BSD-3-Clause
+*/
+
+/* @brief This test application shows usage of MultiMedia Pipeline to build a graph of two pipelines:
+* Static rgb_image -> image converter -> draw labeled rectangle -> display
+* Static ir_image -> image converter -> inference engine (model: mobilefacenet )
+* The view finder is displayed on screen
+* The model outputs embeddings describing the input face
+* the model output is displayed on UART console by application */
+
+/* FreeRTOS kernel includes */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "timers.h"
+#include "string.h"
+#include "stdbool.h"
+#include "atomic.h"
+
+/* NXP includes */
+#include "fsl_device_registers.h"
+#include "fsl_debug_console.h"
+#include "pin_mux.h"
+#include "clock_config.h"
+#include "board.h"
+#include "app.h"
+
+/* MPP includes */
+#include "mpp_api.h"
+#include "mpp_config.h"
+
+/* Model data input */
+#include APP_TFLITE_MOBILEFACENET_DATA
+
+/* Persons database */
+#include APP_DATABASE_NAME
+
+/* Model output post-processing */
+#include "mobilefacenet_output_postproc_quantized.h"
+
+/* Input images */
+#include APP_STATIC_IMAGE_RGB_NAME
+#include APP_STATIC_IMAGE_IR_NAME
+
+#define SRC_RGB_IMAGE_FORMAT SRC_IMAGE_KAGGLE_IMG_RGB_FORMAT
+#define SRC_RGB_IMAGE_CHANNELS_NUMBER SRC_IMAGE_KAGGLE_IMG_RGB_CHANNELS
+#define SRC_RGB_IMAGE_HEIGHT SRC_IMAGE_KAGGLE_IMG_RGB_HEIGHT
+#define SRC_RGB_IMAGE_WIDTH SRC_IMAGE_KAGGLE_IMG_RGB_WIDTH
+
+#define SRC_IR_IMAGE_FORMAT SRC_IMAGE_KAGGLE_IMG_IR_FORMAT
+#define SRC_IR_IMAGE_CHANNELS_NUMBER SRC_IMAGE_KAGGLE_IMG_IR_CHANNELS
+#define SRC_IR_IMAGE_HEIGHT SRC_IMAGE_KAGGLE_IMG_IR_HEIGHT
+#define SRC_IR_IMAGE_WIDTH SRC_IMAGE_KAGGLE_IMG_IR_WIDTH
+
+#ifdef APP_USE_JPEG_IMAGES
+void *rgb_image_data = (void *)kaggle_img_color_yuyv_jpg;
+void *ir_image_data = (void *)kaggle_img_ir_yuyv_jpg;
+#else
+void *rgb_image_data = (void *)kaggle_img_rgb_data;
+void *ir_image_data = (void *)kaggle_img_ir_data;
+#endif
+
+/*******************************************************************************
+ * Variables declaration
+ ******************************************************************************/
+/* label rect line width */
+#define RECT_LINE_WIDTH 2
+
+/* pick default backend if not specified */
+#ifndef APP_GFX_BACKEND_NAME
+#define APP_GFX_BACKEND_NAME NULL
+#endif
+
+/*
+ * SWAP_DIMS = 1 if source/display dims are reversed
+ * SWAP_DIMS = 0 if source/display have the same orientation
+ */
+#define SWAP_DIMS (((APP_DISPLAY_LANDSCAPE_ROTATE == ROTATE_90) || (APP_DISPLAY_LANDSCAPE_ROTATE == ROTATE_270)) ? 1 : 0)
+
+/* display small and large dims */
+#define DISPLAY_SMALL_DIM MIN(APP_DISPLAY_WIDTH, APP_DISPLAY_HEIGHT)
+#define DISPLAY_LARGE_DIM MAX(APP_DISPLAY_WIDTH, APP_DISPLAY_HEIGHT)
+
+#define MODEL_ASPECT_RATIO   (1.0f * MOBILEFACENET_WIDTH / MOBILEFACENET_HEIGHT)
+/* output is displayed in landscape mode */
+#define DISPLAY_ASPECT_RATIO (1.0f * DISPLAY_LARGE_DIM / DISPLAY_SMALL_DIM)
+
+/*
+ * The detection zone is a rectangle that has the same shape as the model input.
+ * The rectangle dimensions are calculated based on the display small dim and respecting the model aspect ratio
+ * The detection zone width and height depend on the display_aspect_ratio compared to the model aspect_ratio:
+ * if the display_aspect_ratio >= model_aspect_ratio then :
+ *                  (width, height) = (display_small_dim * model_aspect_ratio, display_small_dim)
+ * if the display_aspect_ratio < model_aspect_ratio then :
+ *                  (width, height) = (display_small_dim, display_small_dim / model_aspect_ratio)
+ *
+ * */
+#define DETECTION_ZONE_RECT_HEIGHT ((DISPLAY_ASPECT_RATIO >= MODEL_ASPECT_RATIO) ? \
+                (DISPLAY_SMALL_DIM - RECT_LINE_WIDTH) : ((DISPLAY_SMALL_DIM - RECT_LINE_WIDTH) / MODEL_ASPECT_RATIO))
+#define DETECTION_ZONE_RECT_WIDTH  ((DISPLAY_ASPECT_RATIO >= MODEL_ASPECT_RATIO) ? \
+                ((DISPLAY_SMALL_DIM - RECT_LINE_WIDTH) * MODEL_ASPECT_RATIO) : (DISPLAY_SMALL_DIM - RECT_LINE_WIDTH))
+
+/* detection zone top/left offsets */
+#define DETECTION_ZONE_RECT_TOP  (DISPLAY_SMALL_DIM - DETECTION_ZONE_RECT_HEIGHT)/2
+#define DETECTION_ZONE_RECT_LEFT 0
+
+/*
+ *  The computation of the crop size(width and height) and the crop top/left depends on the detection
+ *  zone dims and offsets and on the source-display scaling factor SF which is calculated differently
+ *  depending on 2 constraints:
+ *           * Constraint 1: display aspect ratio compared to the source aspect ratio.
+ *           * Constraint 2: SWAP_DIMS value.
+ * if the display_aspect_ratio < source_aspect_ratio :
+ *            - SWAP_DIMS = 0: SF = APP_DISPLAY_WIDTH / SRC_IMAGE_WIDTH
+ *            - SWAP_DIMS = 1: SF = APP_DISPLAY_HEIGHT / SRC_IMAGE_HEIGHT
+ * if the display_aspect_ratio >= source_aspect_ratio:
+ *            - SWAP_DIMS = 0: SF = APP_DISPLAY_HEIGHT / SRC_IMAGE_HEIGHT
+ *            - SWAP_DIMS = 1: SF = APP_DISPLAY_WIDTH / SRC_IMAGE_WIDTH
+ * the crop dims and offsets are calculated in the following way:
+ * CROP_SIZE_TOP = DETECTION_ZONE_RECT_HEIGHT / SF
+ * CROP_SIZE_LEFT = DETECTION_ZONE_RECT_WIDTH / SF
+ * CROP_TOP = DETECTION_ZONE_RECT_HEIGHT / SF
+ * CROP_LEFT = DETECTION_ZONE_RECT_LEFT / SF
+ * */
+#if ((DISPLAY_LARGE_DIM * SRC_RGB_IMAGE_HEIGHT) < (DISPLAY_SMALL_DIM * SRC_RGB_IMAGE_WIDTH))
+#define CROP_SIZE_TOP   ((DETECTION_ZONE_RECT_HEIGHT * SRC_IMAGE_WIDTH) / (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH))
+#define CROP_SIZE_LEFT  ((DETECTION_ZONE_RECT_WIDTH * SRC_IMAGE_WIDTH) / (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH))
+
+#define CROP_TOP  ((DETECTION_ZONE_RECT_TOP * SRC_IMAGE_WIDTH) / (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH))
+#define CROP_LEFT ((DETECTION_ZONE_RECT_LEFT * SRC_IMAGE_WIDTH) / (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH))
+#else   /* DISPLAY_ASPECT_RATIO() >= SOURCE_ASPECT_RATIO() */
+#define CROP_SIZE_TOP   ((DETECTION_ZONE_RECT_HEIGHT * SRC_RGB_IMAGE_HEIGHT) / (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT))
+#define CROP_SIZE_LEFT  ((DETECTION_ZONE_RECT_WIDTH * SRC_RGB_IMAGE_HEIGHT) / (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT))
+
+#define CROP_TOP  ((DETECTION_ZONE_RECT_TOP * SRC_RGB_IMAGE_HEIGHT) / (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT))
+#define CROP_LEFT ((DETECTION_ZONE_RECT_LEFT * SRC_RGB_IMAGE_HEIGHT) / (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT))
+#endif  /* DISPLAY_ASPECT_RATIO() < SOURCE_ASPECT_RATIO() */
+
+/* Detected boxes offsets */
+#define BOXES_OFFSET_LEFT DETECTION_ZONE_RECT_LEFT
+#define BOXES_OFFSET_TOP  DETECTION_ZONE_RECT_TOP
+
+#define OUTPUT_PRINT_PERIOD_MS 900
+
+static const char s_display_name[] = APP_DISPLAY_NAME;
+
+/** Default priority for application tasks
+   Tasks created by the application have a lower priority than pipeline tasks by default.
+   Pipeline_task_max_prio in mpp_api_params_t structure should be adjusted with other application tasks.*/
+#define APP_DEFAULT_PRIO        1
+
+/*******************************************************************************
+* Definitions
+******************************************************************************/
+
+typedef struct _user_data_t {
+	int inference_frame_num;
+	mpp_t mp;
+	mpp_elem_handle_t elem;
+	mpp_labeled_rect_t labels[1];
+	recognition_result result;
+	uint32_t accessing; /* boolean protecting access to user data */
+	int inference_time_ms;
+} user_data_t;
+
+/*******************************************************************************
+* Prototypes
+******************************************************************************/
+static void app_task(void *params);
+
+/*******************************************************************************
+* Code
+******************************************************************************/
+/*!
+* @brief Application entry point.
+*/
+int main()
+{
+	BaseType_t ret;
+	TaskHandle_t handle = NULL;
+	/* Init board hardware. */
+	BOARD_Init();
+
+	ret = xTaskCreate(
+			app_task,
+			"app_task",
+			configMINIMAL_STACK_SIZE + 1000,
+			NULL,
+			APP_DEFAULT_PRIO,
+			&handle);
+
+	if (pdPASS != ret)
+	{
+		PRINTF("Failed to create app_task task");
+		while (1);
+	}
+
+	vTaskStartScheduler();
+	for (;;)
+		vTaskSuspend(NULL);
+	return 0;
+}
+
+int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data) {
+	const mpp_inference_cb_param_t *inf_output;
+	static recognition_result result;
+
+	/* user_data handle contains application private data */
+	user_data_t *app_priv = (user_data_t *)user_data;
+
+	switch(evt) {
+	case MPP_EVENT_INFERENCE_OUTPUT_READY:
+		/* cast evt_data pointer to correct structure matching the event */
+		inf_output = (const mpp_inference_cb_param_t *) evt_data;
+		MOBILEFACENET_ProcessOutput(
+                inf_output,
+                g_embedding_db,
+                NUM_FACES,
+                &result);
+		/* check that we can modify the user data (not accessed by other task) */
+		if (Atomic_CompareAndSwap_u32(&app_priv->accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
+		{
+			app_priv->inference_time_ms = inf_output->inference_time_ms;
+			app_priv->inference_frame_num++;
+			/* copy recognition results */
+			app_priv->result = result;
+
+			char* label = "Face not recognized";
+
+			/* update recognition label */
+			if (app_priv->result.similarity_percentage > 0)
+				strcpy(label, app_priv->result.recognized_name);
+
+			mpp_element_params_t params;
+			memset(&params, 0, sizeof(params));
+			uint8_t label_size = sizeof(params.labels.rectangles[0].label);
+			// Update the label in the first rectangle
+			params.labels.detected_rect = 1;
+			params.labels.max_rect = 1;
+			params.labels.rectangles = app_priv->labels;
+			strncpy((char *)params.labels.rectangles[0].label, label, label_size);
+			params.labels.rectangles[0].label[label_size - 1] = '\0';
+			if ( (app_priv->elem != 0) && ( app_priv->mp != NULL ) )
+			{
+				mpp_element_update(app_priv->mp, app_priv->elem, &params, true);
+			}
+			__atomic_store_n(&app_priv->accessing, 0, __ATOMIC_SEQ_CST);
+		}
+
+
+		break;
+	case MPP_EVENT_INVALID:
+	default:
+		/* nothing to do */
+		break;
+	}
+
+	return 0;
+}
+
+static void app_task(void *params)
+{
+	static user_data_t user_data = {0};
+	int ret;
+
+	PRINTF("[%s]\r\n", mpp_get_version());
+	PRINTF("Inference Engine: TensorFlow-Lite Micro \r\n");
+
+	/* fix max pipeline task priority. */
+	static mpp_api_params_t api_params;
+	api_params.pipeline_task_max_prio = APP_PIPELINE_TASK_MAX_PRIO;
+
+	ret = mpp_api_init(&api_params);
+	if (ret)
+		goto err;
+	
+    /* Create the first pipeline for inference */
+	static mpp_t mp_inference;
+	static mpp_params_t mpp_params_inf;
+	memset(&mpp_params_inf, 0, sizeof(mpp_params_inf));
+	mpp_params_inf.evt_callback_f = &mpp_event_listener;
+	mpp_params_inf.mask = MPP_EVENT_ALL;
+	mpp_params_inf.cb_userdata = &user_data;
+	mpp_params_inf.exec_flag = MPP_EXEC_PREEMPT;
+
+	mp_inference = mpp_create(&mpp_params_inf, &ret);
+	if (mp_inference == MPP_INVALID)
+		goto err;
+
+	static mpp_img_params_t ir_img_params;
+	memset(&ir_img_params, 0, sizeof (mpp_img_params_t));
+	ir_img_params.format = SCR_IR_IMAGE_FORMAT;
+	ir_img_params.width = SCR_IR_IMAGE_WIDTH;
+	ir_img_params.height = SCR_IR_IMAGE_HEIGHT;
+#ifdef APP_USE_JPEG_IMAGES
+	ir_img_params.compressed_size = data_ir_jpg_len;
+#endif /* APP_USE_JPEG_IMAGES */
+
+	mpp_static_img_add(mp_inference, &ir_img_params, ir_image_data, NULL);
+
+	/* On the preempt-able pipeline run the ML Inference (using an Mobilefacenet TFLite model) */
+	/* First do jpeg decode if needed then crop + resize + color convert */
+	mpp_element_params_t elem_params;
+
+#ifdef APP_USE_JPEG_IMAGES
+    /* Add element jpeg decode */
+    memset(&elem_params, 0, sizeof(mpp_element_params_t));
+    elem_params.decode.dev_name = IMG_DECODE_DEV_NAME;
+    elem_params.decode.width = SCR_IR_IMAGE_WIDTH;
+    elem_params.decode.height = SCR_IR_IMAGE_HEIGHT;
+
+    if (strcmp(IMG_DECODE_DEV_NAME, "jpeg_CPU") == 0)
+        elem_params.decode.out_format = MPP_PIXEL_BGR; /* TODO auto detect */
+    else if (strcmp(IMG_DECODE_DEV_NAME, "jpeg_HW") == 0)
+        elem_params.decode.out_format = MPP_PIXEL_YUYV; /* TODO auto detect */
+
+    ret = mpp_element_add(mp_inference, MPP_ELEMENT_IMG_DECODE, &elem_params, NULL);
+    if (ret)
+    {
+        PRINTF("Failed to add element DECODE\n");
+        goto err;
+    }
+#endif /* APP_USE_JPEG_IMAGES */
+
+	// First do color-convert
+	memset(&elem_params, 0, sizeof(elem_params));
+	// pick default device from the first listed and supported by Hw
+	elem_params.convert.dev_name = APP_GFX_BACKEND_NAME;
+	// set output buffer dims
+	elem_params.convert.out_buf.width = MOBILEFACENET_WIDTH;
+	elem_params.convert.out_buf.height = MOBILEFACENET_HEIGHT;
+	// crop center of image
+	elem_params.convert.crop.top = CROP_TOP;
+	elem_params.convert.crop.bottom = CROP_TOP + CROP_SIZE_TOP - 1;
+	elem_params.convert.crop.left = CROP_LEFT;
+	elem_params.convert.crop.right = CROP_LEFT + CROP_SIZE_LEFT - 1;
+	elem_params.convert.ops = MPP_CONVERT_CROP;
+	// resize: scaling parameters
+	elem_params.convert.scale.width = MOBILEFACENET_WIDTH;
+	elem_params.convert.scale.height = MOBILEFACENET_HEIGHT;
+	elem_params.convert.ops |= MPP_CONVERT_SCALE;
+	//converting image pixel format
+	elem_params.convert.pixel_format = MOBILEFACENET_FORMAT;
+	elem_params.convert.ops |= MPP_CONVERT_COLOR;
+
+	ret = mpp_element_add(mp_inference, MPP_ELEMENT_CONVERT, &elem_params, NULL);
+
+	if (ret) {
+		PRINTF("Failed to add element CONVERT\n");
+		goto err;
+	}
+
+	// configure TFlite element with the mobilefacenet model
+	static mpp_element_params_t mobilefacenet_params;
+	static mpp_stats_t mobilefacenet_stats;
+	memset(&mobilefacenet_params, 0 , sizeof(mpp_element_params_t));
+
+	mobilefacenet_params.ml_inference.model_data = mobilefacenet_data;
+	mobilefacenet_params.ml_inference.model_size = mobilefacenet_data_len;
+	mobilefacenet_params.ml_inference.model_input_mean = MOBILEFACENET_INPUT_MEAN;
+	mobilefacenet_params.ml_inference.model_input_std = MOBILEFACENET_INPUT_STD;
+	mobilefacenet_params.ml_inference.type = MPP_INFERENCE_TYPE_TFLITE;
+	mobilefacenet_params.ml_inference.inference_params.num_inputs = 1;
+	mobilefacenet_params.ml_inference.inference_params.num_outputs = 1;
+	mobilefacenet_params.ml_inference.tensor_order = MPP_TENSOR_ORDER_NHWC;
+	mobilefacenet_params.stats = &mobilefacenet_stats;
+
+	ret = mpp_element_add(mp_inference, MPP_ELEMENT_INFERENCE, &mobilefacenet_params, NULL);
+	if (ret) {
+		PRINTF("Failed to add element VALGO_TFLite");
+		goto err;
+	}
+
+	// close the pipeline with a null sink
+	ret = mpp_nullsink_add(mp_inference);
+	if (ret) {
+		PRINTF("Failed to add NULL sink\n");
+		goto err;
+	}
+
+	/* Create the second pipeline for inference */
+    mpp_t mp_display;
+	mpp_params_t mp_params_disp;
+	memset(&mp_params_disp, 0, sizeof(mp_params_disp));
+	mp_params_disp.evt_callback_f = &mpp_event_listener;
+	mp_params_disp.mask = MPP_EVENT_ALL;
+	mp_params_disp.exec_flag = MPP_EXEC_RC;
+	mp_params_disp.cb_userdata = &user_data;
+	mp_display = mpp_create(&mp_params_disp, &ret);
+	if (mp_display == MPP_INVALID)
+		goto err;
+
+	mpp_img_params_t rgb_img_params;
+	memset(&rgb_img_params, 0, sizeof (mpp_img_params_t));
+	rgb_img_params.format = SCR_RGB_IMAGE_FORMAT;
+	rgb_img_params.width = SCR_RGB_IMAGE_WIDTH;
+	rgb_img_params.height = SCR_RGB_IMAGE_HEIGHT;
+#ifdef APP_USE_JPEG_IMAGES
+	rgb_img_params.compressed_size = data_color_jpg_len;
+#endif
+
+	mpp_static_img_add(mp_display, &rgb_img_params,rgb_image_data, NULL);
+
+#ifdef APP_USE_JPEG_IMAGES
+    /* Add element jpeg decode */
+    memset(&elem_params, 0, sizeof(mpp_element_params_t));
+    elem_params.decode.dev_name = IMG_DECODE_DEV_NAME;
+    elem_params.decode.width = SCR_RGB_IMAGE_WIDTH;
+    elem_params.decode.height = SCR_RGB_IMAGE_HEIGHT;
+
+    if (strcmp(IMG_DECODE_DEV_NAME, "jpeg_CPU") == 0)
+        elem_params.decode.out_format = MPP_PIXEL_BGR; /* TODO auto detect */
+    else if (strcmp(IMG_DECODE_DEV_NAME, "jpeg_HW") == 0)
+        elem_params.decode.out_format = MPP_PIXEL_YUYV; /* TODO auto detect */
+
+    ret = mpp_element_add(mp_display, MPP_ELEMENT_IMG_DECODE, &elem_params, NULL);
+    if (ret)
+    {
+        PRINTF("Failed to add element DECODE\n");
+        goto err;
+    }
+#endif /* APP_USE_JPEG_IMAGES */
+
+	// First do color-convert + flip
+	memset(&elem_params, 0, sizeof(elem_params));
+	// pick default device from the first listed and supported by Hw.
+	elem_params.convert.dev_name = APP_GFX_BACKEND_NAME;
+	// set output buffer dims
+	elem_params.convert.out_buf.width = (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH);
+	elem_params.convert.out_buf.height = (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT);
+	elem_params.convert.pixel_format = APP_DISPLAY_FORMAT;
+	elem_params.convert.ops = MPP_CONVERT_COLOR;
+	/* scaling parameters */
+    if ((DISPLAY_LARGE_DIM * SRC_RGB_IMAGE_HEIGHT) < (DISPLAY_SMALL_DIM * SRC_RGB_IMAGE_WIDTH)) {
+    	elem_params.convert.scale.width =  (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH);
+    	elem_params.convert.scale.height = (SWAP_DIMS ? (APP_DISPLAY_HEIGHT * SRC_RGB_IMAGE_HEIGHT / SRC_RGB_IMAGE_WIDTH) :
+    			(APP_DISPLAY_WIDTH * SRC_RGB_IMAGE_HEIGHT / SRC_RGB_IMAGE_WIDTH));
+    } else {
+    	elem_params.convert.scale.height = (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT);
+    	elem_params.convert.scale.width  = (SWAP_DIMS ? (APP_DISPLAY_WIDTH * SRC_RGB_IMAGE_WIDTH / SRC_RGB_IMAGE_HEIGHT) :
+    			(APP_DISPLAY_HEIGHT * SRC_RGB_IMAGE_WIDTH / SRC_RGB_IMAGE_HEIGHT));
+    }
+
+	elem_params.convert.ops = MPP_CONVERT_COLOR | MPP_CONVERT_SCALE;
+
+	ret = mpp_element_add(mp_display, MPP_ELEMENT_CONVERT, &elem_params, NULL);
+
+	if (ret) {
+		PRINTF("Failed to add element CONVERT\n");
+		goto err;
+	}
+
+	// add one label rectangle
+	memset(&elem_params, 0, sizeof(elem_params));
+	memset(&user_data.labels, 0, sizeof(user_data.labels));
+
+	// params init
+	elem_params.labels.max_rect = 1;
+	elem_params.labels.detected_rect = 1;
+	elem_params.labels.rectangles = user_data.labels;
+
+	// first add detection zone box
+	user_data.labels[0].top    = DETECTION_ZONE_RECT_TOP;
+	user_data.labels[0].left   = DETECTION_ZONE_RECT_LEFT;
+	user_data.labels[0].bottom = DETECTION_ZONE_RECT_TOP + DETECTION_ZONE_RECT_HEIGHT;
+	user_data.labels[0].right  = DETECTION_ZONE_RECT_LEFT + DETECTION_ZONE_RECT_WIDTH;
+	user_data.labels[0].line_width = RECT_LINE_WIDTH;
+	user_data.labels[0].line_color.rgb.B = 0xff;
+	strcpy((char *)user_data.labels[0].label, "Face not recognized");
+
+	// retrieve the element handle while add api
+	ret = mpp_element_add(mp_display, MPP_ELEMENT_LABELED_RECTANGLE, &elem_params, &user_data.elem);
+	if (ret) {
+		PRINTF("Failed to add element LABELED_RECTANGLE (0x%x)\r\n", ret);
+		goto err;
+	}
+	user_data.mp = mp_display;
+	/* then rotate if needed */
+	if (APP_DISPLAY_LANDSCAPE_ROTATE != ROTATE_0) {
+		memset(&elem_params, 0, sizeof(elem_params));
+		// pick device selected in mpp_config.
+		elem_params.convert.dev_name = APP_GFX_BACKEND_NAME;
+		// set output buffer dims
+		elem_params.convert.out_buf.width = APP_DISPLAY_WIDTH;
+		elem_params.convert.out_buf.height = APP_DISPLAY_HEIGHT;
+		elem_params.convert.angle = APP_DISPLAY_LANDSCAPE_ROTATE;
+		elem_params.convert.ops = MPP_CONVERT_ROTATE;
+		ret = mpp_element_add(mp_display, MPP_ELEMENT_CONVERT, &elem_params, NULL);
+
+		if (ret) {
+			PRINTF("Failed to add element CONVERT\r\n");
+			goto err;
+		}
+	}
+
+	static mpp_display_params_t disp_params;
+	memset(&disp_params, 0 , sizeof(disp_params));
+	disp_params.format = APP_DISPLAY_FORMAT;
+	disp_params.width  = APP_DISPLAY_WIDTH;
+	disp_params.height = APP_DISPLAY_HEIGHT;
+	ret = mpp_display_add(mp_display, s_display_name, &disp_params);
+	if (ret) {
+		PRINTF("Failed to add display %s\n", s_display_name);
+		goto err;
+	}
+
+	mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+
+	// start preempt-able pipeline 
+	ret = mpp_start(mp_inference, 0, false);
+	if (ret) {
+		PRINTF("Failed to start pipeline");
+		goto err;
+	}
+
+	// start main pipeline 
+	ret = mpp_start(mp_display, 1, false);
+	if (ret) {
+		PRINTF("Failed to start pipeline");
+		goto err;
+	}
+
+	TickType_t x_last_awake_time;
+	const TickType_t x_frequency = OUTPUT_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
+	x_last_awake_time = xTaskGetTickCount();
+	uint32_t last_inf_frame_num = user_data.inference_frame_num;
+	for (;;) {
+		xTaskDelayUntil( &x_last_awake_time, x_frequency );
+		if (last_inf_frame_num != user_data.inference_frame_num)
+		{
+			mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+			PRINTF("Element stats --------------------------\r\n");
+			PRINTF("mobilefacenet : exec_time %u (ms)\r\n", mobilefacenet_stats.elem.elem_exec_time);
+			mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+
+			if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
+			{
+				PRINTF("inference time %d (ms) \r\n", user_data.inference_time_ms);
+
+				if (user_data.result.recognized_name[0]=='\0')
+				{
+					PRINTF("face not recognized. \r\n");
+				}
+				else {
+					PRINTF("Recognized face: %s with similarity percentage: %d%%\r\n", user_data.result.recognized_name, user_data.result.similarity_percentage);
+				}
+				/* after reading, inference output should be cleared */
+				strcpy(user_data.result.recognized_name,"\0");
+				user_data.result.similarity_percentage = 0;
+				__atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
+			}
+			last_inf_frame_num = user_data.inference_frame_num;
+		}
+	}
+
+	err:
+	for (;;)
+	{
+		PRINTF("Error building application pipeline : ret %d\r\n", ret);
+		vTaskSuspend(NULL);
+	}
+}

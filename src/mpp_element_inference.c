@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP
+ * Copyright 2022-2025 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -49,7 +49,7 @@ unsigned int elem_inference_setup(_elem_t *elem)
         }
         if ((elem->proc_typ != MPP_ELEMENT_INFERENCE) || (elem->type != MPP_TYPE_PROC))
         {
-            MPP_LOGE("invalid element %s (expected element INFERENCE)\n", elem_name(elem->proc_typ));
+            MPP_LOGE("invalid element %s (expected element INFERENCE)\n", elem_name(elem));
             ret = MPP_INVALID_PARAM;
             break;
         }
@@ -88,7 +88,11 @@ unsigned int elem_inference_setup(_elem_t *elem)
         }
 
         /* get input parameters from previous element */
-        buf_desc_t *prev_buf = elem->prev->io.out_buf[0];
+        buf_desc_t *prev_buf = get_in_buff_from_prev_elem(elem);
+        if (prev_buf == NULL) {
+            MPP_LOGE("No input buffer found from previous element\n");
+            return MPP_ERROR;
+        }
 
         /* assign element entry/function */
         elem->entry = inference_func;
@@ -200,14 +204,14 @@ uint32_t mpp_inference_update(_elem_t *elem, mpp_element_params_t *params)
         }
         if ((elem->proc_typ != MPP_ELEMENT_INFERENCE) || (elem->type != MPP_TYPE_PROC))
         {
-            MPP_LOGE("invalid element %s (expected element INFERENCE)\n", elem_name(elem->proc_typ));
+            MPP_LOGE("invalid element %s (expected element INFERENCE)\n", elem_name(elem));
             ret = MPP_INVALID_PARAM;
             break;
         }
         /* check mpp state */
-        if (elem->mpp->oper_status != MPP_STOPPED)
+        if (elem->mpp->oper_status == MPP_RUNNING)
         {
-            MPP_LOGE("MPP branch must be stopped to update element INFERENCE\r\n");
+            MPP_LOGE("MPP branch must not be in running state to update element INFERENCE\r\n");
             ret = MPP_INVALID_PARAM;
             break;
         }
@@ -246,7 +250,11 @@ uint32_t mpp_inference_update(_elem_t *elem, mpp_element_params_t *params)
         }
 
         /* get input parameters from previous element */
-        buf_desc_t *prev_buf = elem->prev->io.out_buf[0];
+        buf_desc_t *prev_buf = get_in_buff_from_prev_elem(elem);
+        if (prev_buf == NULL) {
+            MPP_LOGE("No input buffer found from previous element\n");
+            return MPP_ERROR;
+        }
 
         /* check element entry/function */
         if (elem->entry == NULL)

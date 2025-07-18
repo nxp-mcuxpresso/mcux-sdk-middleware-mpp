@@ -294,7 +294,7 @@ static void main_task(void *params) {
 		PRINTF("Failed to add display\n");
 		goto err;
 	}
-	ret = mpp_start(mp, 1);
+	ret = mpp_start(mp, 1, false);
 	if (ret) {
 		PRINTF("Failed to start pipeline\n");
 		goto err;
@@ -314,7 +314,7 @@ static void main_task(void *params) {
 	vTaskDelay(6000/portTICK_PERIOD_MS);
 
 	/* restart the pipeline */
-	ret = mpp_start(mp, 0);
+	ret = mpp_start(mp, 0, false);
 	if (ret) {
 	    PRINTF("Failed to restart pipeline\n");
 	    goto err;

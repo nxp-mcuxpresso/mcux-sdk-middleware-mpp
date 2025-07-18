@@ -64,10 +64,10 @@ mpp_t mpp_create(mpp_params_t *params, int *ret);
  * @param [in] mpp input pipeline
  * @param [in] name camera driver name
  * @param [in] params parameters to be configured on the camera
+ * @param [out] elem_h element handle in pipeline
  * @return \ref return_codes
  */
-int mpp_camera_add(mpp_t mpp, const char *name, mpp_camera_params_t *params);
-
+int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp_elem_handle_t *elem_h);
 
 /**
  * Static image addition
@@ -157,9 +157,20 @@ int mpp_background(mpp_t mpp, mpp_params_t *params, mpp_t *out_mpp);
  * @param [in] mpp      input pipeline
  * @param [in] elem_h   element handle in the pipeline.
  * @param [in] params   new element parameters
+ * @param [in] force_update  force the pipeline to run even though 
+ *         there is no input frame update for processing elements after update.
+ *         If the force_update flag was already requested before, the current value is ignored
  * @return \ref return_codes
  */
-int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t *params);
+int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t *params, bool force_update);
+
+/**
+ * Check if the pipeline is currently running
+ *
+ * @param [in] mpp      input pipeline
+ * @return true if pipeline is in running state, else false
+ */
+bool mpp_is_running(mpp_t mpp);
 
 /**
  * Start pipeline
@@ -172,9 +183,12 @@ int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t
  * @param [in] mpp pipeline branch handle to start/prepare
  * @param [in] last if non-zero start pipeline processing.
  *         No further start call is possible thereafter.
+ * @param [in] force_update force the pipeline to run even though 
+ *         there is no input frame update for processing elements.
+ *         If the force_update flag was already requested before, the current value is ignored
  * @return \ref return_codes
  */
-int mpp_start(mpp_t mpp, int last);
+int mpp_start(mpp_t mpp, int last, bool force_update);
 
 /**
  * Stop a branch of the pipeline
@@ -185,6 +199,17 @@ int mpp_start(mpp_t mpp, int last);
  * @return \ref return_codes
  */
 int mpp_stop(mpp_t mpp);
+
+/**
+ * Force the update of a branch of the pipeline
+ *
+ * This function forces and update of the branch of the pipeline even if 
+ *          there is no new input frame.
+ *
+ * @param [in] mpp pipeline branch to set the flag force_update to true
+ * @return \ref return_codes
+ */
+int mpp_force_update(mpp_t mpp);
 
 /**
  * Enable statistics collection
@@ -219,6 +244,35 @@ void mpp_stats_disable(mpp_stats_grp_t grp);
  *
  */
 char* mpp_get_version(void);
+
+#ifdef MCMGR_USED
+/*
+ * Call early init function for multi-core manager 
+ * !!!! This function must be called at the begining of main app function
+ *
+ */
+void mpp_mcmgr_early_init(void);
+#endif /* MCMGR_USED */
+
+#ifdef BOOT_SECONDARY_CORE
+/*
+ * Boot secondary core using multi-core manager middleware
+ *
+ * @return pointer to the MCMGR remote event data
+ *
+ */
+volatile uint16_t *mpp_boot_secondary_core(void);
+#endif /* BOOT_SECONDARY_CORE */
+
+#ifdef RPMSG_USED
+/* 
+ * Initialize RPMsg module
+ *
+ * @return: pointer to the created RPMsg instance
+ *
+ */
+void *mpp_init_rpmsg(void);
+#endif /* RPMSG_USED */
 
 /** @}*/
 

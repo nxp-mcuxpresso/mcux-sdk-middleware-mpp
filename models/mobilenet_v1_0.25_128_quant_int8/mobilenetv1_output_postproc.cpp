@@ -72,12 +72,12 @@ int32_t MOBILENETv1_ProcessOutput(const mpp_inference_cb_param_t *inf_out, void 
         memset(&params, 0, sizeof(params));
         uint8_t label_size = sizeof(params.labels.rectangles[0].label);
         /* update the label in first rectangle */
-        params.labels.detected_count = 1;
-        params.labels.max_count = 1;
+        params.labels.detected_rect = 1;
+        params.labels.max_rect = 1;
         params.labels.rectangles = rects;
         strncpy((char *) params.labels.rectangles[0].label, label, label_size);
         params.labels.rectangles[0].label[label_size-1] = '\0';
-        mpp_element_update(mpp, elem, &params);
+        mpp_element_update(mpp, elem, &params, true);
     }
 
     return 0;

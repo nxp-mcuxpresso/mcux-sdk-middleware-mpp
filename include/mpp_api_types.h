@@ -34,7 +34,7 @@
  * @{
  */
 /** Maximum number of inference inputs and outputs **/
-#define MPP_INFERENCE_MAX_OUTPUTS 4 /*!< Maximum number of outputs supported by the pipeline */
+#define MPP_INFERENCE_MAX_OUTPUTS 9 /*!< Maximum number of outputs supported by the pipeline */
 #define MPP_INFERENCE_MAX_INPUTS 1 /*!< Maximum number of inputs supported by the pipeline */
 
 /** Pipeline handle type */
@@ -89,6 +89,7 @@ typedef union {
         unsigned int pr_slot;       /*!< available slot for preemptable (PR) work (ms) */
         unsigned int pr_rounds;     /*!< number of RC cycles required to complete one PR cycle (ms) */
         unsigned int app_slot;      /*!< remaining time for application (ms) */
+        unsigned int cpu_load;      /*!< CPU load percentage (%) */
     } api; /*!< Global execution performance counters */
     struct {
         mpp_t mpp;
@@ -106,6 +107,8 @@ typedef struct {
     unsigned int rc_cycle_min;  /*!< minimum cycle duration for RC tasks (ms), 0: sets default value */
     unsigned int rc_cycle_inc;  /*!< time increment for RC tasks (ms),  0: sets default value */
     int pipeline_task_max_prio; /*!< pipeline tasks maximum priority. */
+    int pipeline_rc_task_prio;  /*!< pipeline run-to-completion tasks priority. 0: sets default value */
+    int pipeline_pr_task_prio;  /*!< pipeline preemptable tasks priority. 0: sets default value */
 } mpp_api_params_t;
 
 /** Pipeline creation parameters */
@@ -175,6 +178,19 @@ typedef enum {
     MPP_PIXEL_INVALID       /*!< invalid pixel format */
 } mpp_pixel_format_t;
 
+/** Camera stream type - for multiple stream camera */
+typedef enum {
+    RGB_STREAM,            /*!< Frames received by the virtual camera element ar in rgb format */
+    IR_STREAM,             /*!< Frames received by the virtual camera element ar in ir format */
+    NUM_STREAMS            /*!< Total number of frame types suported by virtual camera element */
+} mpp_camera_stream_type;
+
+/** Camera stream configuration for multi-stream cameras */
+typedef struct {
+    mpp_camera_stream_type type; /*!< Stream type (member of enum mpp_camera_stream_type) */
+    bool active;                 /*!< Stream is active or not */
+} mpp_camera_stream_cfg;
+
 /** Camera parameters */
 typedef struct {
     int height; /*!< buffer height */
@@ -182,6 +198,11 @@ typedef struct {
     mpp_pixel_format_t format; /*!< pixel format */
     int fps;    /*!< frames per second */
     bool stripe; /*!< stripe mode */
+    void *rpmsg_inst; /*!< pointer to rpmsg instance */
+    volatile uint16_t *mcmgr_event_data; /*!< pointer to mcmgr event data */
+    uint32_t n_streams; /*!< number of total output video streams */
+    mpp_camera_stream_cfg stream[NUM_STREAMS]; /*!< streams configuration */
+    bool in_advance_enqueue; /*!< enable in-advance enqueue mode */
 } mpp_camera_params_t;
 
 /** Static image parameters */
@@ -211,12 +232,12 @@ typedef struct {
 /** Processing element ids */
 typedef enum {
     MPP_ELEMENT_INVALID,    /*!< Invalid element */
-    MPP_ELEMENT_COMPOSE,    /*!< Image composition - NOT IMPLEMENTED YET */
     MPP_ELEMENT_LABELED_RECTANGLE, /*!< Labeled rectangle - bounding box */
     MPP_ELEMENT_TEST,       /*!< Test inplace element - NOT FOR USE */
     MPP_ELEMENT_INFERENCE,  /*!< Inference engine */
     MPP_ELEMENT_CONVERT,    /*!< Image conversion: resolution, orientation, color format */
     MPP_ELEMENT_IMG_DECODE,     /*!< Image decompression: JPEG, PNG */
+    MPP_ELEMENT_IMG_COMPOSE,    /*!< compose a simple GUI: logo and text area with the input stream */
     MPP_ELEMENT_NUM         /*!< DO NOT USE */
 } mpp_element_id_t;
 
@@ -296,6 +317,18 @@ typedef struct {
     bool stripe;            /*!< stripe mode */
 } mpp_labeled_rect_t;
 
+
+/** mpp landmark structure */
+typedef struct {
+    uint16_t clear;     /*!< clear landmark */
+    uint16_t width;     /*!< landmark thickness */
+    mpp_color_t color;  /*!< landmark color */
+    int16_t x;          /*!< landmark x position */
+    int16_t y;          /*!< landmark y position */
+    uint16_t tag;       /*!< landmark tag */
+    bool stripe;        /*!< stripe mode */
+} mpp_landmark_t;
+
 /** Image area coordinates */
 typedef struct {
     int top;
@@ -332,21 +365,36 @@ typedef struct {
 /** Static image and Processing elements parameters */
 typedef struct {
 union {
+    /** Camera element's parameters */
+    mpp_camera_params_t camera;
     /** Static Image element's parameters */
     struct {
         mpp_img_params_t img_params;        /*!< static image parameters */
         void *img_buffer;                   /*!< static image buffer address */
     } static_image;
-    /** Compose element's parameters - NOT IMPLEMENTED YET */
+    /** Compose element's parameters */
     struct {
-        float a;
-        float b;
+        mpp_img_params_t logo_img_params;       /*!< logo image parameters */
+        void *logo_buffer;                      /*!< logo image buffer address */
+        mpp_area_t logo_area;                   /*!< logo image area */
+        mpp_img_params_t txt_img_params;        /*!< text image parameters */
+        void *txt_buffer;                       /*!< text image buffer address */
+        mpp_area_t txt_area;                    /*!< text image area */
+        mpp_area_t input_area;                  /*!< input image area */
+        mpp_rotate_degree_t out_angle;          /*!< output rotation angle */
+        mpp_flip_mode_t out_flip;               /*!< output flip mode */
+        mpp_pixel_format_t out_format;          /*!< output color format */
+        int out_width;                          /*!< output buffer width */
+        int out_height;                         /*!< output buffer height */
     } compose;
-    /** Labeled Rectangle element's parameters */
+    /** Labeled Rectangle and Landmarks element's parameters */
     struct {
-        uint32_t max_count;                 /*!< maximum number of rectangles */
-        uint32_t detected_count;            /*!< detected rectangles */
+        uint32_t max_rect;                  /*!< maximum number of rectangles */
+        uint32_t detected_rect;             /*!< detected rectangles */
         mpp_labeled_rect_t *rectangles;     /*!< array of rectangle data */
+        uint32_t max_landmk;                /*!< maximum number of landmarks */
+        uint32_t detected_landmk;           /*!< detected landmarks */
+        mpp_landmark_t *landmarks;          /*!< array of landmark data */
     } labels;
     /** Convert element's parameters */
     struct {

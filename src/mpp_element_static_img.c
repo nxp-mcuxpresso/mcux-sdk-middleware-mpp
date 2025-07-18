@@ -50,6 +50,12 @@ int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr, mpp_elem
     if (_mpp->status != MPP_CREATED)
         return MPP_ERROR;
 
+    if ((params->format == MPP_PIXEL_JPEG) && (params->compressed_size == 0))
+    {
+        MPP_LOGE("compressed_size param cannot be 0 for MPP_PIXEL_JPEG format\n\r");
+        return MPP_INVALID_PARAM;
+    }
+
     _elem_t *elem;
     ret  = mpp_create_elem(_mpp, &elem);
     if (ret != MPP_SUCCESS)
@@ -138,7 +144,10 @@ uint32_t mpp_static_image_update(_elem_t *elem, mpp_element_params_t *params)
     else
         height = img_params->height;
 
-    img_size = height * image_stride;
+    if (img_params->compressed_size > 0)
+        img_size = img_params->compressed_size;
+    else
+        img_size = height * image_stride;
 
     /* Check if new image fits in the allocated buffer */
     if (img_size > elem->io.out_buf[0]->hw->max_image_size) {
@@ -154,12 +163,14 @@ uint32_t mpp_static_image_update(_elem_t *elem, mpp_element_params_t *params)
     elem->dev.img->elt.config.height = img_params->height;
     elem->dev.img->elt.config.format = img_params->format;
     elem->dev.img->elt.config.stripe = img_params->stripe;
+    elem->dev.img->elt.config.compressed_size = img_params->compressed_size;
     elem->dev.img->elt.buffer = params->static_image.img_buffer;
 
     /* Update output buffer params */
     elem->io.out_buf[0]->width = img_params->width;
     elem->io.out_buf[0]->height = img_params->height;
     elem->io.out_buf[0]->format = img_params->format;
+    elem->io.out_buf[0]->compressed_size = img_params->compressed_size;
     /* set stripes */
     if (img_params->stripe)
         elem->io.out_buf[0]->stripe_num = 1;

@@ -13,6 +13,8 @@ MPP_COMMIT_ID=$(git describe --dirty --always --exclude='*')
 GEN_DOC=false
 LAST_BUILT_ELF=""
 APP_CONFIG_INDEX=""
+INPUT_CORE_ID=""
+SYSBUILD=""
 
 setup_toolchain_and_sdk_dir()
 {
@@ -79,15 +81,27 @@ build()
 
     setup_toolchain_and_sdk_dir
 
+    if [[ "${INPUT_CORE_ID}" != "" ]]; then
+        CORE_ID=${INPUT_CORE_ID}
+    fi
+
     #list examples
     if [ "${EXP}" = "all" ] ; then
-        EXPS=$( cat boards/${BOARD}/examples.conf )
+        if [ -d internal ] && [ -f boards/${BOARD}/examples_internal.conf ]; then
+            EXPS=$( cat boards/${BOARD}/examples.conf boards/${BOARD}/examples_internal.conf )
+        else
+            EXPS=$( cat boards/${BOARD}/examples.conf )
+        fi
     else
         EXPS=${EXP}
     fi
     #list tests
     if [ "${TEST}" = "all" ] ; then
-        TESTS=$( cat boards/${BOARD}/tests.conf )
+        if [ -d internal ] && [ -f boards/${BOARD}/tests_internal.conf ]; then
+            TESTS=$( cat boards/${BOARD}/tests.conf boards/${BOARD}/tests_internal.conf )
+        else
+            TESTS=$( cat boards/${BOARD}/tests.conf )
+        fi
     else
         TESTS=${TEST}
     fi
@@ -109,8 +123,14 @@ build()
     #build examples
     if [ -n "${EXPS}" ] ; then
         for APP in ${EXPS} ; do
+            if [[ "${SYSBUILD}" != "" ]]; then
+                BUILD_PATH="build/${APP}"
+            else
+                BUILD_PATH="build"
+            fi
             rm -fr build
             west build -b ${BOARD} examples/eiq_examples/mpp/${APP} -p always \
+                       ${SYSBUILD} \
                        --config ${BUILD_TYPE} \
                        --toolchain armgcc \
                        -Dcore_id=${CORE_ID} \
@@ -119,11 +139,11 @@ build()
                        -DMPP_COMMIT=${MPP_COMMIT_ID} \
                        -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}"
             if [ "$APP_CONFIG_INDEX" != "" ] ; then
-                cp build/${APP}_${CORE_ID}.elf build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf
-                cp build/${APP}_${CORE_ID}.bin build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.bin
+                cp ${BUILD_PATH}/${APP}_${CORE_ID}.elf build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf
+                cp ${BUILD_PATH}/${APP}_${CORE_ID}.bin build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.bin
                 LAST_BUILT_ELF="${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf"
             else
-                cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
+                cp ${BUILD_PATH}/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
                 LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
             fi
         done
@@ -132,9 +152,15 @@ build()
     #build tests
     if [ -n "${TESTS}" ] ; then
         for APP in ${TESTS} ; do
+            if [[ "${SYSBUILD}" != "" ]]; then
+                BUILD_PATH="build/${APP}"
+            else
+                BUILD_PATH="build"
+            fi
             rm -fr build
             parse_app_config "tests" "${APP}"
             west build -b ${BOARD} middleware/eiq/mpp/tests/${APP} -p always \
+                       ${SYSBUILD} \
                        --config ${BUILD_TYPE} \
                        --toolchain armgcc \
                        -Dcore_id=${CORE_ID} \
@@ -143,17 +169,17 @@ build()
                        -DMPP_COMMIT=${MPP_COMMIT_ID} \
                        -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}"
             if [ "$APP_CONFIG_INDEX" != "" ] ; then
-                cp build/${APP}_${CORE_ID}.elf build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf
-                cp build/${APP}_${CORE_ID}.bin build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.bin
+                cp ${BUILD_PATH}/${APP}_${CORE_ID}.elf build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf
+                cp ${BUILD_PATH}/${APP}_${CORE_ID}.bin build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.bin
                 LAST_BUILT_ELF="${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf"
             else
-                cp build/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
+                cp ${BUILD_PATH}/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
                 LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
             fi
         done
     fi
     cd ${W_DIR}
-    
+
     get_version
 
     set +ex
@@ -241,7 +267,7 @@ list_pannels()
 usage()
 {
     echo "usage:"
-    echo "$0 [-ab:e:h?id:Dp:c:f:t:s:g:v]"
+    echo "$0 [-ab:e:h?id:Dp:c:f:t:s:g:C:Sv]"
     echo " -h|?: help"
     echo " -b <board name>: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk}"
     echo " -D: build mpp and hal APIs documentation"
@@ -256,6 +282,8 @@ usage()
     echo " -s <sdk_path>: specify the path to the mcuxsdk folder from sdk-next repo (DO NOT include mcuxsdk folder)"
     echo " -v: enable verbose for build"
     echo " -g <app_config_index> - the index of the app_config to be used for building the app"
+    echo " -C <core_id> - specify the core id you want to build app for - if not set, default core (0) will be used"
+    echo " -S: add --sysbuild option to the build command - useful for multicore builds"
     exit 0
 }
 
@@ -275,7 +303,7 @@ panel_list=""
 
 #parse arguments
 OPTIND=1
-while getopts "ab:e:h?id:Dp:c:f:t:s:g:v" opt; do
+while getopts "ab:e:h?id:Dp:c:f:t:s:g:C:Sv" opt; do
     case "$opt" in
     a)  TFLM_REBUILD=true
         ;;
@@ -303,6 +331,10 @@ while getopts "ab:e:h?id:Dp:c:f:t:s:g:v" opt; do
         ;;
     g)  APP_CONFIG_INDEX+=$OPTARG
         ;;
+    C)  INPUT_CORE_ID=$OPTARG
+        ;;
+    S)  SYSBUILD="--sysbuild"
+        ;;
     v)  verbose="VERBOSE=1"
         ;;
     esac
@@ -316,7 +348,7 @@ fi
 echo "SDK_DIR=${SDK_DIR}"
 
 if [ "${BOARDS}" == "all" ] ; then
-	BOARDS="frdmmcxn947 evkbmimxrt1170 mimxrt700evk"
+    BOARDS="frdmmcxn947 evkbmimxrt1170 mimxrt700evk"
 fi
 
 # default example camera_view (only if EXP and TEST are not set after parsing arguments)
@@ -325,27 +357,31 @@ if [ "${EXP}" == "" -a "${TEST}" == "" ] ; then
 fi
 
 for BOARD in ${BOARDS} ; do 
-	#adjust build type
-	if [ "${BOARD}" == "frdmmcxn947" -o "${BOARD}" == "mimxrt700evk" ] ; then
-		BUILD_TYPE=flash_${BUILD_REL_OR_DBG}
-	else
-		BUILD_TYPE=flexspi_nor_sdram_${BUILD_REL_OR_DBG}
-	fi
+    #adjust build type
+    if [ "${BOARD}" == "frdmmcxn947" -o "${BOARD}" == "mimxrt700evk" ] ; then
+        if [[ "${INPUT_CORE_ID}" == "cm33_core1" ]] ; then
+            BUILD_TYPE=${BUILD_REL_OR_DBG}
+        else
+            BUILD_TYPE=flash_${BUILD_REL_OR_DBG}
+        fi
+    else
+        BUILD_TYPE=flexspi_nor_sdram_${BUILD_REL_OR_DBG}
+    fi
 
-	#Set default panel depending on board:
-	#RT700: Default Panel 4 
-	#RT1170 and RT1050: Default Panel 0
-	if [ "${BOARD}" == "evkbmimxrt1170" -o "${BOARD}" == "mimxrt700evk" ] ; then
-		default_panel="2"
-	else
+    #Set default panel depending on board:
+    #RT700: Default Panel 4 
+    #RT1170 and RT1050: Default Panel 0
+    if [ "${BOARD}" == "evkbmimxrt1170" -o "${BOARD}" == "mimxrt700evk" ] ; then
+        default_panel="2"
+    else
         default_panel=""
     fi
 
-	#use default panel if not passed by user
-	PANEL="${PANEL:=${default_panel}}"
+    #use default panel if not passed by user
+    PANEL="${PANEL:=${default_panel}}"
 
-	# run build
-	build
+    # run build
+    build
 done
 
 #generate doc

@@ -2,6 +2,8 @@
 cs.sh
 cscope.*
 *.bin
+!boards/mimxrt700evk/drivers/core1_image.bin
+!boards/mimxrt700evk/drivers/core1_image_QVGA.bin
 *.dis
 *.elf
 *.map

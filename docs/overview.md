@@ -18,7 +18,8 @@ The concept behind the API is to create a Media Processing Pipeline (MPP) based 
 The pipeline continues with multiple **processing elements** having a single input and a single output:
 
 - Image format conversion
-- Labeled rectangle drawing
+- Image decoder/decompressor
+- Labeled rectangle and landmarks drawing
 - Machine learning inference with the Tensorflow Lite Micro framework
 
 The pipeline can be closed by adding a **sink element**:
@@ -43,7 +44,7 @@ Summarizing, the application controls:
 - Connection of elements to each other
 - Reception of callbacks based on specific events
 - Updating specific elements (not all elements can be updated)
-- Stopping the pipeline (includes shut down of the hardware peripherals)
+- Stopping branch of the pipeline (includes shut down of the hardware peripherals)
 
 Application does not control:
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 NXP.
+ * Copyright 2021-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -79,9 +79,9 @@ typedef struct _gfx_dev gfx_dev_t;
 typedef struct
 {
     /* initialize the dev */
-    int (*init)(const gfx_dev_t *dev, void *param);
+    int (*init)(gfx_dev_t *dev, void *param);
     /* deinitialize the dev */
-    int (*deinit)(const gfx_dev_t *dev);
+    int (*deinit)(gfx_dev_t *dev);
     /* get buffer descriptors and policy */
     int (*get_buf_desc)(const gfx_dev_t *dev,
             hw_buf_desc_t *in_buf, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy);
@@ -109,6 +109,8 @@ typedef struct
                    gfx_surface_t *pDst,
                    gfx_rotate_config_t *pRotate,
                    mpp_flip_mode_t flip);
+    /* finalize the rendering into destination surface (must be called once after all blit/draw/compose operations) */
+    int (*finish)(gfx_dev_t *dev);
 } gfx_dev_operator_t;
 
 

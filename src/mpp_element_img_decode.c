@@ -43,18 +43,19 @@ unsigned int elem_img_decode_setup(_elem_t *elem)
 {
     int ret = MPP_SUCCESS;
     vdec_dev_t *vdec = NULL;
+    buf_desc_t *prev_buf = NULL;
 
     do {
         /* sanity checks */
         if (elem == NULL)
         {
-            MPP_LOGE("invalid input buffer - elem (0x%x)\n", elem);
+            MPP_LOGE("elem pointer is NULL\n");
             ret = MPP_INVALID_PARAM;
             break;
         }
         if ((elem->type != MPP_TYPE_PROC) || (elem->proc_typ != MPP_ELEMENT_IMG_DECODE))
         {
-            MPP_LOGE("invalid element %s (expected element IMG_DECODE)\n", elem_name(elem->proc_typ));
+            MPP_LOGE("invalid element %s (expected element IMG_DECODE)\n", elem_name(elem));
             ret = MPP_INVALID_PARAM;
             break;
         }
@@ -76,8 +77,13 @@ unsigned int elem_img_decode_setup(_elem_t *elem)
             break;
         }
 
-        if (  (elem->params.decode.width != elem->prev->io.out_buf[0]->width)
-           || (elem->params.decode.height != elem->prev->io.out_buf[0]->height) )
+        prev_buf = get_in_buff_from_prev_elem(elem);
+        if (prev_buf == NULL) {
+            MPP_LOGE("No input buffer found from previous element\n");
+            return MPP_ERROR;
+        }
+        if (  (elem->params.decode.width != prev_buf->width)
+           || (elem->params.decode.height != prev_buf->height) )
         {
             MPP_LOGE("invalid parameters for Image Decode\r\n");
             ret = MPP_INVALID_PARAM;
@@ -88,7 +94,7 @@ unsigned int elem_img_decode_setup(_elem_t *elem)
         elem->io.inplace = false;
         /* input buffer points to previous element buffer */
         elem->io.nb_in_buf = 1;
-        elem->io.in_buf[0] = elem->prev->io.out_buf[0];
+        elem->io.in_buf[0] = prev_buf;
         /* create output buffer parameters to be passed to next element */
         elem->io.nb_out_buf = 1;
         elem->io.out_buf[0] = hal_malloc(sizeof(buf_desc_t));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP
+ * Copyright 2022-2025 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -131,5 +131,8 @@ int hal_get_max_syscall_prio();
 
 /*! @brief get os max priority */
 int hal_get_os_max_prio();
+
+/*! @brief get CPU percent used by idle task */
+unsigned int hal_get_idle_percent();
 
 #endif /* _HAL_OS_H */

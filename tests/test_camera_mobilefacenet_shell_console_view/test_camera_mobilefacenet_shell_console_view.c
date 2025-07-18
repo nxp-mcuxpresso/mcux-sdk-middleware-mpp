@@ -63,23 +63,10 @@
 /* label rect line width */
 #define RECT_LINE_WIDTH 2
 
-#define APP_GFX_BACKEND_NAME "gfx_PXP"
-
-/*
- * SWAP_DIMS = 1 if source/display dims are reversed
- * SWAP_DIMS = 0 if source/display have the same orientation
- */
-#define SWAP_DIMS (((APP_DISPLAY_LANDSCAPE_ROTATE == ROTATE_90) || (APP_DISPLAY_LANDSCAPE_ROTATE == ROTATE_270)) ? 1 : 0)
-
-/*
- * SRC_DISPLAY_FLIP = FLIP_NONE if a static image is used as source
- * SRC_DISPLAY_FLIP = FLIP_HORIZONTAL if a camera is used as source
- */
-#define SRC_DISPLAY_FLIP (SOURCE_STATIC_IMAGE ? FLIP_NONE : FLIP_HORIZONTAL)
-
-/* display small & large dims */
-#define DISPLAY_SMALL_DIM MIN(APP_DISPLAY_WIDTH, APP_DISPLAY_HEIGHT)
-#define DISPLAY_LARGE_DIM MAX(APP_DISPLAY_WIDTH, APP_DISPLAY_HEIGHT)
+/* pick default backend if not specified */
+#ifndef APP_GFX_BACKEND_NAME
+#define APP_GFX_BACKEND_NAME NULL
+#endif
 
 /* set this flag to 1 in order to replace the camera source by static image */
 #ifndef SOURCE_STATIC_IMAGE
@@ -104,8 +91,9 @@ void *image_data = (void *)thispersondoesnotexist_11_bgra_data;
 #define SRC_LARGE_DIM MAX(SRC_WIDTH, SRC_HEIGHT)
 #define SRC_SMALL_DIM MIN(SRC_WIDTH, SRC_HEIGHT)
 
-/* label rect line width */
-#define RECT_LINE_WIDTH 2
+/* display small & large dims */
+#define DISPLAY_SMALL_DIM MIN(APP_DISPLAY_WIDTH, APP_DISPLAY_HEIGHT)
+#define DISPLAY_LARGE_DIM MAX(APP_DISPLAY_WIDTH, APP_DISPLAY_HEIGHT)
 
 #define MODEL_ASPECT_RATIO   (1.0f * MOBILEFACENET_WIDTH / MOBILEFACENET_HEIGHT)
 /* output is displayed in landscape mode */
@@ -113,64 +101,99 @@ void *image_data = (void *)thispersondoesnotexist_11_bgra_data;
 /* camera aspect ratio */
 #define CAMERA_ASPECT_RATIO  (1.0f * APP_CAMERA_WIDTH / APP_CAMERA_HEIGHT)
 
-/* The detection zone is a rectangle that has the same shape as the model input. */
+#if (SOURCE_STATIC_IMAGE == 1)
+#define VIEW_LARGE_DIM DISPLAY_SMALL_DIM
+#define VIEW_SMALL_DIM DISPLAY_SMALL_DIM
+#define VIEW_ASPECT_RATIO DISPLAY_ASPECT_RATIO
+#define VIEW_WIDTH APP_DISPLAY_WIDTH
+#define VIEW_HEIGHT APP_DISPLAY_HEIGHT
+#else
+#define VIEW_SMALL_DIM MIN(DISPLAY_SMALL_DIM, SRC_SMALL_DIM)
+#define VIEW_LARGE_DIM ((DISPLAY_SMALL_DIM > SRC_SMALL_DIM) ? SRC_LARGE_DIM : DISPLAY_LARGE_DIM)
+#define VIEW_ASPECT_RATIO ((DISPLAY_SMALL_DIM > SRC_SMALL_DIM) ? CAMERA_ASPECT_RATIO : DISPLAY_ASPECT_RATIO)
+#define VIEW_WIDTH ((DISPLAY_SMALL_DIM > SRC_SMALL_DIM) ? SRC_WIDTH : APP_DISPLAY_WIDTH)
+#define VIEW_HEIGHT ((DISPLAY_SMALL_DIM > SRC_SMALL_DIM) ? SRC_HEIGHT : APP_DISPLAY_HEIGHT)
+#endif
+
 /*
+ * Assuming that the output should be in landscape, SWAP_DIMS is defined depending on the
+ * orientation of the view.
+ * SWAP_DIMS = 1 if view is not already in landscape (width and height need to be swapped)
+ * SWAP_DIMS = 0 if view is in landscape.
+ */
+#ifdef APP_SKIP_CONVERT_FOR_DISPLAY
+#define SWAP_DIMS 0
+#else
+#define SWAP_DIMS ((VIEW_WIDTH < VIEW_HEIGHT) ? 1 : 0)
+#endif
+
+/*
+ * SRC_DISPLAY_FLIP = FLIP_NONE if a static image is used as source
+ * SRC_DISPLAY_FLIP = FLIP_HORIZONTAL if a camera is used as source
+ */
+#define SRC_DISPLAY_FLIP (SOURCE_STATIC_IMAGE ? FLIP_NONE : APP_SRC_DISPLAY_FLIP)
+
+/* label rect line width */
+#define RECT_LINE_WIDTH 2
+
+/* The detection zone is a rectangle that has the same shape as the model input.
  * The rectangle dimensions are calculated based on the display small dim and respecting the model aspect ratio
- * The detection zone width and height depend on the display_aspect_ratio compared to the model aspect_ratio:
+ * The detection zone width and height depend on the view_aspect_ratio compared to the model aspect_ratio:
  * if the display_aspect_ratio >= model_aspect_ratio then :
- *                  (width, height) = (display_small_dim * model_aspect_ratio, display_small_dim)
+ *                  (width, height) = (view_small_dim * model_aspect_ratio, view_small_dim)
  * if the display_aspect_ratio < model_aspect_ratio then :
- *                  (width, height) = (display_small_dim, display_small_dim / model_aspect_ratio)
+ *                  (width, height) = (view_small_dim, view_small_dim / model_aspect_ratio)
  *
  * */
-#define DETECTION_ZONE_RECT_HEIGHT ((DISPLAY_ASPECT_RATIO >= MODEL_ASPECT_RATIO) ? \
-		DISPLAY_SMALL_DIM : (DISPLAY_SMALL_DIM / MODEL_ASPECT_RATIO))
-#define DETECTION_ZONE_RECT_WIDTH  ((DISPLAY_ASPECT_RATIO >= MODEL_ASPECT_RATIO) ? \
-		(DISPLAY_SMALL_DIM * MODEL_ASPECT_RATIO) : DISPLAY_SMALL_DIM)
+#define DETECTION_ZONE_RECT_HEIGHT ((VIEW_ASPECT_RATIO >= MODEL_ASPECT_RATIO) ? \
+        VIEW_SMALL_DIM : (VIEW_SMALL_DIM / MODEL_ASPECT_RATIO))
+#define DETECTION_ZONE_RECT_WIDTH  ((VIEW_ASPECT_RATIO >= MODEL_ASPECT_RATIO) ? \
+        (VIEW_SMALL_DIM * MODEL_ASPECT_RATIO) : VIEW_SMALL_DIM)
 
 /*
  * The detection zone offsets are defined in the following way:
- * The static image and its detection zone are placed in the top left corner of the display.
+ * The static image is placed in the top left corner of the display and its detection zone is centered on image.
  * The camera output detection zone is placed in the middle of the display.
  *
  * */
-#define DETECTION_ZONE_RECT_TOP (DISPLAY_SMALL_DIM - DETECTION_ZONE_RECT_HEIGHT)/2
+#define DETECTION_ZONE_RECT_TOP (VIEW_SMALL_DIM - DETECTION_ZONE_RECT_HEIGHT)/2
+
 /*
- * DETECTION_ZONE_RECT_LEFT = 0 if a static image is used as source
- * DETECTION_ZONE_RECT_LEFT = (DISPLAY_LARGE_DIM - DETECTION_ZONE_RECT_WIDTH)/2 if a camera is used as source
+ * DETECTION_ZONE_RECT_LEFT = ((SRC_LARGE_DIM * SRC_ZOOM) - DETECTION_ZONE_RECT_WIDTH)/2 if a static image is used as source
+ * DETECTION_ZONE_RECT_LEFT = (VIEW_LARGE_DIM - DETECTION_ZONE_RECT_WIDTH)/2 if a camera is used as source
  */
-#define DETECTION_ZONE_RECT_LEFT (SOURCE_STATIC_IMAGE ? 0 : ((DISPLAY_LARGE_DIM - DETECTION_ZONE_RECT_WIDTH)/2))
+#define DETECTION_ZONE_RECT_LEFT ((VIEW_LARGE_DIM - DETECTION_ZONE_RECT_WIDTH)/2)
 
 /*
  *  The computation of the crop size(width and height) and the crop top/left depends on the detection
  *  zone dims and offsets and on the source-display scaling factor SF which is calculated differently
  *  depending on 2 constraints:
- *           * Constraint 1: display aspect ratio compared to the source aspect ratio.
+ *           * Constraint 1: view aspect ratio compared to the source aspect ratio.
  *           * Constraint 2: SWAP_DIMS value.
  * if the display_aspect_ratio < source_aspect_ratio :
- *            - SWAP_DIMS = 0: SF = APP_DISPLAY_WIDTH / SRC_WIDTH
- *            - SWAP_DIMS = 1: SF = APP_DISPLAY_HEIGHT / SRC_HEIGHT
+ *            - SWAP_DIMS = 0: SF = VIEW_WIDTH / SRC_WIDTH
+ *            - SWAP_DIMS = 1: SF = VIEW_HEIGHT / SRC_HEIGHT
  * if the display_aspect_ratio >= source_aspect_ratio:
- *            - SWAP_DIMS = 0: SF = APP_DISPLAY_HEIGHT / SRC_HEIGHT
- *            - SWAP_DIMS = 1: SF = APP_DISPLAY_WIDTH / SRC_WIDTH
+ *            - SWAP_DIMS = 0: SF = VIEW_HEIGHT / SRC_HEIGHT
+ *            - SWAP_DIMS = 1: SF = VIEW_WIDTH / SRC_WIDTH
  * the crop dims and offsets are calculated in the following way:
  * CROP_SIZE_TOP = DETECTION_ZONE_RECT_HEIGHT / SF
  * CROP_SIZE_LEFT = DETECTION_ZONE_RECT_WIDTH / SF
  * CROP_TOP = DETECTION_ZONE_RECT_HEIGHT / SF
  * CROP_LEFT = DETECTION_ZONE_RECT_LEFT / SF
  * */
-#if ((DISPLAY_LARGE_DIM * SRC_HEIGHT) < (DISPLAY_SMALL_DIM * SRC_WIDTH))
-#define CROP_SIZE_TOP   ((DETECTION_ZONE_RECT_HEIGHT * SRC_WIDTH) / (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH))
-#define CROP_SIZE_LEFT  ((DETECTION_ZONE_RECT_WIDTH * SRC_WIDTH) / (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH))
+#if ((VIEW_LARGE_DIM * SRC_HEIGHT) < (VIEW_SMALL_DIM * SRC_WIDTH))
+#define CROP_SIZE_TOP   ((DETECTION_ZONE_RECT_HEIGHT * SRC_WIDTH) / (SWAP_DIMS ? VIEW_HEIGHT : VIEW_WIDTH))
+#define CROP_SIZE_LEFT  ((DETECTION_ZONE_RECT_WIDTH * SRC_WIDTH) / (SWAP_DIMS ? VIEW_HEIGHT : VIEW_WIDTH))
 
-#define CROP_TOP  ((DETECTION_ZONE_RECT_TOP * SRC_WIDTH) / (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH))
-#define CROP_LEFT ((DETECTION_ZONE_RECT_LEFT * SRC_WIDTH) / (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH))
+#define CROP_TOP  ((DETECTION_ZONE_RECT_TOP * SRC_WIDTH) / (SWAP_DIMS ? VIEW_HEIGHT : VIEW_WIDTH))
+#define CROP_LEFT ((DETECTION_ZONE_RECT_LEFT * SRC_WIDTH) / (SWAP_DIMS ? VIEW_HEIGHT : VIEW_WIDTH))
 #else   /* DISPLAY_ASPECT_RATIO() >= SOURCE_ASPECT_RATIO() */
-#define CROP_SIZE_TOP   ((DETECTION_ZONE_RECT_HEIGHT * SRC_HEIGHT) / (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT))
-#define CROP_SIZE_LEFT  ((DETECTION_ZONE_RECT_WIDTH * SRC_HEIGHT) / (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT))
+#define CROP_SIZE_TOP   ((DETECTION_ZONE_RECT_HEIGHT * SRC_HEIGHT) / (SWAP_DIMS ? VIEW_WIDTH : VIEW_HEIGHT))
+#define CROP_SIZE_LEFT  ((DETECTION_ZONE_RECT_WIDTH * SRC_HEIGHT) / (SWAP_DIMS ? VIEW_WIDTH : VIEW_HEIGHT))
 
-#define CROP_TOP  ((DETECTION_ZONE_RECT_TOP * SRC_HEIGHT) / (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT))
-#define CROP_LEFT ((DETECTION_ZONE_RECT_LEFT * SRC_HEIGHT) / (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT))
+#define CROP_TOP  ((DETECTION_ZONE_RECT_TOP * SRC_HEIGHT) / (SWAP_DIMS ? VIEW_WIDTH : VIEW_HEIGHT))
+#define CROP_LEFT ((DETECTION_ZONE_RECT_LEFT * SRC_HEIGHT) / (SWAP_DIMS ? VIEW_WIDTH : VIEW_HEIGHT))
 #endif  /* DISPLAY_ASPECT_RATIO() < SOURCE_ASPECT_RATIO() */
 
 /* Detected boxes offsets */
@@ -289,7 +312,7 @@ int main()
 	ret = xTaskCreate(
 			app_task,
 			"app_task",
-			configMINIMAL_STACK_SIZE + 1000,
+			configMINIMAL_STACK_SIZE + 2400,
 			NULL,
 			APP_DEFAULT_PRIO,
 			&handle);
@@ -314,6 +337,7 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 
 	/* user_data handle contains application private data */
 	user_data_t *app_priv = (user_data_t *)user_data;
+	char* label = "Face not recognized";
 
 	switch(evt)
 	{
@@ -346,8 +370,23 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 			}
 			else
 			{
+				strcpy(label, app_priv->result.recognized_name);
 				vTaskSuspend(shell_task_handle);
 				task_status = -1;
+			}
+
+			mpp_element_params_t params;
+			memset(&params, 0, sizeof(params));
+			uint8_t label_size = sizeof(params.labels.rectangles[0].label);
+			// Update the label in the first rectangle
+			params.labels.detected_rect = 1;
+			params.labels.max_rect = 1;
+			params.labels.rectangles = app_priv->labels;
+			strncpy((char *)params.labels.rectangles[0].label, label, label_size);
+			params.labels.rectangles[0].label[label_size - 1] = '\0';
+			if ( (app_priv->elem != 0) && ( app_priv->mp != NULL ) )
+			{
+				mpp_element_update(app_priv->mp, app_priv->elem, &params, true);
 			}
 
 			__atomic_store_n(&app_priv->accessing, 0, __ATOMIC_SEQ_CST);
@@ -371,16 +410,23 @@ static void app_task(void *params)
 	PRINTF("[%s]\r\n", mpp_get_version());
 	PRINTF("Inference Engine: TensorFlow-Lite Micro \r\n");
 
-	/* fix max pipeline task priority. */
-	mpp_api_params_t api_params;
-	api_params.pipeline_task_max_prio = APP_PIPELINE_TASK_MAX_PRIO;
+    /* init API */
+    static mpp_api_params_t api_param = {0};
 
-	ret = mpp_api_init(&api_params);
+#if ((defined APP_RC_CYCLE_INC) && (defined APP_RC_CYCLE_MIN))
+    /* fine-tune RC cycle for stripe mode */
+    api_param.rc_cycle_inc = APP_RC_CYCLE_INC;
+    api_param.rc_cycle_min = APP_RC_CYCLE_MIN;
+#endif
+
+    api_param.pipeline_task_max_prio = APP_PIPELINE_TASK_MAX_PRIO;
+
+	ret = mpp_api_init(&api_param);
 	if (ret)
 		goto err;
 
-	mpp_t mp;
-	mpp_params_t mpp_params;
+	static mpp_t mp;
+	static mpp_params_t mpp_params;
 	memset(&mpp_params, 0, sizeof(mpp_params));
 	mpp_params.evt_callback_f = &mpp_event_listener;
 	mpp_params.mask = MPP_EVENT_ALL;
@@ -393,20 +439,20 @@ static void app_task(void *params)
 	user_data.mp = mp;
 
 #if (SOURCE_STATIC_IMAGE == 1)
-    mpp_img_params_t img_params;
+	static mpp_img_params_t img_params;
     memset(&img_params, 0, sizeof (mpp_img_params_t));
     img_params.format = SRC_IMAGE_FORMAT;
     img_params.width = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
     mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
 #else
-    mpp_camera_params_t cam_params;
+    static mpp_camera_params_t cam_params;
     memset(&cam_params, 0 , sizeof(cam_params));
     cam_params.height = APP_CAMERA_HEIGHT;
     cam_params.width =  APP_CAMERA_WIDTH;
     cam_params.format = APP_CAMERA_FORMAT;
     cam_params.fps    = 30;
-    ret = mpp_camera_add(mp, s_camera_name, &cam_params);
+    ret = mpp_camera_add(mp, s_camera_name, &cam_params, NULL);
     if (ret)
     {
         PRINTF("Failed to add camera %s\r\n", s_camera_name);
@@ -418,7 +464,7 @@ static void app_task(void *params)
 	 * - first for the conversion to model
 	 * - second for the label-rect draw & display
 	 * this order is needed to avoid running inference on an image containing label-rect */
-	mpp_t mp_split;
+    static mpp_t mp_split;
 	mpp_params.exec_flag = MPP_EXEC_PREEMPT;
 
 	ret = mpp_split(mp, 1 , &mpp_params, &mp_split);
@@ -429,7 +475,7 @@ static void app_task(void *params)
 	}
 
 	/* First do crop + resize + color convert */
-	mpp_element_params_t elem_params;
+	static mpp_element_params_t elem_params;
 	memset(&elem_params, 0, sizeof(elem_params));
 	/* pick default device from the first listed and supported by Hw */
 	elem_params.convert.dev_name = APP_GFX_BACKEND_NAME;
@@ -460,7 +506,7 @@ static void app_task(void *params)
 	}
 
 	// configure TFlite element with model
-	mpp_element_params_t mobilefacenet_params;
+	static mpp_element_params_t mobilefacenet_params;
 	static mpp_stats_t mobilefacenet_stats;
 	memset(&mobilefacenet_params, 0 , sizeof(mpp_element_params_t));
 
@@ -495,22 +541,19 @@ static void app_task(void *params)
 	/* pick default device from the first listed and supported by Hw */
 	elem_params.convert.dev_name = NULL;
 	/* set output buffer dims */
-	elem_params.convert.out_buf.width =  (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH);
-	elem_params.convert.out_buf.height = (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT);
-	elem_params.convert.pixel_format = APP_DISPLAY_FORMAT;
-	/* scaling parameters */
-	if ((DISPLAY_LARGE_DIM * SRC_HEIGHT) < (DISPLAY_SMALL_DIM * SRC_WIDTH))
-	{
-		elem_params.convert.scale.width =  (SWAP_DIMS ? APP_DISPLAY_HEIGHT : APP_DISPLAY_WIDTH);
-		elem_params.convert.scale.height = (SWAP_DIMS ? (APP_DISPLAY_HEIGHT * SRC_HEIGHT / SRC_WIDTH) :
-				(APP_DISPLAY_WIDTH * SRC_HEIGHT / SRC_WIDTH));
-	}
-	else
-	{
-		elem_params.convert.scale.height = (SWAP_DIMS ? APP_DISPLAY_WIDTH : APP_DISPLAY_HEIGHT);
-		elem_params.convert.scale.width  = (SWAP_DIMS ? (APP_DISPLAY_WIDTH * SRC_WIDTH / SRC_HEIGHT) :
-				(APP_DISPLAY_HEIGHT * SRC_WIDTH / SRC_HEIGHT));
-	}
+    elem_params.convert.out_buf.width =  (SWAP_DIMS ? VIEW_HEIGHT : VIEW_WIDTH);
+    elem_params.convert.out_buf.height = (SWAP_DIMS ? VIEW_WIDTH : VIEW_HEIGHT);
+    elem_params.convert.pixel_format = APP_DISPLAY_FORMAT;
+    /* scaling parameters */
+    if ((VIEW_LARGE_DIM * SRC_HEIGHT) < (VIEW_SMALL_DIM * SRC_WIDTH)) {
+        elem_params.convert.scale.width =  (SWAP_DIMS ? VIEW_HEIGHT : VIEW_WIDTH);
+        elem_params.convert.scale.height = (SWAP_DIMS ? (VIEW_HEIGHT * SRC_HEIGHT / SRC_WIDTH) :
+                (VIEW_WIDTH * SRC_HEIGHT / SRC_WIDTH));
+    } else {
+        elem_params.convert.scale.height = (SWAP_DIMS ? VIEW_WIDTH : VIEW_HEIGHT);
+        elem_params.convert.scale.width  = (SWAP_DIMS ? (VIEW_WIDTH * SRC_WIDTH / SRC_HEIGHT) :
+                (VIEW_HEIGHT * SRC_WIDTH / SRC_HEIGHT));
+    }
 
 	elem_params.convert.flip = SRC_DISPLAY_FLIP;
 	elem_params.convert.ops = MPP_CONVERT_COLOR | MPP_CONVERT_ROTATE | MPP_CONVERT_SCALE;
@@ -528,8 +571,8 @@ static void app_task(void *params)
 	memset(&user_data.labels, 0, sizeof(user_data.labels));
 
 	// params init
-	elem_params.labels.max_count = 1;
-	elem_params.labels.detected_count = 1;
+	elem_params.labels.max_rect = 1;
+	elem_params.labels.detected_rect = 1;
 	elem_params.labels.rectangles = user_data.labels;
 
 	// first add detection zone box
@@ -567,7 +610,7 @@ static void app_task(void *params)
 		}
 	}
 
-	mpp_display_params_t disp_params;
+	static mpp_display_params_t disp_params;
 	memset(&disp_params, 0 , sizeof(disp_params));
 	disp_params.format = APP_DISPLAY_FORMAT;
 	disp_params.width  = APP_DISPLAY_WIDTH;
@@ -581,7 +624,7 @@ static void app_task(void *params)
 	}
 
 	// start preempt-able pipeline branch
-	ret = mpp_start(mp_split, 0);
+	ret = mpp_start(mp_split, 0, false);
 	if (ret)
 	{
 		PRINTF("Failed to start pipeline");
@@ -589,7 +632,7 @@ static void app_task(void *params)
 	}
 
 	// start main pipeline branch
-	ret = mpp_start(mp, 1);
+	ret = mpp_start(mp, 1, false);
 	if (ret)
 	{
 		PRINTF("Failed to start pipeline");

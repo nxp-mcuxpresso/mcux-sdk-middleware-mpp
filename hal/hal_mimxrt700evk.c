@@ -31,6 +31,7 @@
 /* Decoder setup */
 hal_img_decoder_setup_t decoder_setup[] =
 {
+    {"jpeg_HW", HAL_JPEG_HW_Register},
     {"jpeg_CPU", HAL_JPEG_CPU_Register},
 };
 
@@ -74,11 +75,13 @@ int hal_display_setup(const char *name, display_dev_t *dev)
 
 int HAL_CameraDev_EzhV_Ov7670_setup(const char *name, camera_dev_t *dev);
 int HAL_CameraDev_USB_setup(const char *name, camera_dev_t *dev);
+int HAL_CameraDev_Virtual_USB_setup(const char *name, camera_dev_t *dev);
 
 hal_camera_setup_t camera_setup[] =
 {
     {"EzhV_Ov7670", HAL_CameraDev_EzhV_Ov7670_setup},
     {"USB_cam", HAL_CameraDev_USB_setup},
+    {"Virtual_USB_cam", HAL_CameraDev_Virtual_USB_setup}
 };
 
 int setup_camera_dev(hal_camera_setup_t camera_setup[], int camera_nb,

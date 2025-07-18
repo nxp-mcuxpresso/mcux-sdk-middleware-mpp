@@ -311,14 +311,14 @@ static void check_model_switch_output(user_data_t *app_priv)
                     && ((app_priv->final_boxes[i].score * 100.0f) < EXPECTED_PERSON_CONFIDENCE_MIN))
             {
                 test_fail = true;
-                PRINTF("\n\MODEL_PERSONDET confidence below expected min\n\r");
+                PRINTF("\nMODEL_PERSONDET confidence below expected min\n\r");
             }
 
             if ((g_cur_model == MODEL_ULTRAFACE)
                     && ((app_priv->final_boxes[i].score * 100.0f) < EXPECTED_FACE_CONFIDENCE_MIN))
             {
                 test_fail = true;
-                PRINTF("\n\MODEL_ULTRAFACE confidence below expected min\n\r");
+                PRINTF("\nMODEL_ULTRAFACE confidence below expected min\n\r");
             }
         }
     }
@@ -332,7 +332,7 @@ static void check_model_switch_output(user_data_t *app_priv)
         }
         else
         {
-            PRINTF("\n\MODEL_PERSONDET unexpected number of detections \n\r");
+            PRINTF("\nMODEL_PERSONDET unexpected number of detections \n\r");
             test_fail = true;
         }
     }
@@ -344,7 +344,7 @@ static void check_model_switch_output(user_data_t *app_priv)
         }
         else
         {
-            PRINTF("\n\MODEL_ULTRAFACE unexpected number of detections \n\r");
+            PRINTF("\nMODEL_ULTRAFACE unexpected number of detections \n\r");
             test_fail = true;
         }
     }
@@ -416,12 +416,12 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
             mpp_element_params_t params;
             memset(&params, 0, sizeof(params));
             /* detected_count contains at least the detection zone box */
-            params.labels.detected_count = app_priv->detected_count + 1;
-            params.labels.max_count = MAX_LABEL_RECTS;
+            params.labels.detected_rect = app_priv->detected_count + 1;
+            params.labels.max_rect = MAX_LABEL_RECTS;
             params.labels.rectangles = app_priv->labels;
             boxes_to_rects(app_priv->final_boxes, NUM_BOXES_MAX, MAX_LABEL_RECTS, params.labels.rectangles);
 
-            mpp_element_update(app_priv->mp, app_priv->labrect_elem, &params);
+            mpp_element_update(app_priv->mp, app_priv->labrect_elem, &params, true);
         }
 
         app_priv->inference_frame_num++;
@@ -484,7 +484,7 @@ static void app_task(void *params)
     cam_params.format = APP_CAMERA_FORMAT;
     cam_params.fps    = 30;
     cam_params.stripe = stripe_mode;
-    ret = mpp_camera_add(mp, s_camera_name, &cam_params);
+    ret = mpp_camera_add(mp, s_camera_name, &cam_params, NULL);
     if (ret) {
         PRINTF("Failed to add camera %s\n", s_camera_name);
         goto err;
@@ -628,8 +628,8 @@ static void app_task(void *params)
     memset(&user_data.labels, 0, sizeof(user_data.labels));
 
     /* params init */
-    elem_params.labels.max_count = MAX_LABEL_RECTS;
-    elem_params.labels.detected_count = 1;
+    elem_params.labels.max_rect = MAX_LABEL_RECTS;
+    elem_params.labels.detected_rect = 1;
     elem_params.labels.rectangles = user_data.labels;
 
     /* first add detection zone box */
@@ -684,19 +684,19 @@ static void app_task(void *params)
     }
 
     /* start preempt-able pipeline branch */
-    ret = mpp_start(mp_bg, 0);
+    ret = mpp_start(mp_bg, 0, false);
     if (ret) {
         PRINTF("Failed to start preempt-able pipeline branch");
         goto err;
     }
     /* start secondary pipeline branch */
-    ret = mpp_start(mp_split, 0);
+    ret = mpp_start(mp_split, 0, false);
     if (ret) {
         PRINTF("Failed to start secondary pipeline branch");
         goto err;
     }
     /* start main pipeline branch */
-    ret = mpp_start(mp, 1);
+    ret = mpp_start(mp, 1, false);
     if (ret) {
         PRINTF("Failed to start main pipeline branch");
         goto err;
@@ -743,14 +743,14 @@ static void app_task(void *params)
             infer_conv_params.convert.out_buf.height = ULTRAFACE_HEIGHT;
             infer_conv_params.convert.scale.width = ULTRAFACE_WIDTH;
             infer_conv_params.convert.scale.height = ULTRAFACE_HEIGHT;
-            ret = mpp_element_update(mp_split, infer_conv_h, &infer_conv_params);
+            ret = mpp_element_update(mp_split, infer_conv_h, &infer_conv_params, true);
             if (ret) {
                 PRINTF("Failed to update element convert for ultraface");
                 goto err;
             }
 
             /* switch to ULTRAFACE */
-            ret = mpp_element_update(mp_bg, user_data.infer_elem, &ultraface_params);
+            ret = mpp_element_update(mp_bg, user_data.infer_elem, &ultraface_params, true);
             if (ret) {
                 PRINTF("Failed to update element inference for ultraface");
                 goto err;
@@ -765,14 +765,14 @@ static void app_task(void *params)
             infer_conv_params.convert.out_buf.height = PERSONDETECT_HEIGHT;
             infer_conv_params.convert.scale.width = PERSONDETECT_WIDTH;
             infer_conv_params.convert.scale.height = PERSONDETECT_HEIGHT;
-            ret = mpp_element_update(mp_split, infer_conv_h, &infer_conv_params);
+            ret = mpp_element_update(mp_split, infer_conv_h, &infer_conv_params, true);
             if (ret) {
                 PRINTF("Failed to update element convert for persondetect");
                 goto err;
             }
 
             /* switch to PERSONDET */
-            ret = mpp_element_update(mp_bg, user_data.infer_elem, &persondetect_params);
+            ret = mpp_element_update(mp_bg, user_data.infer_elem, &persondetect_params, true);
             if (ret) {
                 PRINTF("Failed to update element inference for persondetect");
                 goto err;
@@ -782,8 +782,8 @@ static void app_task(void *params)
             g_model_name = PERSONDETECT_NAME;
             g_label = PERSONDETECT_DETECTION_LABEL;
         }
-        mpp_start(mp_split, 0);
-        mpp_start(mp_bg, 0);
+        mpp_start(mp_split, 0, false);
+        mpp_start(mp_bg, 0, false);
     }
 
     /* pause application task */

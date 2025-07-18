@@ -75,8 +75,7 @@ void set_new_face_embeddings(const float *person_embeddings)
  */
 static int delete_person (char* Name, int size)
 {
-	int i = 0;
-	int j = 0;
+	int i = 0, j = 0, z = 0;
 	int position = 0;
 
 	for(i = 0; i < size ;i++)
@@ -88,14 +87,16 @@ static int delete_person (char* Name, int size)
 			for(j = position; j < size-1;j++)
 			{
 				strcpy(embeddings_db[j].name , embeddings_db[j+1].name);
-				for (int z = 0; z <SIZE_EMBEDDING ; z++)
+				for (z = 0; z < SIZE_EMBEDDING ; z++)
 				{
 					embeddings_db[j].embedding[z] = embeddings_db[j+1].embedding[z];
 				}
 			}
 
-			/* clear last name */
-            strcpy(embeddings_db[size].name , "\0");
+            /* clear last name and embeddings */
+            strcpy(embeddings_db[size-1].name , "\0");
+            for (z = 0; z < SIZE_EMBEDDING ; z++)
+                embeddings_db[size-1].embedding[z] = 0.0f;
 
             break;
 		}
@@ -185,7 +186,7 @@ shell_status_t database_delete(shell_handle_t shellHandle, int32_t argc, char **
 /*
  * Show database.
  */
-shell_status_t database_show(shell_handle_t shellHandle, int32_t argc)
+shell_status_t database_show(shell_handle_t shellHandle, int32_t argc, char **argv)
 {
 	int new_database_size= calculate_size(embeddings_db);
 

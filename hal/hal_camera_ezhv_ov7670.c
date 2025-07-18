@@ -171,7 +171,7 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Stop(const camera_dev_t *dev)
     return ret;
 }
 
-hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Dequeue(const camera_dev_t *dev, void **data, int *stripe)
+hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Dequeue(const camera_dev_t *dev, void **data, int *stripe, int *compressed_size)
 {
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     HAL_LOGD("++HAL_CameraDev_EzhV_Ov7670_Dequeue\n");
@@ -186,6 +186,7 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Dequeue(const camera_dev_t *dev, v
 
     *data   = (void *)pSrcBuf;
     *stripe = 0;
+    *compressed_size = 0;
 
     HAL_LOGD("--HAL_CameraDev_EzhV_Ov7670_Dequeue\n");
     return ret;
@@ -208,6 +209,8 @@ const static camera_dev_operator_t camera_dev_ezh_ov7670_ops = {
     .enqueue     = HAL_CameraDev_EzhV_Ov7670_Enqueue,
     .dequeue     = HAL_CameraDev_EzhV_Ov7670_Dequeue,
     .get_buf_desc = HAL_CameraDev_EzhV_Ov7670_Getbufdesc,
+    .lock         = NULL,
+    .unlock       = NULL
 };
 
 int HAL_CameraDev_EzhV_Ov7670_setup(const char *name, camera_dev_t *dev)

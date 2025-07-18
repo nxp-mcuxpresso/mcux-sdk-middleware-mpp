@@ -25,6 +25,7 @@ unsigned int elem_lbl_rct_setup(_elem_t *elem);
 unsigned int elem_convert_setup(_elem_t *elem);
 unsigned int elem_inference_setup(_elem_t *elem);
 unsigned int elem_img_decode_setup(_elem_t *elem);
+unsigned int elem_img_compose_setup(_elem_t *elem);
 
 typedef struct _elem_func_id_pair {
     mpp_element_id_t id;
@@ -34,11 +35,11 @@ typedef struct _elem_func_id_pair {
 /* registered elements setup functions */
 elem_func_id_pair elem_setup_funcs[] =
 {
-//    {MPP_ELEMENT_COMPOSE, elem_compose_setup},
     {MPP_ELEMENT_INFERENCE, elem_inference_setup},
     {MPP_ELEMENT_LABELED_RECTANGLE, elem_lbl_rct_setup},
     {MPP_ELEMENT_CONVERT, elem_convert_setup},
     {MPP_ELEMENT_IMG_DECODE, elem_img_decode_setup},
+    {MPP_ELEMENT_IMG_COMPOSE, elem_img_compose_setup},
 #ifdef EMULATOR
     {MPP_ELEMENT_TEST, elem_test_setup},
 #endif

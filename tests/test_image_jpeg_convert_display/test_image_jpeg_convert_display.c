@@ -294,7 +294,12 @@ static void app_task(void *params)
     elem_params.decode.dev_name = IMG_DECODE_DEV_NAME;
     elem_params.decode.width = src_width;
     elem_params.decode.height = src_height;
-    elem_params.decode.out_format = MPP_PIXEL_BGR; /* TODO auto detect */
+
+    if (strcmp(IMG_DECODE_DEV_NAME, "jpeg_CPU") == 0)
+        elem_params.decode.out_format = MPP_PIXEL_BGR; /* TODO auto detect */
+    else if (strcmp(IMG_DECODE_DEV_NAME, "jpeg_HW") == 0)
+        elem_params.decode.out_format = MPP_PIXEL_YUYV; /* TODO auto detect */
+
     ret = mpp_element_add(mp, MPP_ELEMENT_IMG_DECODE, &elem_params, NULL);
     if (ret)
     {
@@ -325,7 +330,7 @@ static void app_task(void *params)
 		goto err;
     }
 
-    ret = mpp_start(mp, 1);
+    ret = mpp_start(mp, 1, false);
     if (ret)
     {
         PRINTF("Failed to start pipeline\r\n");

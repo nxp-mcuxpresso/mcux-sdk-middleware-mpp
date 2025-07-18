@@ -1,6 +1,6 @@
 # eIQ MCU Media Processing Pipeline API
 
-MPP VERSION 3.5
+MPP VERSION 3.6
 
 ## 1. MPP API
 
@@ -8,19 +8,21 @@ MPP VERSION 3.5
 
 - int[ mpp_api_init (](#_page8_x70.87_y643.15)[mpp_api_params_t ](#_page17_x70.87_y451.66)∗params)
 - [mpp_t ](#_page25_x70.87_y384.91)[mpp_create (](#_page9_x70.87_y180.36)[mpp_params_t ](#_page17_x70.87_y590.69)∗params, int ∗ret)
-- int[ mpp_camera_add (](#_page9_x70.87_y463.35)[mpp_t mpp](#_page25_x70.87_y384.91), const char ∗name, [mpp_camera_params_t ](#_page17_x70.87_y771.02)∗params)
+- int[ mpp_camera_add (](#_page9_x70.87_y463.35)[mpp_t mpp](#_page25_x70.87_y384.91), const char ∗name, [mpp_camera_params_t ](#_page17_x70.87_y771.02)∗params, [mpp_elem_handle_t elem_h,](#_page25_x70.87_y443.37))
 - int[ mpp_static_img_add (](#_page9_x70.87_y769.98)[mpp_t mpp](#_page25_x70.87_y384.91), [mpp_img_params_t ](#_page18_x70.87_y234.02)∗params, void ∗addr)
 - int[ mpp_display_add (](#_page10_x70.87_y386.19)[mpp_t mpp](#_page25_x70.87_y384.91), const char ∗name, [mpp_display_params_t ](#_page18_x70.87_y412.84)∗params)
 - int[ mpp_nullsink_add (](#_page10_x70.87_y690.73)[mpp_t mpp)](#_page25_x70.87_y384.91)
 - int[ mpp_element_add (](#_page11_x70.87_y240.84)[mpp_t mpp](#_page25_x70.87_y384.91), [mpp_element_id_t id, ](#_page28_x70.87_y318.21)[mpp_element_params_t ](#_page21_x70.87_y327.65)∗params, [mpp_elem_handle_t ](#_page25_x70.87_y443.37)∗elem\_h)
 - int[ mpp_split (](#_page11_x70.87_y698.27)[mpp_t ](#_page25_x70.87_y384.91)mpp, unsigned int num, [mpp_params_t ](#_page17_x70.87_y590.69)∗params, [mpp_t ](#_page25_x70.87_y384.91)∗out\_list)
 - int[ mpp_background (](#_page12_x70.87_y356.49)[mpp_t mpp](#_page25_x70.87_y384.91), [mpp_params_t ](#_page17_x70.87_y590.69)∗params, [mpp_t ](#_page25_x70.87_y384.91)∗out\_mpp)
-- int[ mpp_element_update (](#_page12_x70.87_y633.66)[mpp_t mpp](#_page25_x70.87_y384.91), [mpp_elem_handle_t elem_h,](#_page25_x70.87_y443.37) [mpp_element_params_t ](#_page21_x70.87_y327.65)∗params)
+- int[ mpp_element_update (](#_page12_x70.87_y633.66)[mpp_t mpp](#_page25_x70.87_y384.91), [mpp_elem_handle_t elem_h,](#_page25_x70.87_y443.37) [mpp_element_params_t ](#_page21_x70.87_y327.65)∗params, , bool force\_update)
 - int[ mpp_start (](#_page13_x70.87_y220.09)[mpp_t mpp](#_page25_x70.87_y384.91), int last)
 - int[ mpp_stop (](#_page13_x70.87_y526.48)[mpp_t mpp)](#_page25_x70.87_y384.91)
 - void [mpp_stats_enable (](#_page13_x70.87_y771.02)[mpp_stats_grp_t grp)](#_page26_x70.87_y460.85)
 - void [mpp_stats_disable (](#_page14_x70.87_y308.61)[mpp_stats_grp_t grp)](#_page26_x70.87_y460.85)
-- char ∗[mpp_get_version (v](#_page14_x70.87_y517.49)oid)
+- char ∗[mpp_get_version (](#_page14_x70.87_y517.49)void)
+- bool[ mpp_is_running (](#_page13_x70.87_y221.09)[mpp_t mpp](#_page25_x70.87_y384.91))
+- int [mpp_force_update(](#_page13_x70.87_y222.09)[mpp_t mpp](#_page25_x70.87_y384.91))
 
 ### 1.1 Detailed Description
 
@@ -67,7 +69,7 @@ handle to the pipeline if success, NULL if there is an error.
 
 3. **mpp\_camera\_add()**
 
-<a name="_page9_x70.87_y478.59"></a><a name="_page9_x70.87_y463.35"></a>int mpp\_camera\_add ( [mpp_t ](#_page25_x70.87_y384.91)mpp, const char ∗ name, [mpp_camera_params_t ](#_page17_x70.87_y771.02)∗ params )
+<a name="_page9_x70.87_y478.59"></a><a name="_page9_x70.87_y463.35"></a>int mpp\_camera\_add ( [mpp_t ](#_page25_x70.87_y384.91)mpp, const char ∗ name, [mpp_camera_params_t ](#_page17_x70.87_y771.02)∗ params, [mpp_elem_handle_t elem_h,](#_page25_x70.87_y443.37) )
 
 Camera addition.
 
@@ -80,6 +82,7 @@ This function adds a camera to the pipeline.
 |in|mpp|input pipeline|
 |in|name|camera driver name|
 |in|params|parameters to be configured on the camera|
+|out|elem\_h|element handle in pipeline|
 
 **Returns**
 
@@ -215,7 +218,7 @@ Put next elements processing in background.
 
 10. **mpp\_element\_update()**
 
-<a name="_page12_x70.87_y648.66"></a><a name="_page12_x70.87_y633.66"></a>int mpp\_element\_update ( [mpp_t ](#_page25_x70.87_y384.91)mpp, [mpp_elem_handle_t ](#_page25_x70.87_y443.37)elem\_h, [mpp_element_params_t ](#_page21_x70.87_y327.65)∗ params )
+<a name="_page12_x70.87_y648.66"></a><a name="_page12_x70.87_y633.66"></a>int mpp\_element\_update ( [mpp_t ](#_page25_x70.87_y384.91)mpp, [mpp_elem_handle_t ](#_page25_x70.87_y443.37)elem\_h, [mpp_element_params_t ](#_page21_x70.87_y327.65)∗ params, bool force\_update )
 
 Update element parameters.
 
@@ -226,6 +229,7 @@ Update element parameters.
 |in|mpp|input pipeline|
 |in|elem\_h|element handle in the pipeline.|
 |in|params|new element parameters|
+|in|force\_update|force the pipeline to run even though there is no input frame update for processing elements after update. If the force\_update flag was already requested before, the current value is ignored|
 
 **Returns**
 
@@ -310,6 +314,40 @@ Get MPP version.
 
 pointer to the MPP version string
 
+16. **bool mpp_is_running ([mpp_t mpp](#_page25_x70.87_y384.91))<a name="_page13_x70.87_y221.09"></a>**
+
+bool mpp\_is\_running ([mpp_t mpp](#_page25_x70.87_y384.91))
+
+Check if the pipeline is currently running
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|mpp|input pipeline|
+
+**Returns**
+
+true if pipeline is in running state, else false
+
+17. **int mpp\_force\_update([mpp_t mpp](#_page25_x70.87_y384.91))<a name="_page13_x70.87_y222.09"></a>**
+
+int mpp\_force\_update([mpp_t mpp](#_page25_x70.87_y384.91))
+
+Force the update of a branch of the pipeline
+
+This function forces an update of the branch of the pipeline even if there is no new input frame
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|mpp|input pipeline branch to set the flag force_update to true|
+
+**Returns**
+
+[Return_codes](#_page29_x70.87_y444.70)
+
 ## 2. MPP Types
 
 **Data Structures**
@@ -317,6 +355,7 @@ pointer to the MPP version string
 - union [mpp_stats_t](#_page17_x70.87_y326.50)
 - struct [mpp_api_params_t](#_page17_x70.87_y451.66)
 - struct [mpp_params_t](#_page17_x70.87_y590.69)
+- struct [mpp_camera_stream_cfg](#_page17_x70.87_y772.02)
 - struct [mpp_camera_params_t](#_page17_x70.87_y771.02)
 - struct [mpp_img_params_t](#_page18_x70.87_y234.02)
 - struct [mpp_display_params_t](#_page18_x70.87_y412.84)
@@ -325,6 +364,7 @@ pointer to the MPP version string
 - struct [mpp_inference_cb_param_t](#_page19_x70.87_y298.76)
 - union [mpp_color_t](#_page19_x70.87_y500.52)
 - struct [mpp_labeled_rect_t](#_page19_x70.87_y660.49)
+- struct [mpp_landmark_t](#_page19_x70.87_y661.49)
 - struct [mpp_area_t](#_page20_x70.87_y251.67)
 - struct [mpp_dims_t](#_page20_x70.87_y428.93)
 - struct [mpp_position_t](#_page20_x70.87_y579.68)
@@ -473,7 +513,7 @@ pointer to the MPP version string
 
   [MPP_ELEMENT_INVALID](#_page28_x142.16_y444.02),
 
-  [MPP_ELEMENT_COMPOSE](#_page28_x130.48_y457.76),
+  [MPP_ELEMENT_IMG_COMPOSE](#_page28_x130.48_y457.76),
 
   [MPP_ELEMENT_LABELED_RECTANGLE](#_page28_x77.24_y472.42),
 
@@ -505,6 +545,14 @@ pointer to the MPP version string
   
   [MPP_INFERENCE_TYPE_TFLITE](#_page29_x77.24_y356.10) }
 
+- enum [mpp_camera_stream_type](#_page29_x70.87_y231.19) { 
+  
+  [RGB_STREAM](#_page29_x77.24_y357.10),
+  
+  [IR_STREAM](#_page29_x77.24_y358.10),
+
+  [NUM_STREAMS](#_page29_x77.24_y359.10) }
+  
 ### 2.1  Detailed Description
 
 This section provides the detailed documentation for the MCU Media Processing Pipeline types.
@@ -531,6 +579,8 @@ This section provides the detailed documentation for the MCU Media Processing Pi
 |unsigned int|rc\_cycle\_min|minimum cycle duration for RC tasks (ms), 0: sets default value|
 |unsigned int|rc\_cycle\_inc|time increment for RC tasks (ms), 0: sets default value|
 |int|pipeline\_task\_max\_prio|pipeline tasks maximum priority.|
+|int|pipeline_rc_task_prio|pipeline run-to-completion tasks priority. 0: sets default value|
+|int|pipeline_pr_task_prio|pipeline preemptable tasks priority. 0: sets default value|
 
 3. **struct<a name="_page17_x70.87_y590.69"></a> mpp\_params\_t** 
 
@@ -557,6 +607,11 @@ Camera parameters.
 |[mpp_pixel_format_t](#_page27_x70.87_y602.11)|format|pixel format|
 |int|fps|frames per second|
 |bool|stripe|stripe mode|
+|void *|rpmsg\_inst|pointer to rpmsg instance|
+|volatile uint16_t *|mcmgr\_event\_data|pointer to mcmgr event data|
+|uint32_t|n\_streams|number of total output video streams|
+|mpp\_camera\_stream\_cfg|stream[NUM\_STREAMS]|streams configuration|
+|bool|in\_advance\_enqueue|enable in-advance enqueue mode|
 
 5. **struct<a name="_page18_x70.87_y249.26"></a><a name="_page18_x70.87_y234.02"></a> mpp\_img\_params\_t**
 
@@ -734,6 +789,7 @@ Static image and Processing elements parameters.
 |unsigned int|pr\_slot|available slot for preemptable (PR) work (ms)|
 |unsigned int|pr\_rounds|number of RC cycles required to complete one PR cycle (ms)|
 |unsigned int|app\_slot|remaining time for application (ms)|
+|unsigned int|cpu\_load|CPU load percentage (%)|
 
 18. **struct<a name="_page21_x70.87_y648.05"></a> mpp\_stats\_t.mpp**
 
@@ -772,8 +828,9 @@ rgb color values
  
 |type|name|description|
 | - | - | - |
+|[mpp_camera_params_t](#_page18_x70.87_y70.87)|camera|Camera element's parameters|
 |struct [mpp_element_params_t.__unnamed5__.static\_image](#_page22_x70.87_y668.79)|static\_image|Static Image element's parameters.|
-|struct [mpp_element_params_t.__unnamed5__.compose](#_page22_x70.87_y639.33)|compose|Compose element's parameters - NOT IMPLEMENTED YET.|
+|struct [mpp_element_params_t.__unnamed5__.compose](#_page22_x70.87_y639.33)|compose|Compose element's parameters.|
 |<p>struct</p><p>[mpp_element_params_t.__unnamed5__.labels](#_page22_x70.87_y771.02)</p>|labels|Labeled Rectangle element's parameters.|
 |struct [mpp_element_params_t.__unnamed5__.convert](#_page23_x70.87_y206.38)|convert|Convert element's parameters.|
 |<p>struct</p><p>[mpp_element_params_t.__unnamed5__.resize](#_page23_x70.87_y487.05)</p>|resize|Resize element's parameters.|
@@ -796,14 +853,24 @@ Static Image element's parameters.
 
 23. **struct<a name="_page22_x70.87_y639.33"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.compose**
 
-Compose element's parameters - NOT IMPLEMENTED YET. 
+Compose element's parameters. 
 
 **Data Fields**
 
 |type|name|description|
 | - | - | - |
-|float|<a name="_page22_x70.87_y771.02"></a>a||
-|float|b||
+|mpp\_img\_params\_t|logo\_img\_params|logo image parameters|
+|void *|logo\_buffer|logo image buffer address|
+|mpp\_area\_t|logo\_area|logo image area|
+|mpp\_img\_params\_t|txt\_img\_params|text image parameters|
+|void *|txt\_buffer|text image buffer address|
+|mpp\_area\_t|txt\_area|text image area|
+|mpp\_area\_t|input\_area|input image area|
+|mpp\_rotate\_degree\_t|out\_angle|output rotation angle|
+|mpp\_flip\_mode\_t|out\_flip|output flip mode|
+|mpp\_pixel\_format\_t|out\_format|output color format|
+|int|out\_width|output buffer width|
+|int|out\_height|output buffer height|
 
 24. **struct<a name="_page23_x70.87_y70.87"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.labels**
 
@@ -813,9 +880,12 @@ Labeled Rectangle element's parameters.
 
 |type|name|description|
 | - | - | - |
-|uint32\_t|max\_count|maximum number of rectangles|
-|uint32\_t|detected\_count|detected rectangles|
+|uint32\_t|max\_rect|maximum number of rectangles|
+|uint32\_t|detected\_rect|detected rectangles|
 |[mpp_labeled_rect_t ](#_page19_x70.87_y660.49)∗|rectangles|array of rectangle data|
+|uint32\_t|max\_landmk|maximum number of landmarks|
+|uint32\_t|detected\_landmk|detected landmarks|
+|mpp\_landmark\_t *|landmarks|array of landmark data|
 
 25. **struct<a name="_page23_x70.87_y221.62"></a><a name="_page23_x70.87_y206.38"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.convert**
 
@@ -909,6 +979,33 @@ ML inference element's parameters.
 |float|model\_input\_std|model 'standard deviation' of input values, used for normalization|
 |[mpp_tensor_order_t](#_page28_x70.87_y755.48)|tensor\_order|model input tensor component order|
 |[mpp_inference_params_t](#_page20_x70.87_y729.29)|inference\_params|model specific parameters used by the inference|
+
+32. **struct <a name="_page17_x70.87_y772.02"></a> mpp_camera_stream_cfg**
+
+Camera stream configuration for multi-stream cameras.
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|mpp\_camera\_stream_type|type|Stream type (member of enum mpp\_camera\_stream\_type)|
+|bool|active|Stream is active or not.|
+
+33. **struct <a name="_page19_x70.87_y661.49></a> mpp_landmark_t**
+
+mpp landmark structure
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|uint16\_t|clear|clear landmark|
+|uint16\_t|width|landmark thickness|
+|mpp\_color\_t|color|landmark color|
+|int16\_t|x|landmark x position|
+|int16\_t|y|landmark y position|
+|uint16\_t|tag|landmark tag|
+|bool|stripe|stripe mode|
 
 #### 2.1.2 Macro Definition Documentation
 
@@ -1102,7 +1199,7 @@ Processing element ids.
 |label|description|
 | - | - |
 |<a name="_page28_x142.16_y444.02"></a>MPP\_ELEMENT\_INVALID|Invalid element.|
-|<a name="_page28_x130.48_y457.76"></a>MPP\_ELEMENT\_COMPOSE|Image composition - NOT IMPLEMENTED YET.|
+|<a name="_page28_x130.48_y457.76"></a>MPP\_ELEMENT\_IMG\_COMPOSE|Image composition - compose a simple GUI: logo and text area with the input stream.|
 |<a name="_page28_x77.24_y472.42"></a>MPP\_ELEMENT\_LABELED\_RECTANGLE|Labeled rectangle - bounding box.|
 |<a name="_page28_x153.40_y487.07"></a>MPP\_ELEMENT\_TEST|Test inplace element - NOT FOR USE.|
 |<a name="_page28_x124.51_y501.62"></a>MPP\_ELEMENT\_INFERENCE|Inference engine.|
@@ -1149,6 +1246,18 @@ Inference type.
 |label|description|
 | - | - |
 |<a name="_page29_x77.24_y356.10"></a>MPP\_INFERENCE\_TYPE\_TFLITE|TensorFlow-Lite.|
+
+12. **mpp\_camera\_stream\_type**
+
+<a name="_page29_x70.87_y231.19"></a>enum [mpp_camera_stream_type ](#_page29_x70.87_y231.19)
+
+**Enumerator**
+
+|label|description|
+| - | - |
+|<a name="_page29_x77.24_y357.10"></a>RGB\_STREAM|Frames received by the virtual camera element ar in rgb format|
+|<a name="_page29_x77.24_y358.10"></a>IR\_STREAM|Frames received by the virtual camera element ar in ir format|
+|<a name="_page29_x77.24_y359.10"></a>NUM\_STREAMS|Total number of frame types suported by virtual camera element|
 
 ## 3. Return\_codes
 

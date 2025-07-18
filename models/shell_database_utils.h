@@ -75,8 +75,6 @@ int reset_registration_state();
       * @retval kStatus_SHELL_Success Successfully printed the database.
       * @retval kStatus_SHELL_Error An error occurred.
  */
- shell_status_t database_show(shell_handle_t shellHandle, int32_t argc);
-
-
+ shell_status_t database_show(shell_handle_t shellHandle, int32_t argc, char **argv);
 
 #endif /* MPP_EXAMPLES_MODELS_SHELL_DATABASE_UTILS_H_ */

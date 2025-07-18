@@ -236,15 +236,15 @@ uint32_t hal_get_tick_rate_hz()
     return configTICK_RATE_HZ;
 }
 
-UBaseType_t uxCriticalSectionType;
+UBaseType_t uxSavedInterruptStatus;
 void hal_atomic_enter()
 {
-    uxCriticalSectionType = portSET_INTERRUPT_MASK_FROM_ISR();
+    uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
 }
 
 void hal_atomic_exit()
 {
-    portCLEAR_INTERRUPT_MASK_FROM_ISR( uxCriticalSectionType );
+    taskEXIT_CRITICAL_FROM_ISR(uxSavedInterruptStatus);
 }
 
 uint32_t hal_tick_to_ms(uint32_t os_tick)
@@ -319,4 +319,13 @@ int hal_get_max_syscall_prio()
 int hal_get_os_max_prio()
 {
 	return configMAX_PRIORITIES;
+}
+
+unsigned int hal_get_idle_percent()
+{
+#if defined(configGENERATE_RUN_TIME_STATS) && (configGENERATE_RUN_TIME_STATS == 1) && (INCLUDE_xTaskGetIdleTaskHandle == 1)
+    return (unsigned int)ulTaskGetIdleRunTimePercent();
+#else
+    return 0;
+#endif
 }

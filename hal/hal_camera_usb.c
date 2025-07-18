@@ -336,7 +336,7 @@ hal_camera_status_t HAL_CameraDev_USB_Stop(const camera_dev_t *dev)
     return ret;
 }
 
-hal_camera_status_t HAL_CameraDev_USB_Dequeue(const camera_dev_t *dev, void **data, int *stripe)
+hal_camera_status_t HAL_CameraDev_USB_Dequeue(const camera_dev_t *dev, void **data, int *stripe, int *compressed_size)
 {
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     usb_camera_msg_t msg;
@@ -367,6 +367,7 @@ hal_camera_status_t HAL_CameraDev_USB_Dequeue(const camera_dev_t *dev, void **da
 	/* copy incoming USB data to the mpp buffer */
 	memcpy(s_framebuffers[0], mpp_buffer, CAMERA_USB_MAX_BUFF_SIZE);
 	*data   = (void *)s_framebuffers[0];
+    *compressed_size = 0;
 
 	msg.cmd = USB_CAMERA_FRAME_DONE;
 	msg.parameter = mpp_buffer;
@@ -395,6 +396,8 @@ const static camera_dev_operator_t camera_dev_usb_ops = {
     .enqueue     = HAL_CameraDev_USB_Enqueue,
     .dequeue     = HAL_CameraDev_USB_Dequeue,
     .get_buf_desc = HAL_CameraDev_USB_Getbufdesc,
+    .lock         = NULL,
+    .unlock       = NULL
 };
 
 int HAL_CameraDev_USB_setup(const char *name, camera_dev_t *dev)

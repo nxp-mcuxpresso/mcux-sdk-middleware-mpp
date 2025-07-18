@@ -55,7 +55,7 @@ void LOGE(const char* module, const char* func, int line, const char* format, ..
     char args_buffer[LOG_STRING_MAX_SIZE];
     va_list args;
     va_start(args, format);
-    vsprintf(args_buffer, format, args);
+    vsnprintf(args_buffer, LOG_STRING_MAX_SIZE, format, args);
     LOG_STR(module, func, line, "ERR", args_buffer);
     va_end(args);
 }
@@ -72,7 +72,7 @@ void LOGI(const char* module, const char* func, int line, const char* format, ..
     char args_buffer[LOG_STRING_MAX_SIZE];
     va_list args;
     va_start(args, format);
-    vsprintf(args_buffer, format, args);
+    vsnprintf(args_buffer, LOG_STRING_MAX_SIZE, format, args);
     LOG_STR(module, func, line, "INFO", args_buffer);
     va_end(args);
 }
@@ -89,7 +89,7 @@ void LOGD(const char* module, const char* func, int line, const char* format, ..
     char args_buffer[LOG_STRING_MAX_SIZE];
     va_list args;
     va_start(args, format);
-    vsprintf(args_buffer, format, args);
+    vsnprintf(args_buffer, LOG_STRING_MAX_SIZE, format, args);
     LOG_STR(module, func, line, "DBG", args_buffer);
     va_end(args);
 }

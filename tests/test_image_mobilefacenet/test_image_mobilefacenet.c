@@ -276,7 +276,7 @@ static void app_task(void *param)
 		goto err;
 	}
 
-	ret = mpp_start(mp, 1);
+	ret = mpp_start(mp, 1, false);
 	if (ret) {
 		PRINTF("Failed to start pipeline\r\n");
 		goto err;

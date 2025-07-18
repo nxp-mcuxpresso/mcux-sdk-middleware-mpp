@@ -1,5 +1,5 @@
 /* Copyright 2019 The TensorFlow Authors. All Rights Reserved.
-   Copyright 2021-2024 NXP
+   Copyright 2021-2025 NXP
 
 SPDX-License-Identifier: Apache-2.0
 
@@ -32,6 +32,13 @@ limitations under the License.
 
 #include "model.h"
 
+/* Lookup table implemetation flag */
+/* Enables LUT-based implementation,
+ mpp_config.h may set/unset the value */ 
+#ifndef HAL_ENABLE_TENSOR_CONVERSION_LUT 
+#define HAL_ENABLE_TENSOR_CONVERSION_LUT 1
+#endif 
+
 /* trick to replace 'float division' with 'multiply by integer and bitshift'
    integer is the inverse multiplied by factor to keep precision */
 #define FAST_DIV_BITS 16
@@ -40,6 +47,11 @@ limitations under the License.
 /* TODO replace by dynamic object construction to allow multiple instances to run concurrently */
 static const tflite::Model* s_model = nullptr;
 static tflite::MicroInterpreter* s_interpreter = nullptr;
+
+/* Define lookup table variables */
+/* LUT processing is disabled initially */
+static int8_t conversion_lut_int8[256];
+static bool lut_int8_initialized = false;
 
 extern tflite::MicroOpResolver &MODEL_GetOpsResolver();
 
@@ -52,7 +64,7 @@ constexpr int kTensorArenaSize = HAL_TFLM_TENSOR_ARENA_SIZE_KB * 1024;
 
 // On some devices tensor arena should be non-cacheable
 #if defined(HAL_TENSOR_ARENA_NCACHE) && (HAL_TENSOR_ARENA_NCACHE == 1)
-static uint8_t s_tensorArena[kTensorArenaSize] __ALIGNED(HAL_TFLITE_BUFFER_ALIGN) __attribute__((section("NonCacheable")));
+static uint8_t s_tensorArena[kTensorArenaSize] __ALIGNED(HAL_TFLITE_BUFFER_ALIGN) __attribute__((section(".npu_ncache_data")));
 #else
 static uint8_t s_tensorArena[kTensorArenaSize] __ALIGNED(HAL_TFLITE_BUFFER_ALIGN);
 #endif
@@ -60,6 +72,7 @@ static uint8_t s_tensorArena[kTensorArenaSize] __ALIGNED(HAL_TFLITE_BUFFER_ALIGN
 status_t MODEL_Init(const void *model_data,
         mpp_inference_tensor_params_t *inputTensor,
         mpp_inference_tensor_params_t *outputTensor[],
+        int mean, int std,
         int nb_out_tensor)
 {
     // Map the model into a usable data structure. This doesn't involve any
@@ -91,6 +104,28 @@ status_t MODEL_Init(const void *model_data,
     }
 
     inputTensor->data = MODEL_GetInputTensorData(s_interpreter, &inputTensor->dims, &inputTensor->type);
+
+    // LUT implementation for input tensor conversion optimization 
+    // If ENABLE_TENSOR_CONVERSION_LUT is defined the LUT implementation will be used 
+    #if (HAL_ENABLE_TENSOR_CONVERSION_LUT  == 1)
+        if (s_interpreter && s_interpreter->input(0)) 
+        {
+            float input_scale = s_interpreter->input(0)->params.scale;
+            float input_zero_point = s_interpreter->input(0)->params.zero_point;
+            int i_zero_point = input_zero_point;
+            int inv_scale = 0;
+            
+            inv_scale = FAST_DIV_FACTOR / (input_scale * std);
+            
+            for (int i = 0; i < 256; i++) 
+            {
+                conversion_lut_int8[i] = (int8_t) (((i - mean) * inv_scale) >> FAST_DIV_BITS) + i_zero_point;
+            }
+            
+            lut_int8_initialized = true;
+
+        }
+    #endif
 
     for(int i = 0; i < nb_out_tensor; i++)
     {
@@ -173,58 +208,102 @@ void MODEL_ConvertInput(uint8_t* data, mpp_tensor_dims_t* dims, mpp_tensor_type_
     float input_zero_point = s_interpreter->input(0)->params.zero_point;
     int inv_scale = 0;
     int i_zero_point = input_zero_point;
-    switch (type)
+
+    switch (type) 
     {
         case MPP_TENSOR_TYPE_UINT8:
-            break;
         case MPP_TENSOR_TYPE_INT8:
-             /* to calculate quantized value:
-             * quantized_value = real_value / scale + zero_point
-             * to normalize the input data:
-             * normalized_value = (real_value - mean) / std
-             *
-             * these two formulas can be combined to perform both normalization and
-             * quantization in the same time:
-             * final_value = (real_value - mean) / (scale * std) + zero_point
-             */
-
-            /* check if normalization is needed. */
-            if ((mean != 0) || (std != 1))
-            {
-                if (std != 0)
-                {
-                    inv_scale = FAST_DIV_FACTOR / (input_scale * std);
-                    for (int i = size - 1; i >= 0; i--)
+            if((mean != 0) || (std != 1))
+            {   
+                if(std != 0)
+                {   
+                    /* Optimized input tensor conversion 
+                    * by processing 4 elements at the 
+                    * time instead of one element per 
+                    * iteration.*/
+                    if(lut_int8_initialized)
                     {
-                        /* optimized form of: ((data[i] - i_mean) / scale) + zero_point */
-                        data[i] = (int8_t) ((data[i] - mean) * inv_scale >> FAST_DIV_BITS) + i_zero_point;
-                    }
-                 }
-                else
+                        /* Process 4 elements at a time 
+                        * and check if the size is a 
+                        * multiple of four. */ 
+                        if (size % 4 == 0)
+                        {
+                            int i = 0;
+                            for (; i <= size - 4; i += 4) 
+                            {
+                                uint8_t val0 = data[i];
+                                uint8_t val1 = data[i + 1];
+                                uint8_t val2 = data[i + 2];
+                                uint8_t val3 = data[i + 3];
+                                
+                                data[i]     = conversion_lut_int8[val0];
+                                data[i + 1] = conversion_lut_int8[val1];
+                                data[i + 2] = conversion_lut_int8[val2];
+                                data[i + 3] = conversion_lut_int8[val3];
+                            }
+                        }
+                        /* If the size is not multiple of 4,  
+                        * switch to processing 1 elemnt per 
+                        * interation. */
+                        else 
+                        {
+                            int i = 0;
+                            for (; i < size; i++) 
+                            {
+                                data[i] = conversion_lut_int8[data[i]];
+                            }
+                        }
+                    }                    
+                    else
+                    /* Fallback to the original method */
+                    /* to calculate quantized value:
+                    * quantized_value = real_value / scale + zero_point
+                    * to normalize the input data:
+                    * normalized_value = (real_value - mean) / std
+                    *
+                    * these two formulas can be combined to perform both normalization and
+                    * quantization at the same time:
+                    * final_value = (real_value - mean) / (scale * std) + zero_point
+                    */
+                    {
+                        inv_scale = FAST_DIV_FACTOR / (input_scale * std);
+                        for (int i = size - 1; i >= 0; i--) 
+                        {
+                            /* optimized form of: (data[i] / scale) + zero_point */
+                            int32_t quantized_val = ((data[i] - mean) * inv_scale >> FAST_DIV_BITS) + i_zero_point;
+                            data[i] = (type == MPP_TENSOR_TYPE_UINT8) ? (uint8_t)quantized_val : (int8_t)quantized_val;
+                        }
+                    } 
+                } 
+                else 
                 {
                     HAL_LOGE("Standard deviation should be different of 0.");
-                    break;
                 }
-            }
-            else /* only quantization should be performed */
+            }     
+            else  /* only quantization should be performed */
             {
                 inv_scale = FAST_DIV_FACTOR / input_scale;
                 for (int i = size - 1; i >= 0; i--)
                 {
                     /* optimized form of: (data[i] / scale) + zero_point */
-                    data[i] = (int8_t) (data[i] * inv_scale >> FAST_DIV_BITS) + i_zero_point;
+                    int32_t quantized_val = (data[i] * inv_scale >> FAST_DIV_BITS) + i_zero_point;
+                    data[i] = (type == MPP_TENSOR_TYPE_UINT8) ? (uint8_t)quantized_val : (int8_t)quantized_val;
         	    }
             }
-            break;
+                break;
+      
         case MPP_TENSOR_TYPE_FLOAT32:
-            for (int i = size - 1; i >= 0; i--)
+        {           
+            
+            for (int i = size - 1; i >= 0; i--) 
             {
-                reinterpret_cast<float*>(data)[i] =
+                reinterpret_cast<float*>(data)[i] = 
                     (static_cast<int>(data[i]) - input_zero_point) / input_scale;
             }
-            break;
+        }
+            break;        
         default:
             assert("Unknown input tensor data type");
+        }
     }
-}
 #endif /* (HAL_ENABLE_INFERENCE_TFLITE == 1) */

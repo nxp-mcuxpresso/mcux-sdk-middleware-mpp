@@ -22,17 +22,15 @@ include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 mcux_add_include(
     BASE_PATH ${SdkRootDirPath}/middleware/eiq/mpp
     INCLUDES    models
-                models/ultraface_slim_quant_int8
                 internal/models
                 internal/models/mobilefacenet
+                internal/images
 )
 
 mcux_add_source(
     BASE_PATH ${SdkRootDirPath}/middleware/eiq/mpp
     SOURCES models/get_top_n.cpp
             models/utils.cpp
-            models/ultraface_slim_quant_int8/ultraface_output_postproc.c
-            models/ultraface_slim_quant_int8/*.h
             models/get_top_n.h
             models/utils.h
             models/shell_database_utils.h

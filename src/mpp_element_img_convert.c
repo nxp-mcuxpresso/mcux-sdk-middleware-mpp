@@ -130,7 +130,17 @@ static int convert_func(_elem_t *elem)
     gfx_rotate_config_t rot = { .degree = elem->params.convert.angle, .target = kGFXRotate_DSTSurface};
 
     ret = gfx->ops->blit(gfx, &gfx->src, &gfx->dst, &rot, elem->params.convert.flip);
-    return ret;
+    if (ret != 0) {
+        MPP_LOGE("Blit operation failed\n");
+        return MPP_ERROR;
+    }
+
+    ret = gfx->ops->finish(gfx);
+    if (ret != 0) {
+        MPP_LOGE("Finish operation failed\n");
+        return MPP_ERROR;
+    }
+    return MPP_SUCCESS;
 }
 
 /* check parameters and complete missing fields */
@@ -140,7 +150,11 @@ static int check_convert_params(_elem_t *elem)
     unsigned int input_width = 0, input_height = 0;
 
     /* get input parameters from previous element */
-    buf_desc_t *prev_buf = elem->prev->io.out_buf[0];
+    buf_desc_t *prev_buf = get_in_buff_from_prev_elem(elem);
+    if (prev_buf == NULL) {
+        MPP_LOGE("No input buffer found from previous element\n");
+        return MPP_ERROR;
+    }
 
     /* check output buffer dimensions */
     if ((elem->params.convert.out_buf.width == 0) ||
@@ -300,7 +314,7 @@ unsigned int elem_convert_setup(_elem_t *elem)
         }
         if ((elem->type != MPP_TYPE_PROC) || (elem->proc_typ != MPP_ELEMENT_CONVERT))
         {
-            MPP_LOGE("invalid element %s (expected element CONVERT)\n", elem_name(elem->proc_typ));
+            MPP_LOGE("invalid element %s (expected element CONVERT)\n", elem_name(elem));
             ret = MPP_INVALID_PARAM;
             break;
         }
@@ -333,7 +347,11 @@ unsigned int elem_convert_setup(_elem_t *elem)
         elem->io.inplace = false;
         /* input buffer points to previous element buffer */
         elem->io.nb_in_buf = 1;
-        elem->io.in_buf[0] = elem->prev->io.out_buf[0];
+        elem->io.in_buf[0] = get_in_buff_from_prev_elem(elem);
+        if (elem->io.in_buf[0] == NULL) {
+            MPP_LOGE("No input buffer found from previous element\n");
+            return MPP_ERROR;
+        }
         /* create output buffer parameters to be passed to next element */
         elem->io.nb_out_buf = 1;
         elem->io.out_buf[0] = hal_malloc(sizeof(buf_desc_t));

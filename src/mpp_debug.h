@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -20,11 +20,12 @@
 #define _MPP_DEBUG_H
 
 #include "hal_debug.h"
+#include "mpp_api_types_internal.h"
 
 int tick_check_rate(uint32_t *last, int *curr, int max);
 
 /* get string from element id */
-char * elem_name(mpp_element_id_t id);
+char * elem_name(_elem_t *elem);
 
 /* non-conditional logs */
 #define MPP_LOGE(format, ...) \

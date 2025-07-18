@@ -26,6 +26,7 @@ SDK_VERSION="main"
 MCU_SDK_TEST_VERSION="main"
 BUILD_CFG="release"
 CLEAN_LOGS_IF_PASS="no"
+NEXUS_DIR_LINK="https://${bamboo_NEXUS_INSTANCE}-nxrm.sw.nxp.com/#browse/browse:${bamboo_NEXUS_REPO}:${bamboo_NEXUS_DIRECTORY}/${bamboo_planKey}/${bamboo_buildNumber}"
 
 # BAMBOO plan does not need the default BUILD_CFG set when running this script
 if [[ "${bamboo_planKey}" != "" ]]; then
@@ -261,13 +262,18 @@ add_new_junit_fail_test()
     failure_message=$3
     failure_type=$4
     test_duration=$5
+    log_file_path=$6
 
     echo -n "    <testcase classname=\"${classname}\" " >> ${JUNIT_TEST_REPORT_FILE}
     echo -n "name=\"${test_name}\" " >> ${JUNIT_TEST_REPORT_FILE}
     echo "time=\"${test_duration}\">" >> ${JUNIT_TEST_REPORT_FILE}
     echo -n "      <failure message=\"${failure_message}\" " >> ${JUNIT_TEST_REPORT_FILE}
     echo "type=\"${failure_type}\">" >> ${JUNIT_TEST_REPORT_FILE}
-    echo "        <![CDATA[${failure_message}]]>" >> ${JUNIT_TEST_REPORT_FILE}
+    if [ -f ${log_file_path} ]; then
+        echo "        <![CDATA[$(cat ${log_file_path})]]>" >> ${JUNIT_TEST_REPORT_FILE}
+    else
+        echo "        <![CDATA[${failure_message}]]>" >> ${JUNIT_TEST_REPORT_FILE}
+    fi
     echo "      </failure>" >> ${JUNIT_TEST_REPORT_FILE}
     echo "    </testcase>" >> ${JUNIT_TEST_REPORT_FILE}
 }
@@ -301,10 +307,14 @@ close_junit_file()
 # Function used to create MD test report file
 create_md_header()
 {
-    echo "# 🧪 DAPENG Test Report 📊" > ${DAPENG_TEST_REPORT_MD_FILE}
+    if echo "${bamboo_planKey}" | grep "VTEC-MSVD\|VTEC-MCUSDKV"; then
+        echo "# 🧪 DAPENG Test Report (kex build) 📊" > ${DAPENG_TEST_REPORT_MD_FILE}
+    else
+        echo "# 🧪 DAPENG Test Report (west build) 📊" > ${DAPENG_TEST_REPORT_MD_FILE}
+    fi
     echo "" >> ${DAPENG_TEST_REPORT_MD_FILE}
-    echo "|  Board  | ✅ Passed | ❌ Failed | ⏭️ Skipped | Total |" >> ${DAPENG_TEST_REPORT_MD_FILE}
-    echo "|---------------|--------|--------|---------|-------|" >> ${DAPENG_TEST_REPORT_MD_FILE}
+    echo "|  Board  | ✅ Passed | ❌ Failed | ⏭️ Skipped | Total | Nexus binaries |" >> ${DAPENG_TEST_REPORT_MD_FILE}
+    echo "|---------------|--------|--------|---------|-------|---------------|" >> ${DAPENG_TEST_REPORT_MD_FILE}
 }
 
 # Add new line in the MD test report table
@@ -316,7 +326,9 @@ add_new_md_entry()
     n_skipped=$4
     n_total=$5
 
-    echo "| ${board_name} | ${n_passed} | ${n_failed} | ${n_skipped} | ${n_total} |" >> ${DAPENG_TEST_REPORT_MD_FILE}
+    binaries_link="${NEXUS_DIR_LINK}/build_${board_name}"
+
+    echo "| ${board_name} | ${n_passed} | ${n_failed} | ${n_skipped} | ${n_total} | [nexus_${board_name}](${binaries_link}) |" >> ${DAPENG_TEST_REPORT_MD_FILE}
 }
 
 # Function used to close a MD test report file
@@ -484,9 +496,9 @@ do
         
         # Get the first timestamp from the log file; this will be the suitetimestamp
         if [ -f "${log_output_path}/app_test.log" ]; then
-            crt_timestamp=$(grep -m 1 -oP '^\[\K[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}(?= [^]]+\])' "${log_output_path}/app_test.log")
+            crt_timestamp=$(grep -a -m 1 -oP '^\[\K[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}(?= [^]]+\])' "${log_output_path}/app_test.log")
             crt_timestamp=$(echo "$crt_timestamp" | awk -F'[- :]' '{printf "%04d-%02d-%02dT%02d:%02d:%02d", $3, $2, $1, $4, $5, $6}')
-            crt_duration=$(grep -m 1 -oP 'TASK DURATION: \K[0-9]+\.[0-9]+' ${log_output_path}/app_test.log)
+            crt_duration=$(grep -a -m 1 -oP 'TASK DURATION: \K[0-9]+\.[0-9]+' ${log_output_path}/app_test.log)
         else
             crt_timestamp=$(date +"%Y-%m-%dT%H:%M:%S")
             crt_duration="0.0"
@@ -537,13 +549,13 @@ do
         test_name=$(echo "${test_log}" | awk -F '/' '{print $NF}')
         log_output_path="${test_log}/${COMPILER}/${BUILD_CFG}"
         if [ -f "${log_output_path}/app_test.log" ]; then
-            crt_duration=$(grep -m 1 -oP 'TASK DURATION: \K[0-9]+\.[0-9]+' ${log_output_path}/app_test.log)
+            crt_duration=$(grep -a -m 1 -oP 'TASK DURATION: \K[0-9]+\.[0-9]+' ${log_output_path}/app_test.log)
         else
             crt_duration="0.0"
         fi
         # If the file runresult_Fail.txt exists, it means test failed
         if [ -f "${log_output_path}/runresult_Fail.txt" ]; then
-            add_new_junit_fail_test ${board_name} ${test_name} "Test failed. Check the log file ${log_output_path}/app_test.log" "generic test failure" ${crt_duration}
+            add_new_junit_fail_test ${board_name} ${test_name} "Test failed. Check the log file ${log_output_path}/app_test.log" "generic test failure" ${crt_duration} "${log_output_path}/app_test.log"
         # If the file runresult_NA.txt exists, it means no board available to run the test
         elif [ -f "${log_output_path}/runresult_NA.txt" ]; then
             add_new_junit_skipped_test ${board_name} ${test_name} ${crt_duration}

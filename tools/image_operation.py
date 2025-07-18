@@ -45,10 +45,10 @@ import sys
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", help="Input file: -.jpg for conversion to raw image -.rgb for image operations", required=True)
-    parser.add_argument("-o", "--output", help="Output file: raw image ", required=True)
+    parser.add_argument("-o", "--output", help="Output file: raw image ")
     parser.add_argument("-W", "--width", type=int, help="Original input image width")
     parser.add_argument("-H", "--height", type=int, help="Original input image height")
-    parser.add_argument("-C", "--channels", type=int, help="Input image channels (each channel is interpreted as a byte)")
+    parser.add_argument("-C", "--channels", type=int, help="Input image channels (each channel is interpreted as a byte)", default=None)
     parser.add_argument("--rsz_w", type=int, help ="Width for resize" )
     parser.add_argument("--rsz_h", type=int, help ="Height for resize" )
     parser.add_argument("--rsz_mode",type=str, help ="Resize mode: exact (without aspect ratio) or with padding (maintains aspect ratio)",
@@ -56,7 +56,7 @@ def parse_args():
     parser.add_argument("--img_op", 
                         choices=[ 'conv_JPEG2FMT', 'swap_ch0_ch2', 'conv_RGB5652RGB', 'conv_RGB5652BGR', 'conv_RGB2BGR'], help="Image operation")
     parser.add_argument("--pix_fmt", 
-                        choices=['yuvx', 'vuyx', 'uyvy422', 'vyuy422', 'rgb888', 'bgr888', 'rgb565', 'bgra', 'gray8'], help="Input pixel format", required=True)
+                        choices=['yuvx', 'vuyx', 'uyvy422', 'vyuy422', 'yuyv422', 'rgb888', 'bgr888', 'rgb565', 'bgra', 'gray8'], help="Input pixel format", required=True)
 
     return parser.parse_args()
 
@@ -131,22 +131,8 @@ def conv_from_JPGToFORMAT(out_file, pix_fmt):
     elif (pix_fmt == 'vyuy422'):
         input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2YCrCb)
         y = input_image[:, :, 0]
-        cb = input_image[:, :, 1]
-        cr = input_image[:, :, 2]
-        if (args.width % 2 !=0) :
-            print("Error: width must be even for", args.pix_fmt, " format")
-            sys.exit('Error: invalid width value')
-        y0 = y [:, 0::2]
-        y1 = y[:, 1::2]
-        u = cb[:, 0::2]
-        v = cr[:, 0::2]
-        input_image = np.stack((u, y0, v, y1), axis=-1).reshape(y.shape[0], -1)
-        input_image.tofile(out_file, '') 
-    elif (pix_fmt == 'uyvy422'):
-        input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2YCrCb)
-        y = input_image[:, :, 0]
-        cb = input_image[:, :, 1]
-        cr = input_image[:, :, 2]
+        cr = input_image[:, :, 1]
+        cb = input_image[:, :, 2]
         if (args.width % 2 !=0) :
             print("Error: width must be even for", args.pix_fmt, " format")
             sys.exit('Error: invalid width value')
@@ -155,6 +141,34 @@ def conv_from_JPGToFORMAT(out_file, pix_fmt):
         u = cb[:, 0::2]
         v = cr[:, 0::2]
         input_image = np.stack((v, y0, u, y1), axis=-1).reshape(y.shape[0], -1)
+        input_image.tofile(out_file, '') 
+    elif (pix_fmt == 'uyvy422'):
+        input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2YCrCb)
+        y = input_image[:, :, 0]
+        cr = input_image[:, :, 1]
+        cb = input_image[:, :, 2]
+        if (args.width % 2 !=0) :
+            print("Error: width must be even for", args.pix_fmt, " format")
+            sys.exit('Error: invalid width value')
+        y0 = y [:, 0::2]
+        y1 = y[:, 1::2]
+        u = cb[:, 0::2]
+        v = cr[:, 0::2]
+        input_image = np.stack((u, y0, v, y1), axis=-1).reshape(y.shape[0], -1)
+        input_image.tofile(out_file, '')
+    elif (pix_fmt == 'yuyv422'):
+        input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2YCrCb)
+        y = input_image[:, :, 0]
+        cr = input_image[:, :, 1]
+        cb = input_image[:, :, 2]
+        if (args.width % 2 !=0) :
+            print("Error: width must be even for", args.pix_fmt, " format")
+            sys.exit('Error: invalid width value')
+        y0 = y [:, 0::2]
+        y1 = y[:, 1::2]
+        u = cb[:, 0::2]
+        v = cr[:, 0::2]
+        input_image = np.stack((y0, u, y1, v), axis=-1).reshape(y.shape[0], -1)
         input_image.tofile(out_file, '') 
     else:
         print("Error: pixel format:", pix_fmt, " is not supported for conversion from JPEG")
@@ -191,7 +205,7 @@ def invert_channel0_channel2():
     output.tofile(args.output, '')
 
 
-def calc_checksum(file, size, channels):
+def calc_checksum(file, width, height):
     """
     Computes the checksum of the image file
     using Pisano with End-Around Carry algorithm
@@ -205,13 +219,17 @@ def calc_checksum(file, size, channels):
     """
     id = 0
     # shape to uint16
+    array = np.fromfile(file, dtype=np.uint16)
+    channels = array.nbytes // (width * height)
+    size = width * height
     reshape_size = int(size * channels/2)
     x = 0x1234
     y = int("0xABCD", 16)
     c = size * channels
     # 16b word count
     w_cnt = c/2
-    array = np.fromfile(file, dtype=np.uint16).reshape(reshape_size)
+    array = array.reshape(reshape_size)
+    print("Checksum compute parameters: WIDTH " + str(width) + " HEIGHT " + str(height) + " CHANNESL " + str(channels))
     while w_cnt > 0:
         c += x
         c += y
@@ -222,7 +240,7 @@ def calc_checksum(file, size, channels):
         id +=1
     print('CHECKSUM=', hex(((x | (y << 16)) & 0xFFFFFFFF)))
 
-def display_with_cv(file, pix_fmt, channels):
+def display_with_cv(file, pix_fmt):
     """
     Display image contained in file using opencv
     :param file: image file
@@ -230,8 +248,11 @@ def display_with_cv(file, pix_fmt, channels):
     :param channels: channels number of the image to display
     """
     # OpenCV imshow() loads as a NumPy array ndarray of row (height) x column (width) x color (3). The order of color is BGR (blue, green, red).
-    array = np.fromfile(file, dtype=np.uint8).reshape((args.height,args.width,channels))
+    array = np.fromfile(file, dtype=np.uint8)
+    channels = array.size // (args.height * args.width)
+    array = array.reshape((args.height,args.width,channels))
     print("Display image with pixel format:", pix_fmt)
+    print("Display image parameters: WIDTH " + str(args.width) + " HEIGHT " + str(args.height) + " CHANNESL " + str(channels))
 
     # Color conversion should apply to display BGR format
     if (pix_fmt == 'rgb565'):
@@ -254,7 +275,19 @@ def display_with_cv(file, pix_fmt, channels):
     elif (pix_fmt == 'uyvy422'):
         cv2_cvtColor='cv2.COLOR_YUV2BGR_Y422'
     elif (pix_fmt == 'vyuy422'):
-        cv2_cvtColor='cv2.COLOR_YUV2RGB_Y422'
+        # OpenCV does not support direct conversion from vyuy422 to bgr
+        # Frist reorder to yuyv422
+        temp_array = array.reshape(args.height, args.width * 2)
+        array = np.zeros_like(temp_array)
+        array[:, ::4] = temp_array[:, 1::4]  # Y0
+        array[:, 1::4] = temp_array[:, 2::4] # U
+        array[:, 2::4] = temp_array[:, 3::4] # Y1
+        array[:, 3::4] = temp_array[:, 0::4] # V
+        # Then convert to BGR
+        array = array.reshape((args.height,args.width,channels))
+        cv2_cvtColor='cv2.COLOR_YUV2BGR_YUY2'
+    elif (pix_fmt == 'yuyv422'):
+        cv2_cvtColor='cv2.COLOR_YUV2BGR_YUY2'
     elif (pix_fmt == 'yuvx'):
         cv2_cvtColor='cv2.COLOR_YUV2BGR'
         # remove alpha channel
@@ -336,27 +369,37 @@ def conv_from_RGBoBGR(out_file, out_pix_fmt):
 # and to be reused for checksum calculation and for display.
 conv_file = "conv_file.raw"
 
+# When we only need to display an image (img_op is not provided), no need to ask for output file
+if args.img_op and args.output is None:
+    print("Output file is required of img_op = " + str(args.img_op))
+    print("Please provide it using option -o")
+    sys.exit('Error: output file not provided')
+
 # Image conversion (if required) + Display + Checksum calculation
 if (args.img_op == 'swap_ch0_ch2'):
+    if args.channels is None:
+        print("Number of channels is required for image operation swap_ch0_ch2")
+        print("Please provide it using option -C")
+        sys.exit('Error: number of channels not provided')
     invert_channel0_channel2()
-    display_with_cv(args.output, output_pix_fmt, args.channels)
-    calc_checksum(args.output, args.width*args.height, args.channels)
+    display_with_cv(args.output, output_pix_fmt)
+    calc_checksum(args.output, args.width, args.height)
 elif (args.img_op == 'conv_RGB5652RGB'):
     conv_from_RGB565ToRGB(conv_file, "rgb888")
-    display_with_cv(conv_file, "rgb888", 3)
-    calc_checksum(conv_file, args.width*args.height, 3)
+    display_with_cv(conv_file, "rgb888")
+    calc_checksum(conv_file, args.width, args.height)
 elif (args.img_op == 'conv_RGB5652BGR'):
     conv_from_RGB565ToRGB(conv_file, "bgr888")
-    display_with_cv(conv_file, "bgr888", 3)
-    calc_checksum(conv_file, args.width*args.height, 3)
+    display_with_cv(conv_file, "bgr888")
+    calc_checksum(conv_file, args.width, args.height)
 elif (args.img_op == 'conv_RGB2BGR'):
     conv_from_RGBoBGR(args.output, "bgr888")
-    display_with_cv(args.output, "bgr888", 3)
-    calc_checksum(args.output, args.width*args.height, 3)
+    display_with_cv(args.output, "bgr888")
+    calc_checksum(args.output, args.width, args.height)
 elif (args.img_op == 'conv_JPEG2FMT'):
     conv_from_JPGToFORMAT(args.output, args.pix_fmt)
-    display_with_cv(args.output, args.pix_fmt, args.channels)
-    calc_checksum(args.output, args.width*args.height, args.channels)
+    display_with_cv(args.output, args.pix_fmt)
+    calc_checksum(args.output, args.width, args.height)
 else:
-    display_with_cv(args.input, args.pix_fmt, args.channels)
-    calc_checksum(args.input, args.width*args.height, args.channels)
+    display_with_cv(args.input, args.pix_fmt)
+    calc_checksum(args.input, args.width, args.height)

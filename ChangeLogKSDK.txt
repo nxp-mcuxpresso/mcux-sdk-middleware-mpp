@@ -2,7 +2,24 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-  Current version is 3.5.0
+  Current version is 3.6.0
+  - 3.6.0
+    - New features:
+      - JPEG Hardware decoder
+      - Virtual camera over RPMSG
+      - Face Landmark drawing
+      - Composition of video stream with logo and text
+      - Tuning of pipeline tasks priorities
+    - Bug fixes:
+      - fixed buffer address alignment issue in vglite HAL
+      - NPU models converted with neutron-converter version 2.2.2
+      - box dropped by NMS (static_image_ultraface_view on mimxrt700evk: only one face is detected)
+    - Known issues:
+      - static_image_mobilenet_view on mimxrt700evk: accuracy is lower than expected
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170 (CM7 only)
+      - mimxrt700evk (CM33_0 only)
   - 3.5.0
     - New features:
       - Multi-source static image element

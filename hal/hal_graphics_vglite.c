@@ -56,15 +56,15 @@ int HAL_GfxDev_GPU_Register();
 }
 #endif
 
-typedef struct _gfx_vglite_handle
+static int s_vgliteInit;  /*<! Flag to track VGLite initialization status */
+
+typedef struct _gfx_vglite_context
 {
-	int vgliteInit;
+	bool draw_ongoing;                      /*!< commands are on-going for this context, no need to lock mutex again */
     vg_lite_buffer_t input_buffer_config;   /*!< Pointer to VGLite input buffer configuration */
     vg_lite_buffer_t output_buffer_config;  /*!< Pointer to VGLite output buffer configuration */
     vg_lite_matrix_t vglite_matrix;         /*!< transformation matrix */
-} gfx_vglite_handle_t;
-
-static gfx_vglite_handle_t s_GfxVGLiteHandle;
+} gfx_vglite_context_t;
 
 /* CUSTOM_VGLITE_MEMORY_CONFIG flag should be set to allocate
  * custom vglite memory.
@@ -78,11 +78,11 @@ uint32_t vglite_heap_size     = HAL_VGLITE_HEAP_SZ;
 
 static hal_mutex_t s_mutex; /* prevent stopping GPU during conversion */
 
-int HAL_GfxDev_VGLite_Init(const gfx_dev_t *dev, void *param)
+int HAL_GfxDev_VGLite_Init(gfx_dev_t *dev, void *param)
 {
     status_t status = kStatus_Success;
     int error = 0;
-
+        
     /* initialize vglite controller */
     status = BOARD_PrepareVGLiteController();
     if (status != kStatus_Success)
@@ -93,7 +93,7 @@ int HAL_GfxDev_VGLite_Init(const gfx_dev_t *dev, void *param)
 
     /* initialize the draw
      * if vglite is already initialized, no need to reinitialize it.*/
-    if (s_GfxVGLiteHandle.vgliteInit == 0)
+    if (s_vgliteInit == 0)
     {
         status = vg_lite_init(HAL_VGLITE_TESSELLATION_BUFF_WIDTH, HAL_VGLITE_TESSELLATION_BUFF_HEIGHT);
         if (status != kStatus_Success)
@@ -109,24 +109,95 @@ int HAL_GfxDev_VGLite_Init(const gfx_dev_t *dev, void *param)
             return -1;
         }
 
-        s_GfxVGLiteHandle.vgliteInit = 1;
+        s_vgliteInit = 1;
     }
+
+    /* allocate context for VGLite operations in this task */
+    gfx_vglite_context_t *vglite_ctx = hal_malloc(sizeof(gfx_vglite_context_t));
+    if (vglite_ctx == NULL)
+    {
+        HAL_LOGE("Failed to allocate VGLite context\r\n");
+        return -1;
+    }
+    /* Zero-initialize the VGLite context */
+    memset(vglite_ctx, 0, sizeof(gfx_vglite_context_t));
+
+    /* attach context in user data */
+    dev->user_data = vglite_ctx;
 
     return error;
 }
 
-int HAL_GfxDev_VGLite_Deinit(const gfx_dev_t *dev)
+int HAL_GfxDev_VGLite_Deinit(gfx_dev_t *dev)
 {
     int error = 0;
     vg_lite_close();
     hal_mutex_remove(s_mutex);
+    /* free the context */
+    gfx_vglite_context_t *vglite_ctx = (gfx_vglite_context_t *)dev->user_data;
+    if (vglite_ctx != NULL) {
+        hal_free(vglite_ctx);
+        dev->user_data = NULL;
+    }
+        
     return error;
 }
 
 /**
- * This function returns the buffer alignment required in bytes.
+ * This function returns the src buffer alignment required in bytes.
  * */
-static inline int hal_vglite_get_buffer_alignment(mpp_pixel_format_t type)
+static inline int hal_vglite_get_src_buffer_alignment(mpp_pixel_format_t type)
+{
+    int ret = 0;
+
+#if (HAL_GPU_CHIPID == HAL_GPU_GC555_CHIP_ID) /* GC555 */
+    switch(type)
+    {
+    case MPP_PIXEL_ARGB:
+    case MPP_PIXEL_BGRA:
+    case MPP_PIXEL_RGBA:
+    case MPP_PIXEL_BGRX:
+    case MPP_PIXEL_RGBX:
+    case MPP_PIXEL_RGB:
+    case MPP_PIXEL_BGR:
+        ret = 64;
+        break;
+    case MPP_PIXEL_RGB565:
+    case MPP_PIXEL_YUYV:
+        ret = 32;
+        break;
+    case MPP_PIXEL_GRAY:
+        ret = 16;
+        break;
+    default:
+        HAL_LOGE("hal_vglite_get_src_buffer_alignment() Color format %d is not supported\n", type);
+        return -1;
+    }
+#elif (HAL_GPU_CHIPID == HAL_GPU_GC355_CHIP_ID) /* GC355 */
+    switch(type)
+    {
+    case MPP_PIXEL_ARGB:
+    case MPP_PIXEL_BGRA:
+    case MPP_PIXEL_RGBA:
+    case MPP_PIXEL_BGRX:
+    case MPP_PIXEL_RGBX:
+    case MPP_PIXEL_RGB565:
+    case MPP_PIXEL_YUYV:
+        ret = 16 * get_bitpp(type) / 8; /* GC355 requires 16 Pixels alignment */
+        break;
+    default:
+        HAL_LOGE("hal_vglite_get_src_buffer_alignment() Color format %d is not supported\n", type);
+        return -1;
+    }
+#endif
+
+    return ret;
+}
+
+/**
+ * This function returns the dst buffer alignment required in bytes.
+ * */
+static inline int hal_vglite_get_dst_buffer_alignment(mpp_pixel_format_t type)
 {
     int ret = 0;
 
@@ -145,8 +216,8 @@ static inline int hal_vglite_get_buffer_alignment(mpp_pixel_format_t type)
         ret = 64;
         break;
     default:
-        HAL_LOGE("hal_vglite_get_buffer_alignment() Color format %d is not supported\n", type);
-        break;
+        HAL_LOGE("hal_vglite_get_dst_buffer_alignment() Color format %d is not supported\n", type);
+        return -1;
     }
     return ret;
 }
@@ -159,6 +230,7 @@ static inline int hal_vglite_get_aligned_stride(int width, mpp_pixel_format_t ty
     int alignment = 0;
     int stride = 0;
 
+#if (HAL_GPU_CHIPID == HAL_GPU_GC555_CHIP_ID) /* GC555 */
     /* get GPU stride alignment requirement */
     switch(type)
     {
@@ -167,6 +239,7 @@ static inline int hal_vglite_get_aligned_stride(int width, mpp_pixel_format_t ty
     case MPP_PIXEL_RGBA:
     case MPP_PIXEL_BGRX:
     case MPP_PIXEL_RGBX:
+    case MPP_PIXEL_YUYV:
         alignment = 64;
         break;
     case MPP_PIXEL_RGB:
@@ -174,7 +247,6 @@ static inline int hal_vglite_get_aligned_stride(int width, mpp_pixel_format_t ty
         alignment = 48;
         break;
     case MPP_PIXEL_RGB565:
-    case MPP_PIXEL_YUYV:
         alignment = 32;
         break;
     case MPP_PIXEL_GRAY:
@@ -182,10 +254,27 @@ static inline int hal_vglite_get_aligned_stride(int width, mpp_pixel_format_t ty
         break;
     default:
         HAL_LOGE("hal_vglite_get_aligned_stride() Color format %d is not supported\n", type);
-        break;
+        return -1;
     }
+#elif (HAL_GPU_CHIPID == HAL_GPU_GC355_CHIP_ID) /* GC355 */
+    switch(type)
+    {
+    case MPP_PIXEL_ARGB:
+    case MPP_PIXEL_BGRA:
+    case MPP_PIXEL_RGBA:
+    case MPP_PIXEL_BGRX:
+    case MPP_PIXEL_RGBX:
+    case MPP_PIXEL_RGB565:
+    case MPP_PIXEL_YUYV:
+    	alignment = 16 * get_bitpp(type) / 8; /* GC355 requires 16 Pixels alignment */
+        break;
+    default:
+        HAL_LOGE("hal_vglite_get_src_buffer_alignment() Color format %d is not supported\n", type);
+        return -1;
+    }
+#endif
 
-    int non_aligned_stride = width * (get_bitpp(type) / 8);
+    int non_aligned_stride = width * get_bitpp(type) / 8;
 
     if ((alignment != 0) && ((non_aligned_stride % alignment)) != 0)
     {
@@ -218,15 +307,36 @@ int HAL_GfxDev_VGLite_Getbufdesc(const gfx_dev_t *dev, hw_buf_desc_t *in_buf, hw
 
         /* set input buffer hw requirement */
         /* VGLITE requires input buffer and stride to be aligned */
-        in_buf->alignment = hal_vglite_get_buffer_alignment(dev->src.format);
+        in_buf->alignment = hal_vglite_get_src_buffer_alignment(dev->src.format);
+
+        if (in_buf->alignment == -1)
+        {
+            HAL_LOGE("\nHAL_GfxDev_VGLite_Getbufdesc(): Invalid input buffer alignment\n");
+            return -1;
+        }
+
         in_buf->nb_lines = 0;
         in_buf->cacheable = false;
         in_buf->stride = hal_vglite_get_aligned_stride(dev->src.width, dev->src.format);
+
+        if (in_buf->stride == -1)
+        {
+            HAL_LOGE("\nHAL_GfxDev_VGLite_Getbufdesc(): Invalid input stride alignment\n");
+            return -1;
+        }
+
         in_buf->max_image_size = 0;
 
         /* set output buffer hw requirement */
         /* Alignment is required for the output buffer address*/
-        out_buf->alignment = hal_vglite_get_buffer_alignment(dev->dst.format);
+        out_buf->alignment = hal_vglite_get_dst_buffer_alignment(dev->dst.format);
+
+        if (out_buf->alignment == -1)
+        {
+            HAL_LOGE("\nHAL_GfxDev_VGLite_Getbufdesc(): Invalid output buffer alignment\n");
+            return -1;
+        }
+
         out_buf->cacheable = false;
         out_buf->stride = 0;
         out_buf->max_image_size = 0;
@@ -338,13 +448,21 @@ static int hal_vglite_set_input_buff_format(vg_lite_buffer_t *input_buffer, gfx_
 static int hal_vglite_init_input_buffer(vg_lite_buffer_t *vg_input_buffer, gfx_surface_t *src)
 {
     int error = 0;
-    static uint32_t input_fbuf;
+    uint32_t input_fbuf;
+    int input_buff_alignment = 0;
 
     error = hal_vglite_set_input_buff_format(vg_input_buffer, src);
     if (error == -1)
     {
         HAL_LOGE("hal_vglite_set_input_buff_format() returned error %d\n", error);
         return error;
+    }
+
+    input_buff_alignment = hal_vglite_get_src_buffer_alignment(src->format);
+    if (input_buff_alignment == -1)
+    {
+        HAL_LOGE("hal_vglite_get_src_buffer_alignment(): color format %d is not supported.\n", src->format);
+        return -1;
     }
 
     int bpp = get_bitpp(src->format);
@@ -357,6 +475,11 @@ static int hal_vglite_init_input_buffer(vg_lite_buffer_t *vg_input_buffer, gfx_s
     vg_input_buffer->stride    = hal_vglite_get_aligned_stride(src->width, src->format);
 
     input_fbuf = (uint32_t)src->buf + (src->left * bpp / 8) + (src->top * src->pitch);
+
+    /* align cropped input buffer */
+    if ((input_buff_alignment != 0) && ((input_fbuf % input_buff_alignment) != 0))
+        input_fbuf = input_fbuf + input_buff_alignment - (input_fbuf % input_buff_alignment);
+
     vg_input_buffer->memory    = (void *)input_fbuf;
     vg_input_buffer->address   = input_fbuf;
     vg_input_buffer->tiled = VG_LITE_LINEAR;
@@ -406,7 +529,7 @@ static int hal_vglite_scale(vg_lite_buffer_t *input_buffer,
     vg_lite_float_t width_scaling_f = 1.0f, height_scaling_f = 1.0f;
 
     /* get scaling width/height factors */
-    if ((input_buffer->height != 0) || (input_buffer->width != 0))
+    if ((input_buffer->height != 0) && (input_buffer->width != 0))
     {
         width_scaling_f = (vg_lite_float_t)output_width / (vg_lite_float_t)input_buffer->width;
         height_scaling_f = (vg_lite_float_t)output_height / (vg_lite_float_t)input_buffer->height;
@@ -521,9 +644,9 @@ static int hal_vglite_init_surface(gfx_rotate_config_t rotate, vg_lite_matrix_t 
 {
     int status = 0;
 
-    /* get output scaling width/height */
-    int image_output_width = gDst->right - gDst->left + 1;
-    int image_output_height = gDst->bottom - gDst->top + 1;
+    /* get scaled area width/height before rotation */
+    int image_scaled_width = 0;
+    int image_scaled_height = 0;
 
     /* setup rotation configuration */
     vg_lite_float_t rotate_degree     = 0.0;
@@ -537,38 +660,51 @@ static int hal_vglite_init_surface(gfx_rotate_config_t rotate, vg_lite_matrix_t 
     {
         if (rotate.degree == ROTATE_90)
         {
+            /* swap output dims */
+            image_scaled_width = gDst->bottom - gDst->top + 1;
+            image_scaled_height = gDst->right - gDst->left + 1;
             /* translate on x-axix in order to rotate the Left point by 90 degrees.*/
-            translate_x = (gDst->width - gDst->left) - gDst->top;
-            translate_y = 0.0;
+            translate_x = gDst->right;
+            translate_y = gDst->top;
         }
         else if (rotate.degree == ROTATE_270)
         {
+            /* swap output dims */
+            image_scaled_width = gDst->bottom - gDst->top + 1;
+            image_scaled_height = gDst->right - gDst->left + 1;
             /* translate on x,y-axis in order to rotate the top,Left point by 270 degrees.*/
-            translate_x =  0.0;
-            translate_y = (gDst->height - gDst->top) - gDst->left;
+            translate_x = gDst->left;
+            translate_y = gDst->bottom;
         }
         else if (rotate.degree == ROTATE_180)
         {
+            image_scaled_width = gDst->right - gDst->left + 1;
+            image_scaled_height = gDst->bottom - gDst->top + 1;
             /* translate on x,y-axis in order to rotate the top,Left point by 180 degrees.*/
-            translate_x = (gDst->width - gDst->left) - gDst->top;
-            translate_y = (gDst->height - gDst->top) - gDst->left;
+            translate_x = gDst->right;
+            translate_y = gDst->bottom;
         }
         else
         { /* 0 degree */
-            translate_x = 0.0;
-            translate_y = 0.0;
+            image_scaled_width = gDst->right - gDst->left + 1;
+            image_scaled_height = gDst->bottom - gDst->top + 1;
+            translate_x = gDst->left;
+            translate_y = gDst->top;
         }
     }
     else
     { /* 0 degree */
-        translate_x = 0.0;
-        translate_y = 0.0;
+        image_scaled_width = gDst->right - gDst->left + 1;
+        image_scaled_height = gDst->bottom - gDst->top + 1;
+        translate_x = gDst->left;
+        translate_y = gDst->top;
     }
 
-    /* translation is needed before rotation to keep image in the output window. */
+    /* apply translate for output window position */
+    vg_lite_translate(translate_x, translate_y, vglite_matrix);
+    /* apply rotate */
     if (rotate.degree != ROTATE_0)
     {
-        vg_lite_translate(translate_x, translate_y, vglite_matrix);
         rotate_degree = hal_vglite_set_surface_rotate(&rotate);
         vg_lite_rotate(rotate_degree, vglite_matrix);
     }
@@ -576,8 +712,8 @@ static int hal_vglite_init_surface(gfx_rotate_config_t rotate, vg_lite_matrix_t 
     /* flip if needed */
     if (flip_mode != FLIP_NONE)
     {
-        status = hal_vglite_flip(vglite_matrix, flip_mode, image_output_width,
-                image_output_height);
+        status = hal_vglite_flip(vglite_matrix, flip_mode, image_scaled_width,
+                image_scaled_height);
         if (status != 0)
         {
             HAL_LOGE("hal_vglite_flip() failed\r\n");
@@ -586,8 +722,8 @@ static int hal_vglite_init_surface(gfx_rotate_config_t rotate, vg_lite_matrix_t 
     }
 
     /* setup scaler configuration */
-    status = hal_vglite_scale(input_buffer, vglite_matrix, image_output_width,
-            image_output_height);
+    status = hal_vglite_scale(input_buffer, vglite_matrix, image_scaled_width,
+            image_scaled_height);
     if (status != 0)
     {
         HAL_LOGE("hal_vglite_scale() failed.\r\n");
@@ -682,9 +818,7 @@ static int hal_vglite_set_output_buff_format(vg_lite_buffer_t *output_buffer, co
 static int hal_vglite_init_output_buffer(vg_lite_buffer_t *vg_output_buffer, const gfx_surface_t *dst)
 {
     int error = 0;
-    static uint32_t output_fbuf;
-
-    int bpp = get_bitpp(dst->format);
+    uint32_t output_fbuf;
 
     error = hal_vglite_set_output_buff_format(vg_output_buffer, dst);
     if (error == -1)
@@ -695,9 +829,9 @@ static int hal_vglite_init_output_buffer(vg_lite_buffer_t *vg_output_buffer, con
 
     vg_output_buffer->height    = dst->height;
     vg_output_buffer->width     = dst->width;
-    vg_output_buffer->stride    = hal_vglite_get_aligned_stride(dst->width, dst->format);
+    vg_output_buffer->stride    = dst->pitch;
 
-    output_fbuf = (uint32_t)dst->buf + (dst->left * bpp / 8) + (dst->top * dst->pitch);
+    output_fbuf = (uint32_t)dst->buf;
     vg_output_buffer->memory    = (void *)output_fbuf;
     vg_output_buffer->address   = output_fbuf;
     vg_output_buffer->tiled = VG_LITE_LINEAR;
@@ -712,7 +846,7 @@ static int hal_vglite_init_output_buffer(vg_lite_buffer_t *vg_output_buffer, con
  *
  * @param *dev      [in] Pointer to VGLite device.
  * @param *pSrc     [in] Pointer to source surface.
- * @param *pDst     [in] Pointer to destination surface.
+ * @param *pDst     [in] Pointer to destination surface (after rotation/scale/flip).
  * @param *pRotate  [in] Pointer to the rotation config.
  * @param flip_mode [in] Flip mode.
  *
@@ -723,11 +857,13 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
         mpp_flip_mode_t flip_mode)
 {
     int error                                = 0;
-    vg_lite_buffer_t *input_buffer_config    = &s_GfxVGLiteHandle.input_buffer_config;
-    vg_lite_buffer_t *output_buffer_config   = &s_GfxVGLiteHandle.output_buffer_config;
+    gfx_vglite_context_t *vglite_ctx = (gfx_vglite_context_t *)dev->user_data;
+    vg_lite_buffer_t *input_buffer_config    = &vglite_ctx->input_buffer_config;
+    vg_lite_buffer_t *output_buffer_config   = &vglite_ctx->output_buffer_config;
     gfx_surface_t src = {0}, dst = {0};
     gfx_rotate_config_t rotate = {0};
     int input_buff_alignment = 0;
+    
 
     if ( (gfx_src->buf == NULL) || (gfx_dst->buf == NULL) )
     {
@@ -735,7 +871,7 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
         return -1;
     }
 
-    input_buff_alignment = hal_vglite_get_buffer_alignment(gfx_src->format);
+    input_buff_alignment = hal_vglite_get_src_buffer_alignment(gfx_src->format);
     if ((input_buff_alignment != 0) && (((unsigned int)(gfx_src->buf) % input_buff_alignment) != 0))
     {
         HAL_LOGE("Input buffer at addr=0x%x is not %d bytes aligned\n", (unsigned int)gfx_src->buf, input_buff_alignment);
@@ -745,11 +881,17 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
     memcpy(&dst, gfx_dst, sizeof(gfx_surface_t));
     memcpy(&rotate, gfx_rotate, sizeof(gfx_rotate_config_t));
 
-    if (hal_mutex_lock(s_mutex) != kStatus_Success)
+    /* lock the mutex only once in this context */
+    if (!vglite_ctx->draw_ongoing)
     {
-        HAL_LOGE("Failed to lock GPU mutex\n");
-        vg_lite_close();
-        return -1;
+        // Acquire GPU context mutex to ensure thread-safe GPU operations
+        if (hal_mutex_lock(s_mutex) != kStatus_Success)
+        {
+            HAL_LOGE("Failed to lock GPU mutex\n");
+            vg_lite_close();
+            return -1;
+        }
+        vglite_ctx->draw_ongoing = true;
     }
 
     /* setup the input buffer configuration */
@@ -762,19 +904,8 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
         return -1;
     }
 
-    if ((gfx_rotate->target == kGFXRotate_DSTSurface) &&
-            ((gfx_rotate->degree == ROTATE_90) || (gfx_rotate->degree == ROTATE_270)))
-    {
-        /* need to swap the width and height as we force the rotate on gfx_dst surface
-           dst */
-        dst.bottom = gfx_dst->right;
-        dst.right = gfx_dst->bottom;
-        dst.left = gfx_dst->top;
-        dst.top = gfx_dst->left;
-    }
-
     /* setup the output buffer configuration */
-    error = hal_vglite_init_output_buffer(output_buffer_config, gfx_dst);
+    error = hal_vglite_init_output_buffer(output_buffer_config, &dst);
     if (error == -1)
     {
         HAL_LOGE("hal_vglite_init_output_buffer() returned error %d\n", error);
@@ -784,7 +915,7 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
     }
 
     /* scale/rotate/flip */
-    error = hal_vglite_init_surface(rotate, &s_GfxVGLiteHandle.vglite_matrix,
+    error = hal_vglite_init_surface(rotate, &vglite_ctx->vglite_matrix,
             output_buffer_config, input_buffer_config, &dst, flip_mode);
     if (error == -1)
     {
@@ -794,7 +925,7 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
         return error;
     }
 
-    error = vg_lite_blit(output_buffer_config, input_buffer_config, &s_GfxVGLiteHandle.vglite_matrix,
+    error = vg_lite_blit(output_buffer_config, input_buffer_config, &vglite_ctx->vglite_matrix,
             VG_LITE_BLEND_NONE, 0, VG_LITE_FILTER_BI_LINEAR);
     if (error != kStatus_Success)
     {
@@ -814,20 +945,31 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
         return -1;
     }
 
+    return error;
+}
+
+int HAL_GfxDev_VGLite_Finish(gfx_dev_t *dev)
+{
+    gfx_vglite_context_t *vglite_ctx = (gfx_vglite_context_t *)dev->user_data;
+
+    vg_lite_finish();
+    vglite_ctx->draw_ongoing = false;
+    /* release mutex for other tasks */
     if (hal_mutex_unlock(s_mutex) != kStatus_Success)
     {
         HAL_LOGE("Failed to unlock GPU mutex\n");
         vg_lite_close();
-        error = -1;
+        return -1;
     }
 
-    return error;
+    return 0;
 }
 
 const static gfx_dev_operator_t s_GfxDevVGLiteOps = {
         .init        = HAL_GfxDev_VGLite_Init,
         .deinit      = HAL_GfxDev_VGLite_Deinit,
         .blit        = HAL_GfxDev_VGLite_Blit,
+        .finish      = HAL_GfxDev_VGLite_Finish,
         .get_buf_desc = HAL_GfxDev_VGLite_Getbufdesc,
 };
 

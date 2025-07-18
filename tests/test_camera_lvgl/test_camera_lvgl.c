@@ -261,7 +261,7 @@ static void mpp_task(void *params)
 	cam_params.width =  width;
 	cam_params.format = args->camera_format;
 	cam_params.fps    = 30;
-	ret = mpp_camera_add(mp, args->camera_name, &cam_params);
+	ret = mpp_camera_add(mp, args->camera_name, &cam_params, NULL);
     if (ret) 
     {
         PRINTF("Failed to add camera %s\r\n", args->camera_name);
@@ -310,7 +310,7 @@ static void mpp_task(void *params)
 		goto err;
     }
 
-    ret = mpp_start(mp, 1);
+    ret = mpp_start(mp, 1, false);
     if (ret) 
     {
         PRINTF("Failed to start pipeline\r\n");
@@ -337,7 +337,7 @@ static void mpp_task(void *params)
         else
         {
             PRINTF("START\r\n");
-            ret = mpp_start(mp, 0);
+            ret = mpp_start(mp, 0, false);
             started = true;
         }
         if (ret) 

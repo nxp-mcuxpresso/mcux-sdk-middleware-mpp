@@ -14,8 +14,10 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES src/mpp_element_static_img.c
         SOURCES src/mpp_element_inference.c
         SOURCES src/mpp_element_nullsink.c
+        SOURCES src/mpp_element_img_compose.c
         SOURCES src/mpp_heap.c
         SOURCES src/mpp_memory.c
+        SOURCES src/mpp_utils.c
         SOURCES src/*.h
         include/mpp_api_types.h
         include/mpp_api.h
@@ -87,9 +89,17 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/hal_graphics_vglite.c
         SOURCES hal/hal_camera_ezhv_ov7670.c
         SOURCES hal/hal_jpegdec_cpu.c
+        SOURCES hal/hal_jpegdec_hw.c
         SOURCES hal/hal_camera_usb.c
+        SOURCES hal/hal_camera_virtual_usb.c
         SOURCES hal/include/*.h
         SOURCES hal/tflite/*.h
+    )
+
+    mcux_remove_armgcc_configuration(
+        CC  "-Wno-nonstandard-extension"
+        CX  "-Wno-int-conversion \
+            -Wno-nonstandard-extension"
     )
 
 endif() #(CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)

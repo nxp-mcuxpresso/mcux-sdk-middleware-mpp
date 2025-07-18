@@ -17,6 +17,12 @@ mcux_add_include(
 
 # board files
 include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
+# model post-processing
+mcux_add_source(
+    BASE_PATH ${SdkRootDirPath}/middleware/eiq/mpp/models
+    SOURCES utils.cpp
+            utils.h
+)
 
 # top level
 include(${SdkRootDirPath}/CMakeLists.txt)

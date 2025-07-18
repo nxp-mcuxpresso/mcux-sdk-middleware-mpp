@@ -57,7 +57,7 @@ typedef struct _user_data_t {
 	int inference_frame_num;
 	mpp_t mp;
 	mpp_elem_handle_t elem;
-	antispoofing_result result;
+	antispoofing_result liveness;
 	uint32_t accessing; /* boolean protecting access to user data */
 	int inference_time_ms;
 } user_data_t;
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 
 int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data) {
 	const mpp_inference_cb_param_t *inf_output;
-	antispoofing_result result;
+	antispoofing_result liveness;
 	
 	// user_data handle contains application private data
 	user_data_t *app_priv = (user_data_t *)user_data;
@@ -123,9 +123,7 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 		inf_output = (const mpp_inference_cb_param_t *) evt_data;
 		ANTISPOOFING_ProcessOutput(
 				inf_output,
-				app_priv->mp,
-				app_priv->elem,
-				&result);
+				&liveness);
 
 		// check that we can modify the user data (not accessed by other task)
 		if (Atomic_CompareAndSwap_u32(&app_priv->accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
@@ -133,7 +131,7 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 			app_priv->inference_time_ms = inf_output->inference_time_ms;
 			app_priv->inference_frame_num++;
 			// copy inference output
-			app_priv->result = result;
+			app_priv->liveness = liveness;
 			__atomic_store_n(&app_priv->accessing, 0, __ATOMIC_SEQ_CST);
 		}
 		break;
@@ -161,6 +159,14 @@ void stat_task(void *param)
 			PRINTF("Antispoofing : exec_time %u (ms)\r\n", antispoofing_stats.elem.elem_exec_time);
 			mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
 			PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+			if(user_data->liveness.result[1] > SPOOFING_THRESHOLD)
+				{
+					PRINTF("%s : Real face, confidence score %d\r\n", ANTISPOOFING_NAME, user_data->liveness.result[1]);
+				}
+				else
+				{
+					PRINTF("%s : Fake face, confidence score %d\r\n", ANTISPOOFING_NAME, user_data->liveness.result[0]);
+				}			
 			last_inf_frame_num = user_data->inference_frame_num;
 		}
 	}
@@ -243,7 +249,7 @@ static void app_task(void *param)
 		goto err;
 	}
 
-	ret = mpp_start(mp, 1);
+	ret = mpp_start(mp, 1, false);
 	if (ret) {
 		PRINTF("Failed to start pipeline\r\n");
 		goto err;

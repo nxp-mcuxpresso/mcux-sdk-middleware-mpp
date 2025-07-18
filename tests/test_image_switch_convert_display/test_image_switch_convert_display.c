@@ -295,13 +295,13 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
             img_params.static_image.img_params.width  = app_priv->crt_image_params.width;
             img_params.static_image.img_params.height = app_priv->crt_image_params.height;
             img_params.static_image.img_buffer = app_priv->crt_image_data;
-            ret = mpp_element_update(app_priv->mp, app_priv->static_img, &img_params);
+            ret = mpp_element_update(app_priv->mp, app_priv->static_img, &img_params, true);
 
             if (MPP_SUCCESS == ret) {
                 /* Update convert element */
                 mpp_element_params_t convert_params;
                 set_img_convert_params(&convert_params, app_priv->crt_image_params.height, app_priv->crt_image_params.width);
-                ret = mpp_element_update(app_priv->mp, app_priv->convert, &convert_params);
+                ret = mpp_element_update(app_priv->mp, app_priv->convert, &convert_params, true);
                 if (MPP_SUCCESS != ret)
                     PRINTF("ERR: Failed to update element CONVERT\r\n");
             } else {
@@ -437,7 +437,7 @@ static void app_task(void *params)
 		goto err;
     }
 
-    ret = mpp_start(mp, 1);
+    ret = mpp_start(mp, 1, false);
     if (ret) {
         PRINTF("Failed to start pipeline\r\n");
         goto err;
@@ -473,13 +473,13 @@ static void app_task(void *params)
         img_params.static_image.img_params.width  = user_data.crt_image_params.width;
         img_params.static_image.img_params.height = user_data.crt_image_params.height;
         img_params.static_image.img_buffer = user_data.crt_image_data;
-        ret = mpp_element_update(user_data.mp, user_data.static_img, &img_params);
+        ret = mpp_element_update(user_data.mp, user_data.static_img, &img_params, true);
 
         if (MPP_SUCCESS == ret) {
             /* Update convert element */
             mpp_element_params_t convert_params;
             set_img_convert_params(&convert_params, user_data.crt_image_params.height, user_data.crt_image_params.width);
-            ret = mpp_element_update(user_data.mp, user_data.convert, &convert_params);
+            ret = mpp_element_update(user_data.mp, user_data.convert, &convert_params, true);
             if (MPP_SUCCESS != ret)
                 PRINTF("ERR: Failed to update element CONVERT\r\n");
         } else {

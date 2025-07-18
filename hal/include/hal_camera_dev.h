@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2025 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -44,6 +44,7 @@ typedef enum _hal_camera_status
 {
     kStatus_HAL_CameraSuccess = 0,  /*!< HAL camera successful */
     kStatus_HAL_CameraBusy,         /*!< Camera is busy */
+    kStatus_HAL_CameraNoData,       /*!< No data available from camera */
     kStatus_HAL_CameraNonBlocking,  /*!< Camera will return immediately */
     kStatus_HAL_CameraError         /*!< Error occurs on HAL Camera */
 } hal_camera_status_t;
@@ -84,8 +85,10 @@ typedef struct _camera_dev_operator
     hal_camera_status_t (*start)(const camera_dev_t *dev); /*!< start the dev */
     hal_camera_status_t (*stop)(const camera_dev_t *dev);  /*!< stop the dev */
     hal_camera_status_t (*enqueue)(const camera_dev_t *dev, void *data); /*!< enqueue a buffer to the dev */
-    hal_camera_status_t (*dequeue)(const camera_dev_t *dev, void **data, int *stripe); /*!< dequeue a buffer from the dev (blocking) */
+    hal_camera_status_t (*dequeue)(const camera_dev_t *dev, void **data, int *stripe, int *compressed_size); /*!< dequeue a buffer from the dev (blocking) */
     hal_camera_status_t (*get_buf_desc)(const camera_dev_t *dev, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy); /*!< get buffer descriptors and policy */
+    hal_camera_status_t (*lock)(const camera_dev_t *dev); /*!< lock the device for exclusive access and operations */
+    hal_camera_status_t (*unlock)(const camera_dev_t *dev); /*!< unlock the device after exclusive operations */
 } camera_dev_operator_t;
 
 /** @} */
@@ -111,6 +114,13 @@ typedef struct
     int framerate;               /*!< frame rate */
     int stripe_size;             /*!< stripe size in bytes */
     bool stripe;                 /*!< stripe mode */
+    uint32_t n_streams;          /*!< number of total output video streams */
+    uint32_t min_stream_req_cnt; /*!< minimum number of enqueue calls to wait for */
+    uint32_t crt_stream_req_cnt; /*!< number of streams requested for enqueue */
+    mpp_exec_flag_t req_cnt_type; /*!< flag to control stream request counting */
+    mpp_camera_stream_cfg stream[NUM_STREAMS]; /*!< stream configuration */
+    bool stream_requested[NUM_STREAMS]; /*!< flag to track if a stream is required for enqueue */
+    bool in_advance_enqueue;     /*!< flag to indicate advance enqueue mode */
 } camera_dev_static_config_t;
 
 /** @brief camera device private capability. */
@@ -128,6 +138,7 @@ struct _camera_dev
     const camera_dev_operator_t *ops;      /*!< operations */
     camera_dev_static_config_t config;     /*!< static configurations */
     camera_dev_private_capability_t cap;   /*!< private capability */
+    void *data;                            /*!< device private data */
 };
 
 /** @} */

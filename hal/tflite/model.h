@@ -38,7 +38,7 @@ extern "C" {
 status_t MODEL_Init(const void *model_data,
         mpp_inference_tensor_params_t *inputTensor,
         mpp_inference_tensor_params_t *outputTensor[],
-        int nb_out_tensor);
+        int mean, int std, int nb_out_tensor);
 status_t MODEL_DeInit(void);
 void MODEL_ConvertInput(uint8_t* data, mpp_tensor_dims_t* dims, mpp_tensor_type_t type, int mean, int std);
 status_t MODEL_RunInference(void);

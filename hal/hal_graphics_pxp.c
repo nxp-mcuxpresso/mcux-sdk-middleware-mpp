@@ -51,7 +51,7 @@
 extern "C" {
 #endif
 int HAL_GfxDev_Pxp_Register();
-int HAL_GfxDev_Pxp_Init(const gfx_dev_t *dev, void *param);
+int HAL_GfxDev_Pxp_Init(gfx_dev_t *dev, void *param);
 #if defined(__cplusplus)
 }
 #endif
@@ -154,7 +154,7 @@ static int _HAL_GfxDev_Pxp_Unlock()
     return error;
 }
 
-int HAL_GfxDev_Pxp_Init(const gfx_dev_t *dev, void *param)
+int HAL_GfxDev_Pxp_Init(gfx_dev_t *dev, void *param)
 {
     int error = 0;
 
@@ -221,7 +221,7 @@ int HAL_GfxDev_Pxp_Getbufdesc(const gfx_dev_t *dev, hw_buf_desc_t *in_buf, hw_bu
     return error;
 }
 
-int HAL_GfxDev_Pxp_Deinit(const gfx_dev_t *dev)
+int HAL_GfxDev_Pxp_Deinit(gfx_dev_t *dev)
 {
     int error = 0;
     return error;
@@ -1317,6 +1317,13 @@ int HAL_GfxDev_Pxp_Compose(const gfx_dev_t *dev,
     return error;
 }
 
+int HAL_GfxDev_Pxp_Finish(gfx_dev_t *dev)
+{
+    /* Implement PXP device finish operation */
+    /* Typically involves waiting for pending graphics operations to complete */
+    return 0;
+}
+ 
 const static gfx_dev_operator_t s_GfxDevPxpOps = {
     .init        = HAL_GfxDev_Pxp_Init,
     .deinit      = HAL_GfxDev_Pxp_Deinit,
@@ -1324,6 +1331,7 @@ const static gfx_dev_operator_t s_GfxDevPxpOps = {
     .drawRect    = HAL_GfxDev_Pxp_DrawRect,
     .drawPicture = HAL_GfxDev_Pxp_DrawPicture,
     .compose     = HAL_GfxDev_Pxp_Compose,
+    .finish      = HAL_GfxDev_Pxp_Finish,
     .get_buf_desc = HAL_GfxDev_Pxp_Getbufdesc,
 };
 

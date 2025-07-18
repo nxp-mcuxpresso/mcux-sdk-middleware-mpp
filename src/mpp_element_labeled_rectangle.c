@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP
+ * Copyright 2022-2025 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -30,13 +30,17 @@
 static hal_mutex_t mutex;
 static mpp_labeled_rect_t *labeled_rectangles = NULL;
 static mpp_labeled_rect_t *labeled_rectangles_new = NULL;
+static mpp_landmark_t *landmarks = NULL;
+static mpp_landmark_t *landmarks_new = NULL;
 
 /* element processing function */
-static int label_rectangle_func (_elem_t *elem)
+static int label_rectangle_landmark_func (_elem_t *elem)
 {
     int ret = MPP_SUCCESS;
     mpp_labeled_rect_t *lr = labeled_rectangles;
     mpp_labeled_rect_t *new_lr = labeled_rectangles_new;
+    mpp_landmark_t *lk = landmarks;
+    mpp_landmark_t *new_lk = landmarks_new;
 
     do {
         /** swap new rectangles */
@@ -46,24 +50,29 @@ static int label_rectangle_func (_elem_t *elem)
             break;
         }
         /* check if an update occured */
-        if (new_lr[0].tag == MPP_LBL_RECT_TAG) {
+        if (new_lr && (new_lr[0].tag == MPP_LBL_RECT_TAG)) {
             /* new rectangles detected */
             memcpy(labeled_rectangles, labeled_rectangles_new,
-                   sizeof(mpp_labeled_rect_t) * elem->params.labels.detected_count);
+                   sizeof(mpp_labeled_rect_t) * elem->params.labels.detected_rect);
             /* reset the first tag to avoid copy the same data for optimisation */
             new_lr[0].tag = 0;
+        }
+        if (new_lk && (new_lk[0].tag == MPP_LANDMARK_TAG)) {
+            /* new landmark detected */
+            memcpy(landmarks, landmarks_new,
+                   sizeof(mpp_landmark_t) * elem->params.labels.detected_landmk);
+            /* reset the first tag to avoid copy the same data for optimisation */
+            new_lk[0].tag = 0;
         }
         ret = hal_mutex_unlock (mutex);
         if (ret != MPP_SUCCESS) {
             MPP_LOGE("%s: mutex failed %d\n", __func__, ret);
             break;
         }
-        /* start drawing */
-        for (int idx = 0; idx < elem->params.labels.detected_count; idx++) {
+        /* start drawing rectangles */
+        for (int idx = 0; idx < elem->params.labels.detected_rect; idx++) {
             if (lr == NULL) {
-                MPP_LOGE ("labeled rectangles not initialized: 0x%x,\n",
-                          (unsigned int)lr);
-                ret = MPP_INVALID_PARAM;
+                /* no rectangle allocated */
                 break;
             }
             if (lr[idx].tag != MPP_LBL_RECT_TAG) {
@@ -88,6 +97,36 @@ static int label_rectangle_func (_elem_t *elem)
                 }
             }
         }
+        
+        /* start drawing landmarks */
+        for (int idx = 0; idx < elem->params.labels.detected_landmk; idx++) {
+            if (lk == NULL) {
+                /* no landmark allocated */
+                break;
+            }
+            if (lk[idx].tag != MPP_LANDMARK_TAG) {
+                MPP_LOGE ("mpp_landmark_t element invalid tag: 0x%x, @%p\n",
+                          lk[idx].tag, &lk[idx].tag);
+                ret = MPP_INVALID_ELEM;
+                break;
+            }
+            /* if clear is set then landmark should not be drawn */
+            if (lk[idx].clear == 0UL) {
+                ret = hal_landmark (
+                        elem->io.in_buf[0]->hw->addr,
+                        elem->io.in_buf[0]->width,
+                        elem->io.in_buf[0]->height,
+                        elem->io.in_buf[0]->format,
+                        &lk[idx],
+                        elem->io.in_buf[0]->stripe_num,
+                        MPP_STRIPE_NUM);
+                if (ret != MPP_SUCCESS) {
+                    MPP_LOGE ("mpp_landmark element num %x failed !\n", idx);
+                    break;
+                }
+            }
+        }
+
         if (ret != MPP_SUCCESS) {
             MPP_LOGE("%s: return error %d\n", __func__, ret);
             break;
@@ -113,7 +152,7 @@ unsigned int elem_lbl_rct_setup (_elem_t *elem)
         if ((elem->type != MPP_TYPE_PROC) || (elem->proc_typ != MPP_ELEMENT_LABELED_RECTANGLE))
         {
             ret = MPP_INVALID_ELEM;
-            MPP_LOGE ("invalid element %s (expected element LABELED_RECTANGLE)\n", elem_name(elem->proc_typ));
+            MPP_LOGE ("invalid element %s (expected element LABELED_RECTANGLE)\n", elem_name(elem));
             break;
         }
         /* get input parameters */
@@ -129,37 +168,79 @@ unsigned int elem_lbl_rct_setup (_elem_t *elem)
         elem->io.inplace = true;
         /* input buffer points to previous element buffer */
         elem->io.nb_in_buf = 1;
-        elem->io.in_buf[0] = elem->prev->io.out_buf[0];
+        elem->io.in_buf[0] = get_in_buff_from_prev_elem(elem);
+        if (elem->io.in_buf[0] == NULL) {
+            MPP_LOGE("No input buffer found from previous element\n");
+            return MPP_ERROR;
+        }
         /* create output buffer parameters to be passed to next element */
         elem->io.nb_out_buf = 1;
         /* element process in-place: means input & output point to same buffer */
         elem->io.out_buf[0] = elem->io.in_buf[0];
 
-        if (elem->params.labels.detected_count > elem->params.labels.max_count) {
+        if (elem->params.labels.detected_rect > elem->params.labels.max_rect) {
             ret = MPP_INVALID_PARAM;
-            MPP_LOGE ("invalid elem params - detected count is bigger than max count %d\n",
-                      (int)elem->params.labels.detected_count);
+            MPP_LOGE ("invalid elem params - rectangles detected count is bigger than max count %d\n",
+                      (int)elem->params.labels.detected_rect);
             break;
         }
-        /* allocate global buffer */
-        labeled_rectangles = hal_malloc(sizeof(mpp_labeled_rect_t) * elem->params.labels.max_count);
-        labeled_rectangles_new = hal_malloc(sizeof(mpp_labeled_rect_t) * elem->params.labels.max_count);
-        if (labeled_rectangles == NULL || labeled_rectangles_new == NULL) {
-            ret = MPP_MALLOC_ERROR;
-            MPP_LOGE ("ERR: malloc failed for labeled_rectangles\n");
+        if (elem->params.labels.detected_landmk > elem->params.labels.max_landmk) {
+            ret = MPP_INVALID_PARAM;
+            MPP_LOGE ("invalid elem params - landmarks detected count is bigger than max count %d\n",
+                (int)elem->params.labels.detected_landmk);
             break;
         }
-        /* copy added rectangles */
-        memcpy(labeled_rectangles, elem->params.labels.rectangles,
-                sizeof(mpp_labeled_rect_t) * elem->params.labels.detected_count);
-        elem->params.labels.rectangles = labeled_rectangles;
-        /* update tags */
-        for (int idx=0; idx < elem->params.labels.detected_count; idx++) {
-            labeled_rectangles[idx].tag = MPP_LBL_RECT_TAG;
+
+        if ((elem->params.labels.max_landmk == 0) && (elem->params.labels.max_rect == 0)) {
+            ret = MPP_INVALID_PARAM;
+            MPP_LOGE ("invalid elem params - max array size cannot be zero for both landmarks and rectangle \r\n");
+            break;
+        }
+        /* allocate current and new buffer */
+        if (elem->params.labels.max_rect) {
+            labeled_rectangles = hal_malloc(sizeof(mpp_labeled_rect_t) * elem->params.labels.max_rect);
+            labeled_rectangles_new = hal_malloc(sizeof(mpp_labeled_rect_t) * elem->params.labels.max_rect);
+            if (labeled_rectangles == NULL || labeled_rectangles_new == NULL) {
+                ret = MPP_MALLOC_ERROR;
+                MPP_LOGE ("ERR: malloc failed for labeled_rectangles\n");
+                break;
+            }
+            /* copy added rectangles */
+            memcpy(labeled_rectangles, elem->params.labels.rectangles,
+                sizeof(mpp_labeled_rect_t) * elem->params.labels.detected_rect);
+                elem->params.labels.rectangles = labeled_rectangles;
+            /* update tags */
+            for (int idx=0; idx < elem->params.labels.detected_rect; idx++) {
+                labeled_rectangles[idx].tag = MPP_LBL_RECT_TAG;
+            }
+        } else {
+            labeled_rectangles = NULL;
+            labeled_rectangles_new = NULL;
+        }
+
+        if (elem->params.labels.max_landmk) {
+            landmarks = hal_malloc(sizeof(mpp_landmark_t) * elem->params.labels.max_landmk);
+            landmarks_new = hal_malloc(sizeof(mpp_landmark_t) * elem->params.labels.max_landmk);
+            if (landmarks == NULL || landmarks_new == NULL) {
+                ret = MPP_MALLOC_ERROR;
+                MPP_LOGE ("ERR: malloc failed for landmarks\n");
+                break;
+            }
+            /* copy added landmarks */
+            memcpy(landmarks, elem->params.labels.landmarks,
+                    sizeof(mpp_landmark_t) * elem->params.labels.detected_landmk);
+            elem->params.labels.landmarks = landmarks;
+            /* update tags */
+            for (int idx=0; idx < elem->params.labels.detected_landmk; idx++) {
+                landmarks[idx].tag = MPP_LANDMARK_TAG;
+            }
+        } else {
+            landmarks = NULL;
+            landmarks_new = NULL;
         }
 
         /* assign element entry/function */
-        elem->entry = label_rectangle_func;
+        elem->entry = label_rectangle_landmark_func;
 
         /* create mutex to protect param buffer during update and draw */
         ret = hal_mutex_create(&mutex);
@@ -175,6 +256,12 @@ unsigned int elem_lbl_rct_setup (_elem_t *elem)
         }
         if (labeled_rectangles_new != NULL) {
             hal_free(labeled_rectangles_new);
+        }
+        if (landmarks != NULL) {
+            hal_free(landmarks);
+        }
+        if (landmarks_new != NULL) {
+            hal_free(landmarks_new);
         }
     }
 
@@ -200,36 +287,63 @@ uint32_t mpp_lbl_rectangle_update (_elem_t *elem, mpp_element_params_t *params)
             MPP_LOGE("ERR: invalid element id (0x%x)\n", elem->proc_typ);
             break;
         }
-        if (elem->params.labels.max_count < params->labels.max_count)
+        if (elem->params.labels.max_rect < params->labels.max_rect)
         {
             ret = MPP_INVALID_PARAM;
-            MPP_LOGE ("ERR: invalid elem params - max count is bigger than setup %d < %d\n",
-                      (int)elem->params.labels.max_count,
-                      (int)params->labels.max_count);
+            MPP_LOGE ("ERR: invalid elem params - rectangle max count is bigger than setup %d < %d\n",
+                      (int)elem->params.labels.max_rect,
+                      (int)params->labels.max_rect);
             break;
         }
-        if (params->labels.detected_count > params->labels.max_count)
+        if (params->labels.detected_rect > params->labels.max_rect)
         {
             ret = MPP_INVALID_PARAM;
-            MPP_LOGE ("ERR: invalid elem params - detected count is bigger than max count %d < %d\n",
-                      (int)params->labels.detected_count,
-                      (int)params->labels.max_count);
+            MPP_LOGE ("ERR: invalid elem params - rectangle detected count is bigger than max count %d < %d\n",
+                      (int)params->labels.detected_rect,
+                      (int)params->labels.max_rect);
             break;
         }
-        /* update rectangles count */
-        elem->params.labels.detected_count = params->labels.detected_count;
+        if (elem->params.labels.max_landmk < params->labels.max_landmk)
+        {
+            ret = MPP_INVALID_PARAM;
+            MPP_LOGE ("ERR: invalid elem params - landmark max count is bigger than setup %d < %d\n",
+                      (int)elem->params.labels.max_landmk,
+                      (int)params->labels.max_landmk);
+            break;
+        }
+        if (params->labels.detected_landmk > params->labels.max_landmk)
+        {
+            ret = MPP_INVALID_PARAM;
+            MPP_LOGE ("ERR: invalid elem params - landmark detected count is bigger than max count %d < %d\n",
+                      (int)params->labels.detected_landmk,
+                      (int)params->labels.max_landmk);
+            break;
+        }
+        /* update rectangles & landmarks count */
+        elem->params.labels.detected_rect = params->labels.detected_rect;
+        elem->params.labels.detected_landmk = params->labels.detected_landmk;
 
-        /* copy added rectangles */
+        /* copy added rectangles and landmarks */
         ret = hal_mutex_lock (mutex);
         if (ret != MPP_SUCCESS) {
             MPP_LOGE("%s: mutex failed %d\n", __func__, (int)ret);
             break;
         }
-        memcpy(labeled_rectangles_new, params->labels.rectangles,
-                sizeof(mpp_labeled_rect_t) * params->labels.detected_count);
-        /* update tags */
-        for (int idx=0; idx < elem->params.labels.detected_count; idx++) {
-            labeled_rectangles_new[idx].tag = MPP_LBL_RECT_TAG;
+        if (params->labels.detected_rect) {
+            memcpy(labeled_rectangles_new, params->labels.rectangles,
+                    sizeof(mpp_labeled_rect_t) * params->labels.detected_rect);
+            /* update tags */
+            for (int idx=0; idx < elem->params.labels.detected_rect; idx++) {
+                labeled_rectangles_new[idx].tag = MPP_LBL_RECT_TAG;
+            }
+        }
+        if (params->labels.detected_landmk) {
+            memcpy(landmarks_new, params->labels.landmarks,
+                    sizeof(mpp_landmark_t) * params->labels.detected_landmk);
+            /* update tags */
+            for (int idx=0; idx < elem->params.labels.detected_landmk; idx++) {
+                landmarks_new[idx].tag = MPP_LANDMARK_TAG;
+            }
         }
         ret = hal_mutex_unlock (mutex);
         if (ret != MPP_SUCCESS) {

@@ -62,6 +62,8 @@
 
 /* labeled rectangle tag identification */
 #define MPP_LBL_RECT_TAG    ((uint16_t)0x4c52)
+/* landmark tag identification */
+#define MPP_LANDMARK_TAG    ((uint16_t)0x4c53)
 
 /* source type id */
 typedef enum
@@ -115,8 +117,12 @@ typedef enum _mpp_buf_status_e {
 /* Basic pipeline structure
  */
 typedef struct _mpp_s _mpp_t;
+struct _elem_s;
+typedef struct _elem_s _elem_t;
+
 typedef int (*dequeue_func_t) (_mpp_t *mpp);
 typedef int (*enqueue_func_t) (_mpp_t *mpp);
+typedef int (*buf_processed_func_t)(_elem_t *, void *);
 
 typedef enum param_id_e {
     PARAM_ID_INVAL,
@@ -147,6 +153,7 @@ typedef struct
     hw_buf_desc_t hw_req_prod;  /* buffer hw requirement from producer */
     hw_buf_desc_t hw_req_cons;  /* buffer hw requirement from consumer */
     hw_buf_desc_t *hw;          /* pointer to above producer/consumer buffer requirement finally selected */
+    buf_processed_func_t callback;
 } buf_desc_t;
 
 typedef struct
@@ -159,10 +166,6 @@ typedef struct
     buf_desc_t *out_buf[MAX_OUTPUT_PORTS]; /* output buffer descriptor (ignored if HAL_MEM_ALLOC_INPUT/NONE) */
     unsigned short last_frame_id[MAX_INPUT_PORTS]; /* frame id of the last processed input buffer(s) */
 } io_desc_t;
-
-/* forward declaration */
-struct _elem_s;
-typedef struct _elem_s _elem_t;
 
 struct _mpp_s {
 	/*creation params*/
@@ -193,6 +196,11 @@ struct _mpp_s {
     /* element where mpp is hooked (NULL for first mpp) */
     _elem_t *hook;
 
+    /* request pipeline to perform processings on an input frame (even when frame id is not changed). */
+    /* set to true by user through mpp_start() or mpp_element_update(), */
+    /* reset to false by pipeline once frame is processed */
+    bool force_update;
+
     mpp_stats_t *stats;
 };
 
@@ -201,6 +209,10 @@ typedef struct _camera_dev_s {
     char name[MAX_DEV_NAME+1];
     /* parameters */
     mpp_camera_params_t params;
+    /* flag for updating camera stream config */
+    volatile bool update;
+    /* camera stream params to be updated */
+    mpp_camera_stream_cfg update_stream[NUM_STREAMS];
 	/* HAL/FWK type */
 	camera_dev_t dev;
 }_camera_dev_t;
@@ -283,11 +295,15 @@ static inline int can_add(mpp_element_id_t id)
     case MPP_ELEMENT_CONVERT:
     case MPP_ELEMENT_INFERENCE:
     case MPP_ELEMENT_IMG_DECODE:
+    case MPP_ELEMENT_IMG_COMPOSE:
         return 1;
     default:
         return 0;
     }
 }
+
+/* Update camera element */
+uint32_t mpp_camera_update(_elem_t *elem, mpp_element_params_t *params);
 
 /* Update static image source */
 uint32_t mpp_static_image_update(_elem_t *elem, mpp_element_params_t *params);
@@ -301,8 +317,17 @@ unsigned int mpp_convert_update(_elem_t *elem, mpp_element_params_t *params);
 /* inference update function */
 uint32_t mpp_inference_update(_elem_t *elem, mpp_element_params_t *params);
 
+/* composition update function */
+uint32_t mpp_compose_update(_elem_t *elem, mpp_element_params_t *params);
+
 /* create element and link it to its mpp */
 int mpp_create_elem(_mpp_t *mpp, _elem_t **p_elem);
+
+/* Get previous element output buffer */
+buf_desc_t *get_in_buff_from_prev_elem(_elem_t *elem);
+
+/* Get output buffer index in list */
+uint32_t get_out_buff_index(_elem_t *elem, buf_desc_t *buf);
 
 /** \endinternal */
 #endif

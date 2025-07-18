@@ -58,6 +58,21 @@ int hal_label_rectangle(uint8_t *frame, int width, int height, mpp_pixel_format_
                         mpp_labeled_rect_t *lr, int stripe, int stripe_max);
 
 /*!
+ * @brief Implementation of hal landmark component that draws a landmark on an input image.
+ * @param[in] frame: The buffer address
+ * @param[in] width: Image width
+ * @param[in] height: Image height
+ * @param[in] format: Image format
+ * @param[in] lk: landmark parameters
+ * @param[in] stripe: stripe number (0=no stripe)
+ * @param[in] stripe_max: max nb of stripes
+ * @return 0
+ *
+ */
+int hal_landmark(uint8_t *frame, int width, int height, mpp_pixel_format_t format,
+                        mpp_landmark_t *lk, int stripe, int stripe_max);
+
+/*!
  * @brief Hal setup function for inference engine Tensorflow-Lite Micro
  *
  * @param[in] dev vision algo device to register

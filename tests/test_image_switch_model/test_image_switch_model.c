@@ -286,7 +286,7 @@ static void app_task(void *params)
     }
 
     /* start main pipeline branch */
-    ret = mpp_start(mp, 1);
+    ret = mpp_start(mp, 1, false);
     if (ret) {
         PRINTF("Failed to start main pipeline branch");
         goto err;
@@ -324,7 +324,7 @@ static void app_task(void *params)
         if (g_cur_model == MODEL_PERSONDET)
         {
             /* switch to ULTRAFACE */
-            ret = mpp_element_update(mp, user_data.infer_elem, &ultraface_params);
+            ret = mpp_element_update(mp, user_data.infer_elem, &ultraface_params, true);
             if (ret) {
                 PRINTF("Failed to update element inference for ultraface");
                 goto err;
@@ -335,7 +335,7 @@ static void app_task(void *params)
             g_label = ULTRAFACE_DETECTION_LABEL;
         } else {
             /* switch to PERSONDET */
-            ret = mpp_element_update(mp, user_data.infer_elem, &persondetect_params);
+            ret = mpp_element_update(mp, user_data.infer_elem, &persondetect_params, true);
             if (ret) {
                 PRINTF("Failed to update element inference for persondetect");
                 goto err;
@@ -345,7 +345,7 @@ static void app_task(void *params)
             g_model_name = PERSONDETECT_NAME;
             g_label = PERSONDETECT_DETECTION_LABEL;
         }
-        mpp_start(mp, 0);
+        mpp_start(mp, 0, false);
     }
 
     /* pause application task */

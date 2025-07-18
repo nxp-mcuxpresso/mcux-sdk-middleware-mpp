@@ -175,10 +175,10 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 			mpp_element_params_t params;
 			memset(&params, 0, sizeof(params));
 			/* detected_count contains at least the detection zone box */
-			params.labels.detected_count = app_priv->detected_count + 1;
-			params.labels.max_count = MAX_LABEL_RECTS;
+			params.labels.detected_rect = app_priv->detected_count + 1;
+			params.labels.max_rect = MAX_LABEL_RECTS;
 			params.labels.rectangles = app_priv->labels;
-			mpp_element_update(app_priv->mp, app_priv->elem, &params);
+			mpp_element_update(app_priv->mp, app_priv->elem, &params, true);
 		}
 
 		app_priv->inference_frame_num++;
@@ -319,7 +319,7 @@ static void app_task(void *params)
 		goto err;
 	}
 
-	ret = mpp_start(mp, 1);
+	ret = mpp_start(mp, 1, false);
 	if (ret) {
 		PRINTF("Failed to start pipeline\r\n");
 		goto err;

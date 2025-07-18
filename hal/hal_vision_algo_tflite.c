@@ -154,6 +154,8 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Init(vision_algo_dev_t *dev, 
     if (kStatus_Success != MODEL_Init(param->model_data,
             &tflite_model_param->input_tensor,
             tflite_model_param->out_param.out_tensors,
+            tflite_model_param->user_params.model_input_mean,
+            tflite_model_param->user_params.model_input_std,
             param->inference_params.num_outputs))
     {
         HAL_LOGE("ERROR: MODEL_Init() failed\n");
@@ -235,7 +237,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Run(const vision_algo_dev_t *
             &(tflite_model_param->input_tensor.dims),
             tflite_model_param->input_tensor.type,  /* use type returned by model interpreter */
             tflite_model_param->user_params.model_input_mean,
-            tflite_model_param->user_params.model_input_std);
+            tflite_model_param->user_params.model_input_std); /* use tensor normalization pamaeters for LUT implementation*/
 
     int startTime = hal_get_exec_time();
     if (kStatus_Success != MODEL_RunInference()) {

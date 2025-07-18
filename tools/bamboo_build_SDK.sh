@@ -36,15 +36,11 @@ MPP_DIR=${SDK_DIR}/middleware/eiq/mpp
 MPP_EXAMPLES_DIR=${SDK_DIR}/boards/${BOARD}/eiq_examples/mpp
 
 # MPP armgcc build output directory
-ARMGCC_BUILD_NAME=build_${bamboo_buildNumber}_mpp_examples_armgcc_${BOARD}_${DISPLAY}
+ARMGCC_BUILD_NAME=armgcc_kex_build_${BOARD}_display${DISPLAY}
 ARMGCC_BUILD_DIR=${TOPDIR}/${ARMGCC_BUILD_NAME}
 
-# MPP mcux build output directory
-MCUX_BUILD_NAME=build_${bamboo_buildNumber}_mpp_examples_mcux_${BOARD}_${DISPLAY}
-MCUX_BUILD_DIR=${TOPDIR}/${MCUX_BUILD_NAME}
-
 # MPP build log directory
-BUILD_LOG_NAME=build_logs_${BOARD}_${DISPLAY}
+BUILD_LOG_NAME=build_logs_${BOARD}_display${DISPLAY}
 BUILD_LOG_DIR=${TOPDIR}/${BUILD_LOG_NAME}
 
 # Update DEMO_PANEL from mcux_config.h
@@ -53,6 +49,10 @@ DEFINE_DISPLAY="#define DEMO_PANEL ${DISPLAY}"
 # List of configs
 #CONFIGS="default source_image"
 CONFIGS="default"
+
+if [[ "${bamboo_TEST_BUILD_CONFIG}" == "" ]]; then
+    bamboo_TEST_BUILD_CONFIG="release"
+fi
 
 archive_armgcc () {
     # Build type "release" or "debug"
@@ -66,25 +66,34 @@ archive_armgcc () {
     case "${BOARD}" in
         evkmimxrt1170 | evkbimxrt1050 | evkbmimxrt1170)
             BUILD_PREFIX="flexspi_nor_sdram_"
+            CORE_ID="cm7"
             ;;
         frdmmcxn947)
             BUILD_PREFIX="flash_"
+            CORE_ID="cm33_core0"
             ;;
         mimxrt700evk)
             BUILD_PREFIX="flash_"
+            CORE_ID="cm33_core0"
             ;;
         *)
             echo "Fail sdk board name"
             exit 1
     esac
 
-    out_dir=${ARMGCC_BUILD_DIR}/${BUILD_PREFIX}${build_type}${config_name}
-    mkdir ${out_dir} -p
+    out_dir=${ARMGCC_BUILD_DIR}/${build_type}
+    mkdir -p ${out_dir}
+    mkdir -p ${bamboo_ARTIFACTS_DIR}/build_${BOARD}
     for build in `find . -name ${BUILD_PREFIX}${build_type}`; do
         echo ${build}
         # store binary
         cp ${build}/*.bin ${out_dir} 2>/dev/null || :
         cp ${build}/*.elf ${out_dir} 2>/dev/null || :
+        app_name=$(echo "${build}" | cut -d "/" -f 2)
+        if echo "${build}" | grep "${BUILD_PREFIX}${bamboo_TEST_BUILD_CONFIG}" && [[ "${bamboo_TEST_DISPLAY}" == "${DISPLAY}" ]]; then
+            cp ${build}/${app_name}.bin ${bamboo_ARTIFACTS_DIR}/build_${BOARD}/${app_name}_${CORE_ID}.bin
+            cp ${build}/${app_name}.elf ${bamboo_ARTIFACTS_DIR}/build_${BOARD}/${app_name}_${CORE_ID}.elf
+        fi
     done
 }
 
@@ -160,14 +169,14 @@ for config in ${CONFIGS}; do
     rm -rf ~/mcutk_workspace/
     mtk build -r -f bin -t Debug -O armgcc=/opt/toolchains/${bamboo_ARMGCC_DIR}
     archive_armgcc "debug"    
-    archive_mcux "Debug"
+    # archive_mcux "Debug"
     collect_build_log "Debug"
 
     # Release build
     rm -rf ~/mcutk_workspace/
     mtk build -r -f bin -t Release -O armgcc=/opt/toolchains/${bamboo_ARMGCC_DIR}
     archive_armgcc "release"
-    archive_mcux "Release"
+    # archive_mcux "Release"
     collect_build_log "Release"
 
     # restore source file from before configuration
@@ -182,5 +191,5 @@ done
 
 # Create build archive
 cd ${TOPDIR}
-tar zcf ${bamboo_ARTIFACTS_DIR}/MPP_BUILD_${BOARD}_${DISPLAY}.tar.gz ${ARMGCC_BUILD_NAME} ${MCUX_BUILD_NAME} ${BUILD_LOG_NAME}
+tar zcf ${bamboo_ARTIFACTS_DIR}/armgcc_build_kex_${BOARD}_display${DISPLAY}.tar.gz ${ARMGCC_BUILD_NAME} ${MCUX_BUILD_NAME} ${BUILD_LOG_NAME}
 
