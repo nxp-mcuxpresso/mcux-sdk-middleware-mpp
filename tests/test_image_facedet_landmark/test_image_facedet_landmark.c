@@ -63,12 +63,28 @@ typedef struct _user_data_t {
  ******************************************************************************/
 
 /* test image include file */
+#if defined(USE_SCRFD_320_256_MODEL)
+#include "images/couple_COCO_256_320_rgb.h"
+#define SRC_IMAGE_FORMAT SRC_IMAGE_COUPLE_COCO_256_320_RGB_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_COUPLE_COCO_256_320_RGB_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_COUPLE_COCO_256_320_RGB_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_COUPLE_COCO_256_320_RGB_WIDTH
+void *image_data = (void *)couple_COCO_256_320_rgb_data;
+#elif defined(USE_SCRFD_256_256_MODEL)
+#include "images/couple_COCO_256_256_rgb.h"
+#define SRC_IMAGE_FORMAT SRC_IMAGE_COUPLE_COCO_256_256_RGB_FORMAT
+#define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_COUPLE_COCO_256_256_RGB_CHANNELS_NUMBER
+#define SRC_IMAGE_HEIGHT SRC_IMAGE_COUPLE_COCO_256_256_RGB_HEIGHT
+#define SRC_IMAGE_WIDTH SRC_IMAGE_COUPLE_COCO_256_256_RGB_WIDTH
+void *image_data = (void *)couple_COCO_256_256_rgb_data;
+#else
 #include "images/couple_COCO_128_128_rgb.h"
 #define SRC_IMAGE_FORMAT SRC_IMAGE_COUPLE_COCO_128_128_RGB_FORMAT
 #define SRC_IMAGE_CHANNELS_NUMBER SRC_IMAGE_COUPLE_COCO_128_128_RGB_CHANNELS_NUMBER
 #define SRC_IMAGE_HEIGHT SRC_IMAGE_COUPLE_COCO_128_128_RGB_HEIGHT
 #define SRC_IMAGE_WIDTH SRC_IMAGE_COUPLE_COCO_128_128_RGB_WIDTH
 void *image_data = (void *)couple_COCO_128_128_rgb_data;
+#endif
 
 mpp_stats_t scrfd_kps_stats;
 

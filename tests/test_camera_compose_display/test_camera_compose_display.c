@@ -109,6 +109,16 @@ __ALIGNED(64) uint8_t  g_text_img[TEXT_WIDTH*TEXT_HEIGHT*TEXT_BPP];
 #define MAX_STRING_SIZE 64
 #define MAX_WORD_SIZE 32
 
+/* enable/disable animation of logo and text positions */
+//#define COMPOSE_ANIMATION
+
+/* Define image indices for the composition array */
+typedef enum {
+    LOGO_IMAGE_INDEX = 0,
+    TEXT_IMAGE_INDEX = 1,
+    MAX_COMPOSE_IMAGES
+} compose_image_index_t;
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -324,10 +334,11 @@ static void app_task(void *params) {
     memset(&elem_params_compose, 0, sizeof(mpp_element_params_t));
     mpp_stats_t compose_stats = {0};
     elem_params_compose.stats = &compose_stats;
+    mpp_img_compose_param_t compose_list[MAX_COMPOSE_IMAGES];
 
     draw_text_area(g_text_img, sizeof(g_text_img), &txt_info);
 
-        /* Output params */
+    /* Output params */
 #if (defined ROTATE_COMPOSE) && (ROTATE_COMPOSE == 90)
     elem_params_compose.compose.out_angle = ROTATE_90;
 #elif (defined ROTATE_COMPOSE) && (ROTATE_COMPOSE == 270)
@@ -337,33 +348,36 @@ static void app_task(void *params) {
 #endif
     elem_params_compose.compose.out_flip = FLIP_NONE;
     elem_params_compose.compose.out_format = args->display_format;
-    /* TODO set output buffer width and height */
+    elem_params_compose.compose.out_width = APP_DISPLAY_WIDTH;
+    elem_params_compose.compose.out_height = APP_DISPLAY_HEIGHT;
 
-    /* Logo image parameters */
-    elem_params_compose.compose.logo_img_params.width = LOGO_WIDTH;
-    elem_params_compose.compose.logo_img_params.height = LOGO_HEIGHT;
-    elem_params_compose.compose.logo_img_params.format = MPP_PIXEL_RGB;
-    elem_params_compose.compose.logo_img_params.stripe = false;
-    elem_params_compose.compose.logo_buffer = NXP_Logo_RGB888_Colour_320_map;
+    /* Set number of images to compose */
+    elem_params_compose.compose.nb_images = MAX_COMPOSE_IMAGES;
+    elem_params_compose.compose.image_list = compose_list;
+
+    /* Configure logo image (index 0) */
+    elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].width = LOGO_WIDTH;
+    elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].height = LOGO_HEIGHT;
+    elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].format = MPP_PIXEL_RGB;
+    elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].buffer = (void *) NXP_Logo_RGB888_Colour_320_map;
 
     /* Logo area - top left corner */
-    elem_params_compose.compose.logo_area.left = LOGO_LEFT_POS;
-    elem_params_compose.compose.logo_area.top = LOGO_TOP_POS;
-    elem_params_compose.compose.logo_area.right = LOGO_RIGHT_POS;
-    elem_params_compose.compose.logo_area.bottom = LOGO_BOTTOM_POS;
+    elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.left = LOGO_LEFT_POS;
+    elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.top = LOGO_TOP_POS;
+    elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.right = LOGO_RIGHT_POS;
+    elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.bottom = LOGO_BOTTOM_POS;
 
-    /* Text image parameters */
-    elem_params_compose.compose.txt_img_params.width = TEXT_WIDTH;
-    elem_params_compose.compose.txt_img_params.height = TEXT_HEIGHT;
-    elem_params_compose.compose.txt_img_params.format = MPP_PIXEL_RGB565;
-    elem_params_compose.compose.txt_img_params.stripe = false;
-    elem_params_compose.compose.txt_buffer = g_text_img;
+    /* Configure text image (index 1) */
+    elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].width = TEXT_WIDTH;
+    elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].height = TEXT_HEIGHT;
+    elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].format = MPP_PIXEL_RGB565;
+    elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].buffer = g_text_img;
     
     /* Text area - bottom center */
-    elem_params_compose.compose.txt_area.left = TEXT_LEFT_POS;
-    elem_params_compose.compose.txt_area.top = TEXT_TOP_POS;
-    elem_params_compose.compose.txt_area.right = TEXT_RIGHT_POS;
-    elem_params_compose.compose.txt_area.bottom = TEXT_BOTTOM_POS;
+    elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].dest_area.left = TEXT_LEFT_POS;
+    elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].dest_area.top = TEXT_TOP_POS;
+    elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].dest_area.right = TEXT_RIGHT_POS;
+    elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].dest_area.bottom = TEXT_BOTTOM_POS;
 
     /* Input area - full frame */
 #ifndef ROTATE_COMPOSE    
@@ -429,28 +443,28 @@ static void app_task(void *params) {
     do {
 #ifdef COMPOSE_ANIMATION
         /* Move logo around the screen */
-        if ((elem_params_compose.compose.logo_area.right + logo_step_x) >= APP_DISPLAY_WIDTH || 
-            (elem_params_compose.compose.logo_area.left + logo_step_x) <= 0) {
+        if ((elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.right + logo_step_x) >= APP_DISPLAY_WIDTH || 
+            (elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.left + logo_step_x) <= 0) {
             logo_step_x = -logo_step_x;
         }
-        if ((elem_params_compose.compose.logo_area.bottom + logo_step_y) >= APP_DISPLAY_HEIGHT/2 || 
-            (elem_params_compose.compose.logo_area.top + logo_step_y) <= 0) {
+        if ((elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.bottom + logo_step_y) >= APP_DISPLAY_HEIGHT/2 || 
+            (elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.top + logo_step_y) <= 0) {
             logo_step_y = -logo_step_y;
         }
         
-        elem_params_compose.compose.logo_area.left += logo_step_x;
-        elem_params_compose.compose.logo_area.right += logo_step_x;
-        elem_params_compose.compose.logo_area.top += logo_step_y;
-        elem_params_compose.compose.logo_area.bottom += logo_step_y;
+        elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.left += logo_step_x;
+        elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.right += logo_step_x;
+        elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.top += logo_step_y;
+        elem_params_compose.compose.image_list[LOGO_IMAGE_INDEX].dest_area.bottom += logo_step_y;
 
         /* Move text horizontally */
-        if ((elem_params_compose.compose.txt_area.right + text_step_x) >= APP_DISPLAY_WIDTH || 
-            (elem_params_compose.compose.txt_area.left + text_step_x) <= 0) {
+        if ((elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].dest_area.right + text_step_x) >= APP_DISPLAY_WIDTH || 
+            (elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].dest_area.left + text_step_x) <= 0) {
             text_step_x = -text_step_x;
         }
         
-        elem_params_compose.compose.txt_area.left += text_step_x;
-        elem_params_compose.compose.txt_area.right += text_step_x;
+        elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].dest_area.left += text_step_x;
+        elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].dest_area.right += text_step_x;
 #endif  /* COMPOSE_ANIMATION */
         /* redraw the text buffer every 2 seconds */
         if ((var % 20) == 0) {
@@ -468,16 +482,16 @@ static void app_task(void *params) {
         if ((var % 20) == 0) {
             text_visible = !text_visible;
             if (text_visible) {
-                elem_params_compose.compose.txt_buffer = g_text_img;
+                elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].buffer = g_text_img;
                 PRINTF("Text visible\r\n");
             } else {
-                elem_params_compose.compose.txt_buffer = NULL;
+                elem_params_compose.compose.image_list[TEXT_IMAGE_INDEX].buffer = NULL;
                 PRINTF("Text hidden\r\n");
             }
         }
 #endif
         /* Update the compose element with new positions */
-        mpp_element_update(mp, elem, &elem_params_compose);
+        mpp_element_update(mp, elem, &elem_params_compose, true);
         var++;
         vTaskDelay(xDelay);
 
@@ -493,4 +507,3 @@ err:
         vTaskSuspend(NULL);
     }
 }
-

@@ -232,6 +232,12 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Run(const vision_algo_dev_t *
 
     tflite_model_param = (tflite_model_param_t *)dev->priv_data;
 
+    tflite_model_param->user_params.evt_callback_f(
+    NULL, /* TODO pass mpp_t object here? */
+    MPP_EVENT_INFERENCE_INPUT_READY,
+    (void *)tflite_model_param->input_tensor.data,
+    tflite_model_param->user_params.cb_userdata);
+
     // TODO replace by a generic model->ConvertInput() call
     MODEL_ConvertInput((uint8_t *) tflite_model_param->input_tensor.data,
             &(tflite_model_param->input_tensor.dims),

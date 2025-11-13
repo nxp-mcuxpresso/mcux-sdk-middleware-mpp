@@ -321,6 +321,7 @@ err:
     return 0;
 }
 
+#if (IMG_DYN_CROP == 1)
 static int dyn_crop_loop(mpp_t mp, mpp_elem_handle_t convert_h, mpp_element_params_t * pelem_params)
 {
     int ret = 0;
@@ -375,6 +376,7 @@ static int dyn_crop_loop(mpp_t mp, mpp_elem_handle_t convert_h, mpp_element_para
     }
     return ret;
 }
+#endif
 
 static void app_task(void *params)
 {

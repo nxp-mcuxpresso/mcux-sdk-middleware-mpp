@@ -376,8 +376,17 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
             return MPP_MALLOC_ERROR;
         }
         elem->io.out_buf[i]->format = cam->params.format;
-        elem->io.out_buf[i]->width = cam->params.width;
-        elem->io.out_buf[i]->height = cam->params.height;
+        /* If per stream height and width are provided, use those, else use camera's default */
+        if (cam->params.stream[i].height != 0 && cam->params.stream[i].width != 0)
+        {
+            elem->io.out_buf[i]->width = cam->params.stream[i].width;
+            elem->io.out_buf[i]->height = cam->params.stream[i].height;
+        }
+        else
+        {
+            elem->io.out_buf[i]->width = cam->params.width;
+            elem->io.out_buf[i]->height = cam->params.height;
+        }
         /* init stripes */
         if (cam->params.stripe)
             elem->io.out_buf[i]->stripe_num = 1;

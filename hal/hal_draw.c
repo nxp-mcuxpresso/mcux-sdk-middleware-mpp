@@ -237,7 +237,10 @@ int hal_landmark(uint8_t *frame, int width, int height, mpp_pixel_format_t forma
     /* check landmark size versus image border */
     if ( (lk->y <= lk->width) || (lk->y >= (height - (lk->width * 2))) 
         || (lk->x <= lk->width) || (lk->x >= (width - (lk->width * 2))) )
+    {
+        HAL_LOGE("invalid landmark size versus image border x:%d y:%d thickness:%d width:%d height:%d\n", lk->x, lk->y, lk->width, width, height);
         return MPP_INVALID_PARAM;
+    }
     
     /* draw a 'cross' shape */
     int x, y;

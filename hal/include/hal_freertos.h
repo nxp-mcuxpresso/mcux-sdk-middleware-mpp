@@ -29,9 +29,13 @@
 #define TICK_PERIOD_MS   (1000*128 / configTICK_RATE_HZ) / 128
 
 /* period (us) of the high precision RunTime counter (= /10 OS tick) */
-#define HAL_EXEC_TIMER_US (TICK_PERIOD_MS * 1000 / 10)
+#ifndef HAL_TIMER_PRECISION_1_US
+#define HAL_EXEC_TIMER_US (TICK_PERIOD_MS * 1000 / 10) /* precision 100us */
+#else
+#define HAL_EXEC_TIMER_US 1 /* precision 1us */
+#endif
 
 /* max number of tasks expected in the system */
-#define HAL_MAX_TASKS 10
+#define HAL_MAX_TASKS 20
 
 #endif /* _HAL_FREERTOS_H */

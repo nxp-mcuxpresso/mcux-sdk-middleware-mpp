@@ -17,7 +17,7 @@
 #include "math.h"
 #define EOL "\r\n"
 
-static int32_t area(box_data *box) {
+int32_t area(box_data *box) {
     return (box->right - box->left +1) * (box->bottom - box->top +1);
 }
 

@@ -792,8 +792,16 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Getbufdesc(const camera_dev_t *dev
     *policy = HAL_MEM_ALLOC_OUTPUT;
     out_buf->alignment = CAMERA_DEV_BUFFER_ALIGN;
     out_buf->cacheable = true;
-    out_buf->stride = dev->config.width;
-    out_buf->nb_lines = dev->config.height;
+    if (dev->config.stream[dev_data->crt_get_buf_desc_idx].height != 0 && dev->config.stream[dev_data->crt_get_buf_desc_idx].width != 0)
+    {
+        out_buf->stride = dev->config.stream[dev_data->crt_get_buf_desc_idx].width * get_bitpp(dev->config.format) / 8;
+        out_buf->nb_lines = dev->config.stream[dev_data->crt_get_buf_desc_idx].height;
+    }
+    else
+    {
+        out_buf->stride = dev->config.width * get_bitpp(dev->config.format) / 8;
+        out_buf->nb_lines = dev->config.height;
+    }
     out_buf->addr = dev_data->stream_addr[dev->config.stream[dev_data->crt_get_buf_desc_idx++].type];
 
     /* reset crt_get_buf_desc_idx if we processed the last stream */

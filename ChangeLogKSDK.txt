@@ -8,12 +8,16 @@
       - JPEG Hardware decoder
       - Virtual camera over RPMSG
       - Face Landmark drawing
-      - Composition of video stream with logo and text
+      - Composition of video stream with image and text
       - Tuning of pipeline tasks priorities
     - Bug fixes:
       - fixed buffer address alignment issue in vglite HAL
       - NPU models converted with neutron-converter version 2.2.2
       - box dropped by NMS (static_image_ultraface_view on mimxrt700evk: only one face is detected)
+	  - fixed camera_view for USB camera JPEG output
+	  - increased tensorArena size for NANODET model as required by the new new neutron-converter
+	  - increased maximum number of tasks allowed to run along the pipeline
+	  - fixed build warnings in unit tests
     - Known issues:
       - static_image_mobilenet_view on mimxrt700evk: accuracy is lower than expected
     - Supported evaluation boards:

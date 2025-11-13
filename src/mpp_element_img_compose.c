@@ -64,7 +64,7 @@ static int compose_func(_elem_t *elem)
 {
     int ret = MPP_SUCCESS;
     gfx_surface_t input_surface, output_surface;
-    gfx_surface_t logo_surface, text_surface;
+    gfx_surface_t image_surface;
     bool can_compose = (elem->dev.gfx->ops && elem->dev.gfx->ops->compose);
     bool can_blit = (elem->dev.gfx->ops && elem->dev.gfx->ops->blit);
     
@@ -75,7 +75,7 @@ static int compose_func(_elem_t *elem)
 
     const mpp_element_params_t *params = &elem->params;
 
-    // Create input surface
+    /* Create input surface */
     ret = mpp_compose_create_surface(&input_surface, 
                                    elem->io.in_buf[0]->width,
                                    elem->io.in_buf[0]->height,
@@ -88,7 +88,7 @@ static int compose_func(_elem_t *elem)
         return ret;
     }
 
-    // Create output surface
+    /* Create output surface */
     ret = mpp_compose_create_surface(&output_surface,
                                    elem->io.out_buf[0]->width,
                                    elem->io.out_buf[0]->height,
@@ -104,7 +104,7 @@ static int compose_func(_elem_t *elem)
     /* configure rotation */
     gfx_rotate_config_t rot = { .degree = params->compose.out_angle, .target = kGFXRotate_DSTSurface};
 
-    // Copy input to output as base layer using blit operation
+    /* Copy input to output as base layer using blit operation */
     if (can_blit) {
         ret = elem->dev.gfx->ops->blit(elem->dev.gfx, 
                                      &input_surface, &output_surface, 
@@ -118,81 +118,66 @@ static int compose_func(_elem_t *elem)
         return MPP_ERROR;
     }
 
-    // Compose logo if provided
-    if (params->compose.logo_buffer && params->compose.logo_img_params.width > 0) {
-        ret = mpp_compose_create_surface(&logo_surface, 
-                                       params->compose.logo_img_params.width,
-                                       params->compose.logo_img_params.height,
-                                       params->compose.logo_img_params.width * get_bitpp(params->compose.logo_img_params.format) / 8,
-                                       params->compose.logo_img_params.format,
-                                       params->compose.logo_buffer,
+    /* Compose all images in the array */
+    for (int i = 0; i < params->compose.nb_images; i++) {
+        const mpp_img_compose_param_t *img = &params->compose.image_list[i];
+        
+        /* Skip if no buffer provided */
+        if (!img->buffer) {
+            MPP_LOGD("Compose: Skipping image %d - no buffer provided\r\n", i);
+            continue;
+        }
+
+        /* Validate image dimensions */
+        if (img->width <= 0 || img->height <= 0) {
+            MPP_LOGE("Compose: Invalid dimensions for image %d\r\n", i);
+            continue;
+        }
+
+        /* Create surface for this image */
+        ret = mpp_compose_create_surface(&image_surface, 
+                                       img->width,
+                                       img->height,
+                                       img->width * get_bitpp(img->format) / 8,
+                                       img->format,
+                                       img->buffer,
                                        NULL);
         if (ret != MPP_SUCCESS) {
-            MPP_LOGE("Compose: Failed to create logo surface\r\n");
+            MPP_LOGE("Compose: Failed to create surface for image %d\r\n", i);
             return ret;
         }
 
-        // Set logo position on output surface
-        output_surface.left = params->compose.logo_area.left;
-        output_surface.top = params->compose.logo_area.top;
-        output_surface.right = params->compose.logo_area.right;
-        output_surface.bottom = params->compose.logo_area.bottom;
+        /* Set image position on output surface */
+        output_surface.left = img->dest_area.left;
+        output_surface.top = img->dest_area.top;
+        output_surface.right = img->dest_area.right;
+        output_surface.bottom = img->dest_area.bottom;
+
+        /* Validate area bounds */
+        if (output_surface.left < 0 || output_surface.top < 0 ||
+            output_surface.right >= elem->io.out_buf[0]->width ||
+            output_surface.bottom >= elem->io.out_buf[0]->height ||
+            output_surface.left >= output_surface.right ||
+            output_surface.top >= output_surface.bottom) {
+            MPP_LOGE("Compose: Invalid area for image %d\r\n", i);
+            continue;
+        }
 
         if (can_compose) {
             ret = elem->dev.gfx->ops->compose(elem->dev.gfx,
-                                            &output_surface, &logo_surface, 
-                                            &output_surface, &rot, params->compose.out_flip);
+                                            &output_surface, &image_surface, 
+                                            &output_surface, &rot, FLIP_NONE);
             if (ret != 0) {
-                MPP_LOGE("Compose: Failed to compose logo\r\n");
+                MPP_LOGE("Compose: Failed to compose image %d\r\n", i);
                 return MPP_ERROR;
             }
         } else if (can_blit) {
-            // Fallback to blit if compose not available
+            /* Fallback to blit if compose not available */
             ret = elem->dev.gfx->ops->blit(elem->dev.gfx,
-                                         &logo_surface,&output_surface,
-                                         &rot, params->compose.out_flip);
+                                         &image_surface, &output_surface,
+                                         &rot, FLIP_NONE);
             if (ret != 0) {
-                MPP_LOGE("Compose: Failed to blit logo\r\n");
-                return MPP_ERROR;
-            }
-        }
-    }
-
-    // Compose text if provided
-    if (params->compose.txt_buffer && params->compose.txt_img_params.width > 0) {
-        ret = mpp_compose_create_surface(&text_surface,
-                                       params->compose.txt_img_params.width,
-                                       params->compose.txt_img_params.height,
-                                       params->compose.txt_img_params.width * get_bitpp(params->compose.txt_img_params.format) / 8,
-                                       params->compose.txt_img_params.format,
-                                       params->compose.txt_buffer,
-                                       NULL);
-        if (ret != MPP_SUCCESS) {
-            MPP_LOGE("Compose: Failed to create text surface\r\n");
-            return ret;
-        }
-
-        // Set text position on output surface
-        output_surface.left = params->compose.txt_area.left;
-        output_surface.top = params->compose.txt_area.top;
-        output_surface.right = params->compose.txt_area.right;
-        output_surface.bottom = params->compose.txt_area.bottom;
-
-        if (can_compose) {
-            ret = elem->dev.gfx->ops->compose(elem->dev.gfx,
-                                            &output_surface, &text_surface,
-                                            &output_surface, &rot, params->compose.out_flip);
-            if (ret != 0) {
-                MPP_LOGE("Compose: Failed to compose text\r\n");
-                return MPP_ERROR;
-            }
-        } else if (can_blit) {
-            // Fallback to blit if compose not available
-            ret = elem->dev.gfx->ops->blit(elem->dev.gfx,
-                                         &text_surface, &output_surface,
-                                         &rot, params->compose.out_flip);
-            if (ret != 0) {
-                MPP_LOGE("Compose: Failed to blit text\r\n");
+                MPP_LOGE("Compose: Failed to blit image %d\r\n", i);
                 return MPP_ERROR;
             }
         }
@@ -238,23 +223,26 @@ unsigned int elem_img_compose_setup(_elem_t *elem)
         /* validate compose parameters */
         const mpp_element_params_t *params = &elem->params;
         
-        // Validate logo parameters
-        if (params->compose.logo_buffer && 
-            (params->compose.logo_img_params.width <= 0 || 
-             params->compose.logo_img_params.height <= 0)) {
-            MPP_LOGE("Compose: Invalid logo dimensions\r\n");
+        /* Validate number of images */
+        if (params->compose.nb_images < 0) {
+            MPP_LOGE("Compose: Invalid number of images (%d)\r\n", params->compose.nb_images);
             ret = MPP_INVALID_PARAM;
             break;
         }
 
-        // Validate text parameters
-        if (params->compose.txt_buffer && 
-            (params->compose.txt_img_params.width <= 0 || 
-             params->compose.txt_img_params.height <= 0)) {
-            MPP_LOGE("Compose: Invalid text dimensions\r\n");
-            ret = MPP_INVALID_PARAM;
-            break;
+        /* Validate each image parameters */
+        for (int i = 0; i < params->compose.nb_images; i++) {
+            const mpp_img_compose_param_t *img = &params->compose.image_list[i];
+            
+            if (img->buffer && 
+                (img->width <= 0 || img->height <= 0)) {
+                MPP_LOGE("Compose: Invalid dimensions for image %d\r\n", i);
+                ret = MPP_INVALID_PARAM;
+                break;
+            }
         }
+        
+        if (ret != MPP_SUCCESS) break;
 
         /* setup the graphics device */
         gfx = hal_malloc(sizeof(gfx_dev_t));
@@ -384,31 +372,35 @@ uint32_t mpp_compose_update(_elem_t *elem, mpp_element_params_t *params)
         }
 
         /* validate compose parameters */
-        // Validate logo parameters
-        if (params->compose.logo_buffer && 
-            (params->compose.logo_img_params.width <= 0 || 
-             params->compose.logo_img_params.height <= 0)) {
-            MPP_LOGE("Compose: Invalid logo dimensions\r\n");
+        /* Validate number of images */
+        if (params->compose.nb_images < 0) {
+            MPP_LOGE("Compose: Invalid number of images (%d)\r\n", params->compose.nb_images);
             ret = MPP_INVALID_PARAM;
             break;
         }
 
-        // Validate text parameters
-        if (params->compose.txt_buffer && 
-            (params->compose.txt_img_params.width <= 0 || 
-             params->compose.txt_img_params.height <= 0)) {
-            MPP_LOGE("Compose: Invalid text dimensions\r\n");
-            ret = MPP_INVALID_PARAM;
-            break;
+        /* Validate each image parameters */
+        for (int i = 0; i < params->compose.nb_images; i++) {
+            const mpp_img_compose_param_t *img = &params->compose.image_list[i];
+            
+            if (img->buffer && 
+                (img->width <= 0 || img->height <= 0)) {
+                MPP_LOGE("Compose: Invalid dimensions for image %d\r\n", i);
+                ret = MPP_INVALID_PARAM;
+                break;
+            }
         }
+        
+        if (ret != MPP_SUCCESS) break;
 
         /* update element parameters */
-        elem->params.compose.logo_img_params = params->compose.logo_img_params;
-        elem->params.compose.logo_buffer = params->compose.logo_buffer;
-        elem->params.compose.logo_area = params->compose.logo_area;
-        elem->params.compose.txt_img_params = params->compose.txt_img_params;
-        elem->params.compose.txt_buffer = params->compose.txt_buffer;
-        elem->params.compose.txt_area = params->compose.txt_area;
+        elem->params.compose.nb_images = params->compose.nb_images;
+        
+        /* Copy the image list - Note: this assumes the image_list array is properly allocated */
+        for (int i = 0; i < params->compose.nb_images; i++) {
+            elem->params.compose.image_list[i] = params->compose.image_list[i];
+        }
+        
         elem->params.compose.input_area = params->compose.input_area;
         elem->params.compose.out_angle = params->compose.out_angle;
         elem->params.compose.out_flip = params->compose.out_flip;

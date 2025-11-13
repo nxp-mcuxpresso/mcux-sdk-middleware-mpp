@@ -16,4 +16,5 @@ Origin:                	   NXP (Apache-2.0)
                            TensorFlow (Apache-2.0) - https://github.com/tensorflow/tensorflow
                            COCO Common Objects in Context (CC-BY-4.0)- https://cocodataset.org/
                            The Independent JPEG Group's software (IJG) - http://www.ijg.org/files/jpegsr9b.zip
+                           Poppins Font (SIL Open Font License v1.1) - https://openfontlicense.org/open-font-license-official-text/
 

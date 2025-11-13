@@ -44,7 +44,9 @@ At present, the MPP HAL supports the following devices:
    * OV5640
    * MT9M114
    * OV7670
+   * Logitech C920 PRO HD WEBCAM
 - Displays:
+   * LVGL
    * RK055AHD091
    * RK055MHD091
    * RK043FN02H-CT
@@ -68,14 +70,14 @@ Currently, the MPP HAL supports the following boards:
 
 - evkbmimxrt1170 is supported by porting the following devices:
     * Cameras:  OV5640.
-    * Displays: RK055AHD091 and RK055MHD091.
+    * Displays: LVGL, RK055AHD091 and RK055MHD091.
     
 - frdmmcxn947 is supported by porting the following devices:
     * Cameras:  OV7670.
     * Displays: Mikroe TFT Proto 5" and NXP's LCD-PAR-S035.
 
 - mimxrt700evk is supported by porting the following devices:
-    * Cameras:  OV7670.
+    * Cameras:  OV7670, Logitech C920 PRO HD WEBCAM.
     * Displays: RK055AHD091 and RK055MHD091.
 
 # How to port new boards/devices:

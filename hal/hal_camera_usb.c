@@ -51,12 +51,19 @@
  * Definitions
  ******************************************************************************/
 #define CAMERA_NAME "USB_cam"
-#define CAMERA_USB_MAX_WIDTH 320
-#define CAMERA_USB_MAX_HEIGHT 240
+#define CAMERA_USB_MAX_WIDTH  1280 /* maximum supported width */
+#define CAMERA_USB_MAX_HEIGHT 720  /* maximum supported height */
 #define CAMERA_USB_MAX_BPP 2 /* YUYV */
 #define CAMERA_USB_MAX_BUFFERS  1
 #define CAMERA_DEV_BUFFER_ALIGN 16      /* alignment requirement TODO */
-#define CAMERA_USB_MAX_BUFF_SIZE CAMERA_USB_MAX_WIDTH * CAMERA_USB_MAX_HEIGHT * CAMERA_USB_MAX_BPP
+#define CAMERA_USB_RAW_BUFF_SIZE CAMERA_USB_MAX_WIDTH * CAMERA_USB_MAX_HEIGHT * CAMERA_USB_MAX_BPP
+#define CAMERA_USB_JPEG_BUFF_SIZE (CAMERA_USB_RAW_BUFF_SIZE * USB_MJPEG_COMPRESSION_RATIO) / 100
+
+#if ((MATCH_FORMAT == MATCH_FORMAT_MJPEG) || (MATCH_FORMAT == MATCH_FORMAT_ANY))
+#define CAMERA_USB_MAX_BUFF_SIZE CAMERA_USB_JPEG_BUFF_SIZE
+#else /* MATCH_FORMAT_UNCOMPRESSED */
+#define CAMERA_USB_MAX_BUFF_SIZE CAMERA_USB_RAW_BUFF_SIZE
+#endif
 
 #define USB_HOST_TASK_SIZE      2500L / sizeof(portSTACK_TYPE)
 #define USB_HOST_APP_TASK_SIZE  (20000L+5000L) / sizeof(portSTACK_TYPE)
@@ -214,15 +221,16 @@ hal_camera_status_t HAL_CameraDev_USB_Init(
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     HAL_LOGD("++HAL_CameraDev_USB_Init( param[%p])\r\n", param);
     
-    if ((config->width != CAMERA_USB_MAX_WIDTH) || (config->height != CAMERA_USB_MAX_HEIGHT))
+    if ((config->width > CAMERA_USB_MAX_WIDTH) || (config->height > CAMERA_USB_MAX_HEIGHT) ||
+    		(config->width <= 0) || (config->height <= 0))
     {
         HAL_LOGE("Camera resolution unsupported\r\n");
         return kStatus_HAL_CameraError;
     }
 
-    if (config->format != MPP_PIXEL_YUYV)
+    if ((config->format != MPP_PIXEL_YUYV) && (config->format != MPP_PIXEL_JPEG))
     {
-        HAL_LOGE("Camera format unsupported\r\n");
+        HAL_LOGE("Camera format %d unsupported\r\n", config->format);
         return kStatus_HAL_CameraError;
     }
 
@@ -367,7 +375,11 @@ hal_camera_status_t HAL_CameraDev_USB_Dequeue(const camera_dev_t *dev, void **da
 	/* copy incoming USB data to the mpp buffer */
 	memcpy(s_framebuffers[0], mpp_buffer, CAMERA_USB_MAX_BUFF_SIZE);
 	*data   = (void *)s_framebuffers[0];
-    *compressed_size = 0;
+
+	if (dev->config.format == MPP_PIXEL_JPEG)
+		*compressed_size = CAMERA_USB_JPEG_BUFF_SIZE;
+	else
+		*compressed_size = 0;
 
 	msg.cmd = USB_CAMERA_FRAME_DONE;
 	msg.parameter = mpp_buffer;

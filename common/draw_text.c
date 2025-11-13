@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include "ascii_dmserif30_cells_rgb565.h"   // generated header
+#include "Poppins_40_rgb565.h"   // generated header
 #include "draw_text.h"
 
 static void blit_cell_RGB565_clipped(const uint16_t *cell,

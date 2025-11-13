@@ -92,7 +92,7 @@ static int label_rectangle_landmark_func (_elem_t *elem)
                         elem->io.in_buf[0]->stripe_num,
                         MPP_STRIPE_NUM);
                 if (ret != MPP_SUCCESS) {
-                    MPP_LOGE ("mpp_labeled_rectangle element num %x failed !\n", idx);
+                    HAL_LOGI("mpp_labeled_rectangle element num %x failed !\n", idx);
                     break;
                 }
             }
@@ -128,7 +128,7 @@ static int label_rectangle_landmark_func (_elem_t *elem)
         }
 
         if (ret != MPP_SUCCESS) {
-            MPP_LOGE("%s: return error %d\n", __func__, ret);
+            HAL_LOGI("%s: return error %d\n", __func__, ret);
             break;
         }
     } while (false);

@@ -49,6 +49,9 @@ typedef struct {
     coord_t nose;
 } face_data_t;
 
+/* computes box area
+ */
+int32_t area(box_data *box);
 
 /* computes IoU of box 1 and 2.
  * box->area must be pre-computed

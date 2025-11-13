@@ -141,8 +141,16 @@ uint32_t hal_get_exec_time()
     TaskHandle_t cur_task = xTaskGetCurrentTaskHandle();
     uint32_t runtime_ms = 0, tasks_time = 0;
 
+    UBaseType_t number_of_tasks = uxTaskGetNumberOfTasks();
+    if (number_of_tasks > HAL_MAX_TASKS)
+    {
+        HAL_LOGE("Number of tasks in the system (%d) is higher than HAL_MAX_TASKS (%d)\r\n", number_of_tasks, HAL_MAX_TASKS);
+        HAL_LOGE("Cannot compute the exec time. Please increase the value of HAL_MAX_TASKS to %d or higher\r\n", number_of_tasks);
+        return 0;
+    }
+
     uxTaskGetSystemState(taskStatus, HAL_MAX_TASKS, &runtime);
-    for(int i= 0; i < HAL_MAX_TASKS; i++)
+    for(int i= 0; i < number_of_tasks; i++)
     {
         if (taskStatus[i].xHandle == NULL) break;
         if (taskStatus[i].xHandle == cur_task) continue;

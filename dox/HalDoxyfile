@@ -882,16 +882,19 @@ IMAGE_PATH             = hal
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = hal/include/hal_camera_dev.h \
+                         hal/include/hal_camera_shared.h \
                          hal/include/hal_static_image.h \
                          hal/include/hal_graphics_dev.h \
                          hal/include/hal_chgui.h \
                          hal/include/hal_draw.h \
+                         hal/include/hal_vdec_dev.h \
                          hal/include/hal_valgo_dev.h \
                          hal/include/hal_display_dev.h \
                          hal/HalReadme.md \
                          hal/include/hal_types.h \
                          hal/include/hal_utils.h \
                          hal/include/hal.h \
+                         hal/include/hal_os.h \
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses

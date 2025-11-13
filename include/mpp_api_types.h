@@ -47,6 +47,7 @@ typedef uintptr_t mpp_elem_handle_t ;
 /** Pipeline generated events */
 typedef enum {
     MPP_EVENT_INVALID,  /*!< invalid event */
+    MPP_EVENT_INFERENCE_INPUT_READY,    /*!< RGB image for inference is ready */
     MPP_EVENT_INFERENCE_OUTPUT_READY,   /*!< inference out is ready */
     MPP_EVENT_INTERNAL_TEST_RESERVED,   /*!< INTERNAL: DO NOT USE */
     MPP_EVENT_NUM   /*!< DO NOT USE */
@@ -189,6 +190,8 @@ typedef enum {
 typedef struct {
     mpp_camera_stream_type type; /*!< Stream type (member of enum mpp_camera_stream_type) */
     bool active;                 /*!< Stream is active or not */
+    int height;
+    int width;
 } mpp_camera_stream_cfg;
 
 /** Camera parameters */
@@ -362,6 +365,15 @@ typedef struct {
     mpp_tensor_type_t model_input_tensors_type; /*!< type of input buffer */
 } mpp_inference_params_t;
 
+/** Image composition parameters */
+typedef struct {
+    int height;                 /*!< original image height */
+    int width;                  /*!< original image width */
+    mpp_pixel_format_t format;  /*!< pixel format */
+    void *buffer;               /*!< image buffer address */
+    mpp_area_t dest_area;       /*!< area for image in destination */
+} mpp_img_compose_param_t;
+
 /** Static image and Processing elements parameters */
 typedef struct {
 union {
@@ -374,13 +386,9 @@ union {
     } static_image;
     /** Compose element's parameters */
     struct {
-        mpp_img_params_t logo_img_params;       /*!< logo image parameters */
-        void *logo_buffer;                      /*!< logo image buffer address */
-        mpp_area_t logo_area;                   /*!< logo image area */
-        mpp_img_params_t txt_img_params;        /*!< text image parameters */
-        void *txt_buffer;                       /*!< text image buffer address */
-        mpp_area_t txt_area;                    /*!< text image area */
-        mpp_area_t input_area;                  /*!< input image area */
+        int nb_images;                          /*!< number of images to compose */
+        mpp_img_compose_param_t *image_list;    /*!< pointer to array of images to compose */
+        mpp_area_t input_area;                  /*!< area of input stream in destination */
         mpp_rotate_degree_t out_angle;          /*!< output rotation angle */
         mpp_flip_mode_t out_flip;               /*!< output flip mode */
         mpp_pixel_format_t out_format;          /*!< output color format */
