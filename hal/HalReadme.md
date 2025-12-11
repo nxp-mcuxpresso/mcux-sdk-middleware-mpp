@@ -52,10 +52,14 @@ At present, the MPP HAL supports the following devices:
    * RK043FN02H-CT
    * Mikroe TFT Proto 5(SSD1963 controller)
    * NXP's LCD-PAR-S035 (ST7796S controller)
+   * FBdev
 - Graphics:
    * PXP
    * CPU
    * GPU
+- JPEG Decoder:
+   * JPEG SW
+   * JPEG HW
 ## Supported boards:
 
 Currently, the MPP HAL supports the following boards:

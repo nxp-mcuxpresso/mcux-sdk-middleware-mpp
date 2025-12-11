@@ -2,7 +2,20 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-  Current version is 3.6.0
+  Current version is 3.7.0
+  - 3.7.0
+    - New features:
+      - New display HAL for FBDEV.
+    - Bug fixes:
+      - Increased maximum number of HAL tasks.
+      - camera_view on RT700: Added rotation and scaling for landscape full screen preview.
+      - Fixed several medium and HIGH impact MSG coverity issues.
+    - Known issues:
+      - static_image_mobilenet_view on mimxrt700evk: accuracy is lower than expected
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170 (CM7 only)
+      - mimxrt700evk (CM33_0 only)
   - 3.6.0
     - New features:
       - JPEG Hardware decoder

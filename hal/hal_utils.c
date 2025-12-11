@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 NXP.
+ * Copyright 2020-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -24,6 +24,7 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <assert.h>
 
 #include "fsl_debug_console.h"
 #include <stdio.h>
@@ -53,9 +54,14 @@ static void LOG_STR(const char* module, const char* func, int line, const char* 
 void LOGE(const char* module, const char* func, int line, const char* format, ...)
 {
     char args_buffer[LOG_STRING_MAX_SIZE];
+    int ret;
     va_list args;
     va_start(args, format);
-    vsnprintf(args_buffer, LOG_STRING_MAX_SIZE, format, args);
+    /* CERT ERR33-C/POS54-C: Check vsnprintf return value */
+    ret = vsnprintf(args_buffer, LOG_STRING_MAX_SIZE, format, args);
+    if (ret < 0 || ret >= LOG_STRING_MAX_SIZE) {
+        args_buffer[LOG_STRING_MAX_SIZE - 1] = '\0';
+    }
     LOG_STR(module, func, line, "ERR", args_buffer);
     va_end(args);
 }
@@ -70,9 +76,14 @@ void LOGE(const char* module, const char* func, int line, const char* format, ..
 void LOGI(const char* module, const char* func, int line, const char* format, ...)
 {
     char args_buffer[LOG_STRING_MAX_SIZE];
+    int ret;
     va_list args;
     va_start(args, format);
-    vsnprintf(args_buffer, LOG_STRING_MAX_SIZE, format, args);
+    /* CERT ERR33-C/POS54-C: Check vsnprintf return value */
+    ret = vsnprintf(args_buffer, LOG_STRING_MAX_SIZE, format, args);
+    if (ret < 0 || ret >= LOG_STRING_MAX_SIZE) {
+        args_buffer[LOG_STRING_MAX_SIZE - 1] = '\0';
+    }
     LOG_STR(module, func, line, "INFO", args_buffer);
     va_end(args);
 }
@@ -87,9 +98,14 @@ void LOGI(const char* module, const char* func, int line, const char* format, ..
 void LOGD(const char* module, const char* func, int line, const char* format, ...)
 {
     char args_buffer[LOG_STRING_MAX_SIZE];
+    int ret;
     va_list args;
     va_start(args, format);
-    vsnprintf(args_buffer, LOG_STRING_MAX_SIZE, format, args);
+    /* CERT ERR33-C/POS54-C: Check vsnprintf return value */
+    ret = vsnprintf(args_buffer, LOG_STRING_MAX_SIZE, format, args);
+    if (ret < 0 || ret >= LOG_STRING_MAX_SIZE) {
+        args_buffer[LOG_STRING_MAX_SIZE - 1] = '\0';
+    }
     LOG_STR(module, func, line, "DBG", args_buffer);
     va_end(args);
 }
@@ -241,16 +257,27 @@ int setup_static_image_elt(static_image_t *elt)
  **/
 uint32_t calc_checksum(int size_b, void *pbuf)
 {
-    uint16_t *pw = (uint16_t *)pbuf;  /* pointer to 16b word in input buffer */
+    uint16_t *pw;
     uint16_t x = 0x1234;
     uint32_t y = 0xABCD;
-    uint32_t c = size_b;
-    int w_cnt = size_b/2; /* 16b word count */
+    uint32_t c;
+    int w_cnt;
+
+    /* CERT INT31-C: Validate size_b before casting to unsigned */
+    assert(size_b >= 0);
+
+    pw = (uint16_t *)pbuf;
+    c = (uint32_t)size_b;
+    w_cnt = size_b / 2;
+
     while(w_cnt > 0)
     {
+        /* CERT INT30-C: Check for overflow before addition */
+    	assert(!((c > (UINT32_MAX - x)) || ((c + x) > (UINT32_MAX - y))));
         c += x;
         c += y;
         y  = x + *pw;
+        /* CERT INT31-C: Validate before narrowing cast */
         x  = (uint16_t) c;
         c >>= 16;
         w_cnt--;

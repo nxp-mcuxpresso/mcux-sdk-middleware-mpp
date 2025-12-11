@@ -8,6 +8,7 @@ echo "Set environment"
 export ARMGCC_DIR=/opt/toolchains/${bamboo_ARMGCC_DIR}
 TOPDIR=$(pwd)
 SDK_DIR=${TOPDIR}/sdk-next/mcuxsdk/
+build_cmd="python3 ./build_mpp.py"
 
 if [[ "${BOARD}" == "" ]]; then
     BOARD=${bamboo_BOARD}
@@ -42,8 +43,8 @@ BUILD_OUTPUT="${SDK_DIR}/build_${BOARD}_output"
 # build all tests and examples for all build configurations
 for build_config in "release" "debug"; do
     mkdir -p ${BUILD_OUTPUT}/${build_config}
-    ./build_mpp.sh -e all -b "$BOARD" -p "$DISPLAY" -c "$build_config"
-    ./build_mpp.sh -t all -b "$BOARD" -p "$DISPLAY" -c "$build_config"
+    ${build_cmd} -e all -b "$BOARD" -p "$DISPLAY" -c "$build_config"
+    ${build_cmd} -t all -b "$BOARD" -p "$DISPLAY" -c "$build_config"
     for app in ${SDK_DIR}/build_${BOARD}/${build_config}/*.bin; do
         app=$(basename ${app} .bin)
         mv ${SDK_DIR}/build_${BOARD}/${build_config}/${app}.bin ${BUILD_OUTPUT}/${build_config}/
@@ -53,12 +54,12 @@ done
 
 build_app () {
     local app="$1"
-    local configs="$2"
+    local configs="\"$2\""
     local index="$3"
     local build_cfg="$5"
     local option
     if [[ "$4" == "tests" ]]; then option="-t"; else option="-e"; fi
-    ./build_mpp.sh "${option}" "${app}" -b "$BOARD" -p "$DISPLAY" -f "${configs}" -c "${build_cfg}"
+    ${build_cmd} "${option}" "${app}" -b "$BOARD" -p "$DISPLAY" -f "${configs}" -c "${build_cfg}"
     mv ${SDK_DIR}/build_${BOARD}/${build_cfg}/${app}_${CORE_ID}.bin ${BUILD_OUTPUT}/${build_cfg}/${app}_${CORE_ID}_config${index}.bin
     mv ${SDK_DIR}/build_${BOARD}/${build_cfg}/${app}_${CORE_ID}.elf ${BUILD_OUTPUT}/${build_cfg}/${app}_${CORE_ID}_config${index}.elf
 }

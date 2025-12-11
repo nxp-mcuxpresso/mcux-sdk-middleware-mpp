@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 NXP.
+ * Copyright 2024,2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -20,6 +20,9 @@
 /*
  * @brief display dev HAL driver implementation for ST7796S using flexio mcu-lcd 8080 interface.
  */
+
+#include <limits.h>
+#include <assert.h>
 
 /* driver includes */
 #include "pin_mux.h"
@@ -190,12 +193,14 @@ static display_dev_t s_display_dev_mcu_lcd = {.id   = 0,
 
 static void board_set_cs_pin(bool set)
 {
-    GPIO_PinWrite(BOARD_LCD_CS_GPIO, BOARD_LCD_CS_PIN, (uint8_t)set);
+    /* INT31-C: Boolean to integer conversion */
+    GPIO_PinWrite(BOARD_LCD_CS_GPIO, BOARD_LCD_CS_PIN, set ? 1U : 0U);
 }
 
 static void board_set_rs_pin(bool set)
 {
-    GPIO_PinWrite(BOARD_LCD_RS_GPIO, BOARD_LCD_RS_PIN, (uint8_t)set);
+    /* INT31-C: Boolean to integer conversion */
+    GPIO_PinWrite(BOARD_LCD_RS_GPIO, BOARD_LCD_RS_PIN, set ? 1U : 0U);
 }
 
 static void board_flexio_transfer_callback(FLEXIO_MCULCD_Type *base,
@@ -369,19 +374,41 @@ static hal_display_status_t hal_flush_display(const display_dev_t *dev, const ui
     uint32_t pixel_count;
     if (dev->cap.stripe)
     {
+        /* INT32-C: Validate signed integer operations */
+        assert(stripenum >= 1);
+        assert(dev->cap.stripe_height >= 0);
+        assert(dev->cap.width >= 0);
+        assert(dev->cap.top >= 0);
+        assert(dev->cap.stripe_height <= (INT_MAX - dev->cap.top) / (stripenum > 1 ? (stripenum - 1) : 1));
+        
         top = dev->cap.stripe_height * (stripenum - 1) + dev->cap.top;
+        
+        assert(top <= INT_MAX - dev->cap.stripe_height + 1);
         bottom = top + dev->cap.stripe_height - 1;
-        pixel_count = dev->cap.stripe_height * dev->cap.width;
+        
+        /* INT31-C: Validate before conversion to unsigned long */
+        assert(dev->cap.stripe_height * dev->cap.width >= 0);
+        pixel_count = (uint32_t)(dev->cap.stripe_height * dev->cap.width);
     }
     else
     {
         top = dev->cap.top;
         bottom = dev->cap.bottom;
-        pixel_count = dev->cap.height * dev->cap.width;
+        /* INT31-C: Validate before conversion to unsigned long */
+        assert(dev->cap.height >= 0 && dev->cap.width >= 0);
+        assert(dev->cap.height <= INT_MAX / dev->cap.width);
+        pixel_count = (uint32_t)(dev->cap.height * dev->cap.width);
     }
 
-    status = ST7796S_SelectArea(&lcd_handle, dev->cap.left,
-            top, dev->cap.right, bottom);
+    /* INT31-C: Validate before narrowing conversions to uint16_t */
+    assert(dev->cap.left >= 0 && dev->cap.left <= UINT16_MAX);
+    assert(top >= 0 && top <= UINT16_MAX);
+    assert(dev->cap.right >= 0 && dev->cap.right <= UINT16_MAX);
+    assert(bottom >= 0 && bottom <= UINT16_MAX);
+    
+    status = ST7796S_SelectArea(&lcd_handle, (uint16_t)dev->cap.left,
+    		(uint16_t)top, (uint16_t)dev->cap.right,
+			(uint16_t)bottom);
 
     if (status != kStatus_Success)  {
         HAL_LOGE("HAL_DisplayDev_McuLcdST7796S: Failed to set display output area\n");
@@ -437,10 +464,24 @@ static hal_display_status_t hal_set_background_to_black(void)
     while (top != HAL_DISPLAY_DEV_McuLcdST7796S_HEIGHT) {
         while (left != HAL_DISPLAY_DEV_McuLcdST7796S_WIDTH) {
 
+            /* INT32-C: Validate signed integer operations */
+            assert(left >= 0 && backgr_buff_width > 0);
+            assert(left <= INT_MAX - backgr_buff_width + 1);
+            assert(top >= 0 && backgr_buff_height > 0);
+            assert(top <= INT_MAX - backgr_buff_height + 1);
+            
+            int right_edge = left + backgr_buff_width - 1;
+            int bottom_edge = top + backgr_buff_height - 1;
+            
+            /* INT31-C: Validate before narrowing conversions */
+            assert(left <= UINT16_MAX && top <= UINT16_MAX);
+            assert(right_edge >= 0 && right_edge <= UINT16_MAX);
+            assert(bottom_edge >= 0 && bottom_edge <= UINT16_MAX);
+            
             /* Define frame area where MCU can access */
-            status = ST7796S_SelectArea(&lcd_handle, left,
-                    top, left + backgr_buff_width - 1,
-                    top + backgr_buff_height - 1);
+            status = ST7796S_SelectArea(&lcd_handle, (uint16_t)left,
+                    (uint16_t)top, (uint16_t)right_edge,
+                    (uint16_t)bottom_edge);
             if (status !=  kStatus_Success) {
                 free(backgr_buff);
                 return kStatus_HAL_DisplayError;

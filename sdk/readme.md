@@ -83,10 +83,10 @@ $ sudo ln -s "$PWD/cmake-3.31.5-linux-x86_64/bin/cmake" /usr/bin/cmake
 
 ### 8. Fetch the sdk repo by running the below commands:
 
-The script install_sdk.sh will also create symbolink links inside sdk folder to the respective folders in mpp repository
+The script install_sdk.py will also create symbolink links inside sdk folder to the respective folders in mpp repository
 `$ cd mpp`
 
-`$ ./sdk/install_sdk.sh` check the usage with ./sdk/install_sdk.sh -h
+`$ python3 ./sdk/install_sdk.py` check the usage with python3 ./sdk/install_sdk.py -h
 
 ### 9. Install Python Dependency (optional)
 ```
@@ -105,5 +105,5 @@ $ deactivate
 ### 11. Check the build using the mpp build script:
 ```
 $ cd mpp
-$ ./build_mpp.sh
+$ python3 ./build_mpp.py
 ```

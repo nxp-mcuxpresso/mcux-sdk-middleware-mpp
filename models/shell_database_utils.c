@@ -28,6 +28,7 @@ static void add_person (char* Name, int position);
  * Variables declaration
  ******************************************************************************/
 static face_t *embeddings_db;
+static const uint32_t embeddings_db_max_size = DATABASE_MAX_SIZE;
 static float new_face_embeddings[SIZE_EMBEDDING];
 static int state = 0;
 /*******************************************************************************
@@ -39,7 +40,7 @@ static int state = 0;
  * */
 int registration_state()
 {
-	return state;
+    return state;
 }
 
 /*
@@ -47,8 +48,8 @@ int registration_state()
  * */
 int reset_registration_state()
 {
-	state = 0;
-	return state;
+    state = 0;
+    return state;
 }
 
 /*
@@ -56,7 +57,7 @@ int reset_registration_state()
  */
 void init_database(face_t * db)
 {
-	embeddings_db = db;
+    embeddings_db = db;
 }
 
 /*
@@ -64,7 +65,7 @@ void init_database(face_t * db)
  */
 void set_new_face_embeddings(const float *person_embeddings)
 {
-	memcpy(new_face_embeddings, person_embeddings, sizeof(new_face_embeddings));
+    memcpy(new_face_embeddings, person_embeddings, sizeof(new_face_embeddings));
 }
 
 /*
@@ -75,23 +76,29 @@ void set_new_face_embeddings(const float *person_embeddings)
  */
 static int delete_person (char* Name, int size)
 {
-	int i = 0, j = 0, z = 0;
-	int position = 0;
+    int i = 0, j = 0, z = 0;
+    int position = 0;
 
-	for(i = 0; i < size ;i++)
-	{
-		if(strcmp(embeddings_db[i].name, Name) == 0)
-		{
-			position = i;
-			PRINTF("person found at %d \r\n", position);
-			for(j = position; j < size-1;j++)
-			{
-				strcpy(embeddings_db[j].name , embeddings_db[j+1].name);
-				for (z = 0; z < SIZE_EMBEDDING ; z++)
-				{
-					embeddings_db[j].embedding[z] = embeddings_db[j+1].embedding[z];
-				}
-			}
+    if (size > embeddings_db_max_size)
+    {
+        PRINTF("[ERR] - Database size (%d) exceeds maximum size (%d)\r\n", size, embeddings_db_max_size);
+        return 1;
+    }
+
+    for(i = 0; i < size ;i++)
+    {
+        if(strcmp(embeddings_db[i].name, Name) == 0)
+        {
+            position = i;
+            PRINTF("person found at %d \r\n", position);
+            for(j = position; j < size-1;j++)
+            {
+                strcpy(embeddings_db[j].name , embeddings_db[j+1].name);
+                for (z = 0; z < SIZE_EMBEDDING ; z++)
+                {
+                    embeddings_db[j].embedding[z] = embeddings_db[j+1].embedding[z];
+                }
+            }
 
             /* clear last name and embeddings */
             strcpy(embeddings_db[size-1].name , "\0");
@@ -99,10 +106,10 @@ static int delete_person (char* Name, int size)
                 embeddings_db[size-1].embedding[z] = 0.0f;
 
             break;
-		}
-	}
+        }
+    }
 
-	return 0;
+    return 0;
 }
 
 /*
@@ -112,13 +119,13 @@ static int delete_person (char* Name, int size)
  */
 static int calculate_size(face_t * face)
 {
-	int num_faces = 0;
+    int num_faces = 0;
 
-	while (face[num_faces].name[0] != '\0'){
-		num_faces++;
-	}
+    while ((num_faces < embeddings_db_max_size) && (face[num_faces].name[0] != '\0')){
+        num_faces++;
+    }
 
-	return num_faces;
+    return num_faces;
 }
 
 /*
@@ -128,8 +135,14 @@ static int calculate_size(face_t * face)
  */
 static void add_person (char* Name, int position)
 {
-	strcpy(embeddings_db[position].name, Name);
-	PRINTF("position:%d\r\n",position);
+    if (position >= embeddings_db_max_size)
+    {
+        PRINTF("[ERR] - Position in DB (%d) is out of bounds (%d\r\n", position, embeddings_db_max_size);
+        return;
+    }
+
+    strcpy(embeddings_db[position].name, Name);
+    PRINTF("position:%d\r\n",position);
 
     for (int i = 0; i < SIZE_EMBEDDING ; i++) {
         embeddings_db[position].embedding[i] = new_face_embeddings[i];
@@ -154,17 +167,25 @@ shell_status_t database_add(shell_handle_t shellHandle, int32_t argc, char **arg
         return kStatus_SHELL_Error;
     }
 
-	char  *Name = argv[1];
-	SHELL_Printf("You have entered: %s  \r\n", Name);
+    char *name = argv[1];
+    SHELL_Printf("You have entered: %s  \r\n", name);
 
-	const int new_database_size = calculate_size(embeddings_db) + 1;
-	PRINTF("size %d\r\n", new_database_size);
-	add_person(Name,new_database_size - 1);
-	PRINTF("Person added name %s\r\n", embeddings_db[new_database_size-1].name);
+    const int database_size = calculate_size(embeddings_db);
 
-	state = 1;
+    if (database_size >= embeddings_db_max_size)
+    {
+        PRINTF("[ERR] - Current data base size is %d\r\n", embeddings_db_max_size);
+        PRINTF("[ERR] - Database is full, cannot add more persons. Please increse the size of the db\r\n");
+        return 0;
+    }
 
-	return kStatus_SHELL_Success;
+    PRINTF("size %d\r\n", database_size + 1);
+    add_person(name,database_size);
+    PRINTF("Person added name %s\r\n", embeddings_db[database_size].name);
+
+    state = 1;
+
+    return kStatus_SHELL_Success;
 }
 
 /*
@@ -172,15 +193,16 @@ shell_status_t database_add(shell_handle_t shellHandle, int32_t argc, char **arg
  */
 shell_status_t database_delete(shell_handle_t shellHandle, int32_t argc, char **argv)
 {
-	char  *Name = argv[1];
+    char  *name = argv[1];
 
-	SHELL_Printf("You have entered: %s  \r\n", Name);
-	int new_database_size= calculate_size(embeddings_db);
-	delete_person(Name,new_database_size);
+    SHELL_Printf("You have entered: %s  \r\n", name);
+    int database_size = calculate_size(embeddings_db);
 
-	PRINTF("%s deleted from database. \r\n", Name);
+    delete_person(name, database_size);
 
-	return kStatus_SHELL_Success;
+    PRINTF("%s deleted from database. \r\n", name);
+
+    return kStatus_SHELL_Success;
 }
 
 /*
@@ -188,15 +210,21 @@ shell_status_t database_delete(shell_handle_t shellHandle, int32_t argc, char **
  */
 shell_status_t database_show(shell_handle_t shellHandle, int32_t argc, char **argv)
 {
-	int new_database_size= calculate_size(embeddings_db);
+    int database_size = calculate_size(embeddings_db);
 
-	SHELL_Printf("Displaying database \r\n");
-	SHELL_Printf("\r\n");
+    if (database_size > embeddings_db_max_size)
+    {
+        PRINTF("computed database_size (%d) exceeds configured size (%d)\r\n", database_size, embeddings_db_max_size);
+        return kStatus_SHELL_Error;
+    }
 
-	for (int j=0 ;j < new_database_size; j++)
-	{
-		PRINTF("Name[%d]: %s\r\n", j, embeddings_db[j].name);
-	}
+    SHELL_Printf("Displaying database \r\n");
+    SHELL_Printf("\r\n");
 
-	return kStatus_SHELL_Success;
+    for (int j = 0 ;j < database_size; j++)
+    {
+        PRINTF("Name[%d]: %s\r\n", j, embeddings_db[j].name);
+    }
+
+    return kStatus_SHELL_Success;
 }

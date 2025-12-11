@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 NXP.
+ * Copyright 2020-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -95,6 +95,7 @@ struct _display_dev_private_capability
     mpp_callback_t callback;    /*!< callback */
     void *user_data;            /*!< parameter for the callback */
     void *handle;               /*!< Handle to the LVGL widget 'image' */
+    void **p_in_buf_addr;       /*!< Pointer to current input buffer address */
 };
 
 /** @brief Attributes of a display device. */

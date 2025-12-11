@@ -1,28 +1,28 @@
 # eIQ MCU Media Processing Pipeline API
 
-MPP VERSION 3.6
+MPP VERSION 3.7
 
 ## 1. MPP API
 
 **Functions**
 
-- int[ mpp_api_init (](#_page8_x70.87_y643.15)[mpp_api_params_t ](#_page17_x70.87_y451.66)∗params)
-- [mpp_t ](#_page25_x70.87_y384.91)[mpp_create (](#_page9_x70.87_y180.36)[mpp_params_t ](#_page17_x70.87_y590.69)∗params, int ∗ret)
-- int[ mpp_camera_add (](#_page9_x70.87_y463.35)[mpp_t mpp](#_page25_x70.87_y384.91), const char ∗name, [mpp_camera_params_t ](#_page17_x70.87_y771.02)∗params, [mpp_elem_handle_t elem_h,](#_page25_x70.87_y443.37))
-- int[ mpp_static_img_add (](#_page9_x70.87_y769.98)[mpp_t mpp](#_page25_x70.87_y384.91), [mpp_img_params_t ](#_page18_x70.87_y234.02)∗params, void ∗addr)
-- int[ mpp_display_add (](#_page10_x70.87_y386.19)[mpp_t mpp](#_page25_x70.87_y384.91), const char ∗name, [mpp_display_params_t ](#_page18_x70.87_y412.84)∗params)
-- int[ mpp_nullsink_add (](#_page10_x70.87_y690.73)[mpp_t mpp)](#_page25_x70.87_y384.91)
-- int[ mpp_element_add (](#_page11_x70.87_y240.84)[mpp_t mpp](#_page25_x70.87_y384.91), [mpp_element_id_t id, ](#_page28_x70.87_y318.21)[mpp_element_params_t ](#_page21_x70.87_y327.65)∗params, [mpp_elem_handle_t ](#_page25_x70.87_y443.37)∗elem\_h)
-- int[ mpp_split (](#_page11_x70.87_y698.27)[mpp_t ](#_page25_x70.87_y384.91)mpp, unsigned int num, [mpp_params_t ](#_page17_x70.87_y590.69)∗params, [mpp_t ](#_page25_x70.87_y384.91)∗out\_list)
-- int[ mpp_background (](#_page12_x70.87_y356.49)[mpp_t mpp](#_page25_x70.87_y384.91), [mpp_params_t ](#_page17_x70.87_y590.69)∗params, [mpp_t ](#_page25_x70.87_y384.91)∗out\_mpp)
-- int[ mpp_element_update (](#_page12_x70.87_y633.66)[mpp_t mpp](#_page25_x70.87_y384.91), [mpp_elem_handle_t elem_h,](#_page25_x70.87_y443.37) [mpp_element_params_t ](#_page21_x70.87_y327.65)∗params, , bool force\_update)
-- int[ mpp_start (](#_page13_x70.87_y220.09)[mpp_t mpp](#_page25_x70.87_y384.91), int last)
-- int[ mpp_stop (](#_page13_x70.87_y526.48)[mpp_t mpp)](#_page25_x70.87_y384.91)
-- void [mpp_stats_enable (](#_page13_x70.87_y771.02)[mpp_stats_grp_t grp)](#_page26_x70.87_y460.85)
-- void [mpp_stats_disable (](#_page14_x70.87_y308.61)[mpp_stats_grp_t grp)](#_page26_x70.87_y460.85)
-- char ∗[mpp_get_version (](#_page14_x70.87_y517.49)void)
-- bool[ mpp_is_running (](#_page13_x70.87_y221.09)[mpp_t mpp](#_page25_x70.87_y384.91))
-- int [mpp_force_update(](#_page13_x70.87_y222.09)[mpp_t mpp](#_page25_x70.87_y384.91))
+- int[ mpp_api_init (](#mpp_api_init)[mpp_api_params_t ](#mpp_api_params_t)∗params)
+- [mpp_t ](#mpp_t)[mpp_create (](#mpp_create)[mpp_params_t ](#mpp_params_t)∗params, int ∗ret)
+- int[ mpp_camera_add (](#mpp_camera_add)[mpp_t mpp](#mpp_t), const char ∗name, [mpp_camera_params_t ](#mpp_camera_params_t)∗params, [mpp_elem_handle_t elem_h,](#mpp_elem_handle_t))
+- int[ mpp_static_img_add (](#mpp_static_img_add)[mpp_t mpp](#mpp_t), [mpp_img_params_t ](#mpp_img_params_t)∗params, void ∗addr)
+- int[ mpp_display_add (](#mpp_display_add)[mpp_t mpp](#mpp_t), const char ∗name, [mpp_display_params_t ](#mpp_display_params_t)∗params)
+- int[ mpp_nullsink_add (](#mpp_nullsink_add)[mpp_t mpp)](#mpp_t)
+- int[ mpp_element_add (](#mpp_element_add)[mpp_t mpp](#mpp_t), [mpp_element_id_t id, ](#mpp_element_id_t)[mpp_element_params_t ](#mpp_element_params_t)∗params, [mpp_elem_handle_t ](#mpp_elem_handle_t)∗elem\_h)
+- int[ mpp_split (](#mpp_split)[mpp_t ](#mpp_t)mpp, unsigned int num, [mpp_params_t ](#mpp_params_t)∗params, [mpp_t ](#mpp_t)∗out\_list)
+- int[ mpp_background (](#mpp_background)[mpp_t mpp](#mpp_t), [mpp_params_t ](#mpp_params_t)∗params, [mpp_t ](#mpp_t)∗out\_mpp)
+- int[ mpp_element_update (](#mpp_element_update)[mpp_t mpp](#mpp_t), [mpp_elem_handle_t elem_h,](#mpp_elem_handle_t) [mpp_element_params_t ](#mpp_element_params_t)∗params, , bool force\_update)
+- int[ mpp_start (](#mpp_start)[mpp_t mpp](#mpp_t), int last)
+- int[ mpp_stop (](#mpp_stop)[mpp_t mpp)](#mpp_t)
+- void [mpp_stats_enable (](#mpp_stats_enable)[mpp_stats_grp_t grp)](#mpp_stats_grp_t)
+- void [mpp_stats_disable (](#mpp_stats_disable)[mpp_stats_grp_t grp)](#mpp_stats_grp_t)
+- char ∗[mpp_get_version (](#mpp_get_version)void)
+- bool[ mpp_is_running (](#mpp_is_running)[mpp_t mpp](#mpp_t))
+- int [mpp_force_update(](#mpp_force_update)[mpp_t mpp](#mpp_t))
 
 ### 1.1 Detailed Description
 
@@ -30,9 +30,10 @@ This section provides the detailed documentation for the MCU Media Processing Pi
 
 #### 1.1.1 Function Documentation
 
-1. **mpp\_api\_init()**
 
-<a name="_page8_x70.87_y643.15"></a>int mpp\_api\_init ( [mpp_api_params_t ](#_page17_x70.87_y451.66)∗ params ) 
+##### mpp_api_init
+
+int mpp\_api\_init ( [mpp_api_params_t ](#mpp_api_params_t)∗ params )
 
 Pipeline initialization.
 This function initializes the library and its data structures.
@@ -47,11 +48,13 @@ It must be called before any other function of the API is called.
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
 **2. mpp\_create()**
 
-<a name="_page9_x70.87_y195.60"></a><a name="_page9_x70.87_y180.36"></a>[mpp_t ](#_page25_x70.87_y384.91) mpp\_create ( [mpp_params_t ](#_page17_x70.87_y590.69)∗ params, int ∗ ret )
+##### mpp_create
+
+[mpp_t ](#mpp_t) mpp\_create ( [mpp_params_t ](#mpp_params_t)∗ params, int ∗ ret )
 
 Basic pipeline creation.
 This function returns a handle to the pipeline.
@@ -67,9 +70,10 @@ This function returns a handle to the pipeline.
 
 handle to the pipeline if success, NULL if there is an error.
 
-3. **mpp\_camera\_add()**
 
-<a name="_page9_x70.87_y478.59"></a><a name="_page9_x70.87_y463.35"></a>int mpp\_camera\_add ( [mpp_t ](#_page25_x70.87_y384.91)mpp, const char ∗ name, [mpp_camera_params_t ](#_page17_x70.87_y771.02)∗ params, [mpp_elem_handle_t elem_h,](#_page25_x70.87_y443.37) )
+##### mpp_camera_add
+
+int mpp\_camera\_add ( [mpp_t ](#mpp_t)mpp, const char ∗ name, [mpp_camera_params_t ](#mpp_camera_params_t)∗ params, [mpp_elem_handle_t elem_h,](#mpp_elem_handle_t) )
 
 Camera addition.
 
@@ -86,11 +90,13 @@ This function adds a camera to the pipeline.
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
-4. <a name="_page9_x70.87_y769.98"></a>**mpp\_static\_img\_add()**
+##### mpp_static_img_add
 
-<a name="_page10_x70.87_y70.87"></a>int mpp\_static\_img\_add ( [mpp_t ](#_page25_x70.87_y384.91)mpp, [mpp_img_params_t ](#_page18_x70.87_y234.02)∗ params, void ∗ addr, [mpp_elem_handle_t ](#_page26_x70.87_y532.01)∗ elem\_h )
+**mpp\_static\_img\_add()**
+
+int mpp\_static\_img\_add ( [mpp_t ](#mpp_t)mpp, [mpp_img_params_t ](#mpp_img_params_t)∗ params, void ∗ addr, [mpp_elem_handle_t ](#mpp_elem_handle_t)∗ elem\_h )
 
 Static image addition.
 
@@ -106,15 +112,16 @@ Static image addition.
 
 **Returns**
 
-[Return_codes ](#_page29_x70.87_y444.70)
+[Return_codes ](#return_codes)
 
 **Precondition**
 
 - Image buffer allocation/free is the responsibility of the user.
 
-5. **mpp\_display\_add()**
 
-<a name="_page10_x70.87_y401.43"></a><a name="_page10_x70.87_y386.19"></a>int mpp\_display\_add ( [mpp_t ](#_page25_x70.87_y384.91)mpp, const char ∗ name, [mpp_display_params_t ](#_page18_x70.87_y412.84)∗ params )
+##### mpp_display_add
+
+int mpp\_display\_add ( [mpp_t ](#mpp_t)mpp, const char ∗ name, [mpp_display_params_t ](#mpp_display_params_t)∗ params )
 
 Display addition.
 
@@ -130,11 +137,13 @@ This function adds a display to the pipeline.
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
-6. **mpp\_nullsink\_add()<a name="_page10_x70.87_y705.84"></a><a name="_page10_x70.87_y690.73"></a>**
+##### mpp_nullsink_add
 
-int mpp\_nullsink\_add ( [mpp_t ](#_page25_x70.87_y384.91)mpp )
+**mpp\_nullsink\_add()**
+
+int mpp\_nullsink\_add ( [mpp_t ](#mpp_t)mpp )
 
 Null sink addition.
 
@@ -150,11 +159,12 @@ After this call pipeline is closed and no further elements can be added. Input f
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
-7. **mpp\_element\_add()**
 
-<a name="_page11_x70.87_y256.08"></a><a name="_page11_x70.87_y240.84"></a>int mpp\_element\_add ( [mpp_t ](#_page25_x70.87_y384.91)mpp, [mpp_element_id_t ](#_page28_x70.87_y318.21)id, [mpp_element_params_t ](#_page21_x70.87_y327.65)∗ params, [mpp_elem_handle_t ](#_page25_x70.87_y443.37)∗ elem\_h )
+##### mpp_element_add
+
+int mpp\_element\_add ( [mpp_t ](#mpp_t)mpp, [mpp_element_id_t ](#mpp_element_id_t)id, [mpp_element_params_t ](#mpp_element_params_t)∗ params, [mpp_elem_handle_t ](#mpp_elem_handle_t)∗ elem\_h )
 
 Add processing element (single input, single output) This function adds an element to the pipeline. Available elements are:
 - 2D image processing
@@ -173,11 +183,12 @@ Add processing element (single input, single output) This function adds an eleme
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
-8. **mpp\_split()**
 
-<a name="_page11_x70.87_y712.99"></a><a name="_page11_x70.87_y698.27"></a>int mpp\_split ( [mpp_t ](#_page25_x70.87_y384.91)mpp, unsigned int num, [mpp_params_t ](#_page17_x70.87_y590.69)∗ params, [mpp_t ](#_page25_x70.87_y384.91)∗ out\_list )
+##### mpp_split
+
+int mpp\_split ( [mpp_t ](#mpp_t)mpp, unsigned int num, [mpp_params_t ](#mpp_params_t)∗ params, [mpp_t ](#mpp_t)∗ out\_list )
 
 Pipeline multiplication. 
 
@@ -192,15 +203,16 @@ Pipeline multiplication.
 
 **Returns**
 
-[Return_codes ](#_page29_x70.87_y444.70)
+[Return_codes ](#return_codes)
 
 **Precondition**
 
 - out\_list array must contain at least num elements.
 
-9. **mpp\_background()**
 
-<a name="_page12_x70.87_y371.74"></a><a name="_page12_x70.87_y356.49"></a>int mpp\_background ( [mpp_t ](#_page25_x70.87_y384.91)mpp, [mpp_params_t ](#_page17_x70.87_y590.69)∗ params, [mpp_t ](#_page25_x70.87_y384.91)∗ out\_mpp )
+##### mpp_background
+
+int mpp\_background ( [mpp_t ](#mpp_t)mpp, [mpp_params_t ](#mpp_params_t)∗ params, [mpp_t ](#mpp_t)∗ out\_mpp )
 
 Put next elements processing in background. 
 
@@ -214,11 +226,12 @@ Put next elements processing in background.
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
-10. **mpp\_element\_update()**
 
-<a name="_page12_x70.87_y648.66"></a><a name="_page12_x70.87_y633.66"></a>int mpp\_element\_update ( [mpp_t ](#_page25_x70.87_y384.91)mpp, [mpp_elem_handle_t ](#_page25_x70.87_y443.37)elem\_h, [mpp_element_params_t ](#_page21_x70.87_y327.65)∗ params, bool force\_update )
+##### mpp_element_update
+
+int mpp\_element\_update ( [mpp_t ](#mpp_t)mpp, [mpp_elem_handle_t ](#mpp_elem_handle_t)elem\_h, [mpp_element_params_t ](#mpp_element_params_t)∗ params, bool force\_update )
 
 Update element parameters.
 
@@ -233,11 +246,11 @@ Update element parameters.
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
-11. **mpp\_start()<a name="_page13_x70.87_y235.33"></a><a name="_page13_x70.87_y220.09"></a>**
+##### mpp_start
 
-int mpp\_start ( [mpp_t ](#_page25_x70.87_y384.91)mpp, int last )
+int mpp\_start ( [mpp_t ](#mpp_t)mpp, int last )
 
 Start pipeline.
 
@@ -254,11 +267,11 @@ Data flow should start after all the branches of the pipeline have been prepared
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
-12. **mpp\_stop()<a name="_page13_x70.87_y541.72"></a><a name="_page13_x70.87_y526.48"></a>**
+##### mpp_stop
 
-int mpp\_stop ( [mpp_t ](#_page25_x70.87_y384.91)mpp )
+int mpp\_stop ( [mpp_t ](#mpp_t)mpp )
 
 Stop a branch of the pipeline.
 
@@ -272,11 +285,11 @@ This function stops the data processing and peripherals of a pipeline branch.
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
-13. <a name="_page13_x70.87_y771.02"></a>**mpp\_stats\_enable()<a name="_page14_x70.87_y70.87"></a>**
+##### mpp_stats_enable
 
-void mpp\_stats\_enable ( [mpp_stats_grp_t ](#_page26_x70.87_y460.85)grp ) 
+void mpp\_stats\_enable ( [mpp_stats_grp_t ](#mpp_stats_grp_t)grp ) 
 
 Enable statistics collection.
 
@@ -290,9 +303,9 @@ This function enables statistics collection for a given group. Statistics collec
 
 **Returns**
 
-14. **mpp\_stats\_disable()<a name="_page14_x70.87_y323.85"></a><a name="_page14_x70.87_y308.61"></a>**
+##### mpp_stats_disable
 
-void mpp\_stats\_disable ( [mpp_stats_grp_t ](#_page26_x70.87_y460.85)grp )
+void mpp\_stats\_disable ( [mpp_stats_grp_t ](#mpp_stats_grp_t)grp )
 
 Disable statistics collection.
 
@@ -304,7 +317,7 @@ This function disables statistics collection for a given group. Calling this fun
 | - | - | - |
 |in|grp|statistics group|
 
-15. **mpp\_get\_version()<a name="_page14_x70.87_y532.57"></a><a name="_page14_x70.87_y517.49"></a>**
+##### mpp_get_version
 
 char ∗ mpp\_get\_version ( void )
 
@@ -314,9 +327,9 @@ Get MPP version.
 
 pointer to the MPP version string
 
-16. **bool mpp_is_running ([mpp_t mpp](#_page25_x70.87_y384.91))<a name="_page13_x70.87_y221.09"></a>**
+##### mpp_is_running
 
-bool mpp\_is\_running ([mpp_t mpp](#_page25_x70.87_y384.91))
+bool mpp\_is\_running ([mpp_t mpp](#mpp_t))
 
 Check if the pipeline is currently running
 
@@ -330,9 +343,9 @@ Check if the pipeline is currently running
 
 true if pipeline is in running state, else false
 
-17. **int mpp\_force\_update([mpp_t mpp](#_page25_x70.87_y384.91))<a name="_page13_x70.87_y222.09"></a>**
+##### mpp_force_update
 
-int mpp\_force\_update([mpp_t mpp](#_page25_x70.87_y384.91))
+int mpp\_force\_update([mpp_t mpp](#mpp_t))
 
 Force the update of a branch of the pipeline
 
@@ -346,212 +359,212 @@ This function forces an update of the branch of the pipeline even if there is no
 
 **Returns**
 
-[Return_codes](#_page29_x70.87_y444.70)
+[Return_codes](#return_codes)
 
 ## 2. MPP Types
 
 **Data Structures**
 
-- union [mpp_stats_t](#_page17_x70.87_y326.50)
-- struct [mpp_api_params_t](#_page17_x70.87_y451.66)
-- struct [mpp_params_t](#_page17_x70.87_y590.69)
-- struct [mpp_camera_stream_cfg](#_page17_x70.87_y772.02)
-- struct [mpp_camera_params_t](#_page17_x70.87_y771.02)
-- struct [mpp_img_params_t](#_page18_x70.87_y234.02)
-- struct [mpp_display_params_t](#_page18_x70.87_y412.84)
-- struct [mpp_tensor_dims_t](#_page18_x70.87_y680.52)
-- struct [mpp_inference_tensor_params_t](#_page19_x70.87_y134.80)
-- struct [mpp_inference_cb_param_t](#_page19_x70.87_y298.76)
-- union [mpp_color_t](#_page19_x70.87_y500.52)
-- struct [mpp_labeled_rect_t](#_page19_x70.87_y660.49)
-- struct [mpp_landmark_t](#_page19_x70.87_y661.49)
-- struct [mpp_area_t](#_page20_x70.87_y251.67)
-- struct [mpp_dims_t](#_page20_x70.87_y428.93)
-- struct [mpp_position_t](#_page20_x70.87_y579.68)
-- struct [mpp_inference_params_t](#_page20_x70.87_y729.29)
-- struct [mpp_element_params_t](#_page21_x70.87_y327.65)
-- struct [mpp_stats_t.api](#_page21_x70.87_y477.88)
-- struct [mpp_stats_t.mpp](#_page21_x70.87_y648.05)
-- struct [mpp_stats_t.elem](#_page22_x70.87_y70.87)
-- struct [mpp_color_t.rgb](#_page22_x70.87_y166.66)
-- union [mpp_element_params_t.__unnamed5__](#_page22_x70.87_y330.95)
-- struct [mpp_element_params_t.__unnamed5__.static_image](#_page22_x70.87_y668.79)
-- struct [mpp_element_params_t.__unnamed5__.compose](#_page22_x70.87_y639.33)
-- struct [mpp_element_params_t.__unnamed5__.labels](#_page22_x70.87_y771.02)
-- struct [mpp_element_params_t.__unnamed5__.convert](#_page23_x70.87_y206.38)
-- struct [mpp_element_params_t.__unnamed5__.resize](#_page23_x70.87_y487.05)
-- struct [mpp_element_params_t.__unnamed5__.color_conv](#_page23_x70.87_y637.69)
-- struct [mpp_element_params_t.__unnamed5__.rotate](#_page23_x70.87_y771.02)
-- struct [mpp_element_params_t.__unnamed5__.test](#_page24_x70.87_y176.96)
-- struct [mpp_element_params_t.__unnamed5__.decode](#_page25_x70.87_y70.87)
-- struct [mpp_element_params_t.__unnamed5__.ml_inference](#_page24_x70.87_y356.50)
+- union [mpp_stats_t](#mpp_stats_t)
+- struct [mpp_api_params_t](#mpp_api_params_t)
+- struct [mpp_params_t](#mpp_params_t)
+- struct [mpp_camera_stream_cfg](#mpp_camera_stream_cfg)
+- struct [mpp_camera_params_t](#mpp_camera_params_t)
+- struct [mpp_img_params_t](#mpp_img_params_t)
+- struct [mpp_display_params_t](#mpp_display_params_t)
+- struct [mpp_tensor_dims_t](#mpp_tensor_dims_t)
+- struct [mpp_inference_tensor_params_t](#mpp_inference_tensor_params_t)
+- struct [mpp_inference_cb_param_t](#mpp_inference_cb_param_t)
+- union [mpp_color_t](#mpp_color_t)
+- struct [mpp_labeled_rect_t](#mpp_labeled_rect_t)
+- struct [mpp_landmark_t](#mpp_landmark_t)
+- struct [mpp_area_t](#mpp_area_t)
+- struct [mpp_dims_t](#mpp_dims_t)
+- struct [mpp_position_t](#mpp_position_t)
+- struct [mpp_inference_params_t](#mpp_inference_params_t)
+- struct [mpp_element_params_t](#mpp_element_params_t)
+- struct [mpp_stats_t.api](#mpp_stats_tapi)
+- struct [mpp_stats_t.mpp](#mpp_stats_tmpp)
+- struct [mpp_stats_t.elem](#mpp_stats_telem)
+- struct [mpp_color_t.rgb](#mpp_color_trgb)
+- union [mpp_element_params_t.__unnamed5__](#mpp_element_params_t__unnamed5__)
+- struct [mpp_element_params_t.__unnamed5__.static_image](#mpp_element_params_t__unnamed5__static_image)
+- struct [mpp_element_params_t.__unnamed5__.compose](#mpp_element_params_t__unnamed5__compose)
+- struct [mpp_element_params_t.__unnamed5__.labels](#mpp_element_params_t__unnamed5__labels)
+- struct [mpp_element_params_t.__unnamed5__.convert](#mpp_element_params_t__unnamed5__convert)
+- struct [mpp_element_params_t.__unnamed5__.resize](#mpp_element_params_t__unnamed5__resize)
+- struct [mpp_element_params_t.__unnamed5__.color_conv](#mpp_element_params_t__unnamed5__color_conv)
+- struct [mpp_element_params_t.__unnamed5__.rotate](#mpp_element_params_t__unnamed5__rotate)
+- struct [mpp_element_params_t.__unnamed5__.test](#mpp_element_params_t__unnamed5__test)
+- struct [mpp_element_params_t.__unnamed5__.decode](#mpp_element_params_t__unnamed5__decode)
+- struct [mpp_element_params_t.__unnamed5__.ml_inference](#mpp_element_params_t__unnamed5__ml_inference)
 
 **Macros**
 
-- #define [MPP_INFERENCE_MAX_OUTPUTS](#_page24_x70.87_y638.86)
-- #define [MPP_INFERENCE_MAX_INPUTS](#_page24_x289.64_y733.09)
-- #define [MPP_INVALID](#_page25_x70.87_y124.26)
-- #define [MPP_EVENT_ALL](#_page25_x70.87_y197.47)
-- #define [MAX_TENSOR_DIMS](#_page25_x70.87_y268.89)
+- #define [MPP_INFERENCE_MAX_OUTPUTS](#mpp_inference_max_outputs)
+- #define [MPP_INFERENCE_MAX_INPUTS](#mpp_inference_max_inputs)
+- #define [MPP_INVALID](#mpp_invalid)
+- #define [MPP_EVENT_ALL](#mpp_event_all)
+- #define [MAX_TENSOR_DIMS](#max_tensor_dims)
 
 **Typedefs**
 
-- typedef void ∗[mpp_t](#_page25_x70.87_y384.91)
-- typedef uintptr\_t [mpp_elem_handle_t](#_page25_x70.87_y443.37)
-- typedef unsigned int [mpp_evt_mask_t](#_page25_x70.87_y516.58)
-- typedef int(∗[inference_entry_point_t) ](#_page25_x70.87_y589.78)(uint8\_t ∗, uint8\_t ∗, uint8\_t ∗)
+- typedef void ∗[mpp_t](#mpp_t)
+- typedef uintptr\_t [mpp_elem_handle_t](#mpp_elem_handle_t)
+- typedef unsigned int [mpp_evt_mask_t](#mpp_evt_mask_t)
+- typedef int(∗[inference_entry_point_t) ](#inference_entry_point_t)(uint8\_t ∗, uint8\_t ∗, uint8\_t ∗)
 
 **Enumerations**
 
-- enum [mpp_evt_t](#_page25_x70.87_y704.02) {
+- enum [mpp_evt_t](#mpp_evt_t) {
 
-  [MPP_EVENT_INVALID](#_page26_x171.80_y85.99),
+  [MPP_EVENT_INVALID](#mpp_event_invalid),
   
-  [MPP_EVENT_INFERENCE_OUTPUT_READY](#_page26_x77.24_y99.73),
+  [MPP_EVENT_INFERENCE_OUTPUT_READY](#mpp_event_inference_output_ready),
   
-  [MPP_EVENT_INTERNAL_TEST_RESERVED](#_page26_x79.86_y114.28),
+  [MPP_EVENT_INTERNAL_TEST_RESERVED](#mpp_event_internal_test_reserved),
   
-  [MPP_EVENT_NUM](#_page26_x185.55_y128.02) }
+  [MPP_EVENT_NUM](#mpp_event_num) }
 
-- enum [mpp_exec_flag_t](#_page26_x70.87_y162.22) {
+- enum [mpp_exec_flag_t](#mpp_exec_flag_t) {
 
-  [MPP_EXEC_INHERIT](#_page26_x84.72_y396.74),
+  [MPP_EXEC_INHERIT](#mpp_exec_inherit),
   
-  [MPP_EXEC_RC](#_page26_x107.64_y411.29),
+  [MPP_EXEC_RC](#mpp_exec_rc),
   
-  [MPP_EXEC_PREEMPT](#_page26_x77.24_y425.84) }
+  [MPP_EXEC_PREEMPT](#mpp_exec_preempt) }
 
-- enum [mpp_stats_grp_t](#_page26_x70.87_y460.85) {
+- enum [mpp_stats_grp_t](#mpp_stats_grp_t) {
 
-  [MPP_STATS_GRP_API](#_page26_x105.14_y561.28),
+  [MPP_STATS_GRP_API](#mpp_stats_grp_api),
 
-  [MPP_STATS_GRP_MPP](#_page26_x100.16_y575.93),
+  [MPP_STATS_GRP_MPP](#mpp_stats_grp_mpp),
 
-  [MPP_STATS_GRP_ELEMENT](#_page26_x77.24_y590.48),
+  [MPP_STATS_GRP_ELEMENT](#mpp_stats_grp_element),
 
-  [MPP_STATS_GRP_NUM](#_page26_x99.17_y604.22) }
+  [MPP_STATS_GRP_NUM](#mpp_stats_grp_num) }
 
-- enum [mpp_rotate_degree_t](#_page26_x70.87_y639.34) {
+- enum [mpp_rotate_degree_t](#mpp_rotate_degree_t) {
 
-  [ROTATE_0](#_page27_x87.21_y86.20),
+  [ROTATE_0](#rotate_0),
 
-  [ROTATE_90](#_page27_x82.23_y100.86),
+  [ROTATE_90](#rotate_90),
 
-  [ROTATE_180](#_page27_x77.24_y115.51),
+  [ROTATE_180](#rotate_180),
 
-  [ROTATE_270](#_page27_x77.24_y130.17) }
+  [ROTATE_270](#rotate_270) }
 
-- enum [mpp_flip_mode_t](#_page27_x70.87_y165.29) {
+- enum [mpp_flip_mode_t](#mpp_flip_mode_t) {
 
-  [FLIP_NONE](#_page27_x108.05_y291.20),
+  [FLIP_NONE](#flip_none),
 
-  [FLIP_HORIZONTAL](#_page27_x77.24_y305.75),
+  [FLIP_HORIZONTAL](#flip_horizontal),
 
-  [FLIP_VERTICAL](#_page27_x90.38_y320.30),
+  [FLIP_VERTICAL](#flip_vertical),
 
-  [FLIP_BOTH](#_page27_x109.40_y334.85) }
+  [FLIP_BOTH](#flip_both) }
 
-- enum [mpp_convert_ops_t](#_page27_x70.87_y369.85) {
+- enum [mpp_convert_ops_t](#mpp_convert_ops_t) {
 
-  [MPP_CONVERT_NONE](#_page27_x114.33_y495.87),
+  [MPP_CONVERT_NONE](#mpp_convert_none),
 
-  [MPP_CONVERT_ROTATE](#_page27_x106.55_y509.61),
+  [MPP_CONVERT_ROTATE](#mpp_convert_rotate),
 
-  [MPP_CONVERT_SCALE](#_page27_x110.83_y524.16),
+  [MPP_CONVERT_SCALE](#mpp_convert_scale),
 
-  [MPP_CONVERT_COLOR](#_page27_x108.35_y538.82),
+  [MPP_CONVERT_COLOR](#mpp_convert_color),
 
-  [MPP_CONVERT_CROP](#_page27_x114.51_y552.56),
+  [MPP_CONVERT_CROP](#mpp_convert_crop),
 
-  [MPP_CONVERT_OUT_WINDOW](#_page27_x77.24_y567.10) }
+  [MPP_CONVERT_OUT_WINDOW](#mpp_convert_out_window) }
 
-- enum [mpp_pixel_format_t](#_page27_x70.87_y602.11) {
+- enum [mpp_pixel_format_t](#mpp_pixel_format_t) {
 
-  [MPP_PIXEL_ARGB](#_page27_x102.17_y726.24),
+  [MPP_PIXEL_ARGB](#mpp_pixel_argb),
 
-  [MPP_PIXEL_BGRA](#_page27_x102.17_y739.98),
+  [MPP_PIXEL_BGRA](#mpp_pixel_bgra),
 
-  [MPP_PIXEL_RGBA](#_page27_x102.17_y753.72),
+  [MPP_PIXEL_RGBA](#mpp_pixel_rgba),
 
-  [MPP_PIXEL_BGRX](#_page28_x102.17_y503.25),
+  [MPP_PIXEL_BGRX](#mpp_pixel_bgrx),
 
-  [MPP_PIXEL_RGBX](#_page28_x102.17_y516.99),
+  [MPP_PIXEL_RGBX](#mpp_pixel_rgbx),
 
-  [MPP_PIXEL_RGB](#_page28_x108.15_y86.20),
+  [MPP_PIXEL_RGB](#mpp_pixel_rgb),
 
-  [MPP_PIXEL_RGB565](#_page28_x93.19_y99.94),
+  [MPP_PIXEL_RGB565](#mpp_pixel_rgb565),
 
-  [MPP_PIXEL_BGR](#_page28_x108.15_y113.67),
+  [MPP_PIXEL_BGR](#mpp_pixel_bgr),
 
-  [MPP_PIXEL_GRAY888](#_page28_x88.11_y127.41),
+  [MPP_PIXEL_GRAY888](#mpp_pixel_gray888),
 
-  [MPP_PIXEL_GRAY888X](#_page28_x82.13_y142.07),
+  [MPP_PIXEL_GRAY888X](#mpp_pixel_gray888x),
 
-  [MPP_PIXEL_GRAY](#_page28_x103.07_y156.73),
+  [MPP_PIXEL_GRAY](#mpp_pixel_gray),
 
-  [MPP_PIXEL_GRAY16](#_page28_x93.09_y171.39),
+  [MPP_PIXEL_GRAY16](#mpp_pixel_gray16),
 
-  [MPP_PIXEL_YUV1P444](#_page28_x83.22_y185.84),
+  [MPP_PIXEL_YUV1P444](#mpp_pixel_yuv1p444),
 
-  [MPP_PIXEL_VYUY1P422](#_page28_x77.24_y199.37),
+  [MPP_PIXEL_VYUY1P422](#mpp_pixel_vyuy1p422),
 
-  [MPP_PIXEL_UYVY1P422](#_page28_x77.24_y212.90),
+  [MPP_PIXEL_UYVY1P422](#mpp_pixel_uyvy1p422),
 
-  [MPP_PIXEL_YUYV](#_page28_x103.16_y226.43), 
+  [MPP_PIXEL_YUYV](#mpp_pixel_yuyv), 
 
-  [MPP_PIXEL_DEPTH16](#_page28_x87.22_y239.97),
+  [MPP_PIXEL_DEPTH16](#mpp_pixel_depth16),
 
-  [MPP_PIXEL_DEPTH8](#_page28_x92.21_y254.31),
+  [MPP_PIXEL_DEPTH8](#mpp_pixel_depth8),
 
-  [MPP_PIXEL_YUV420P](#_page28_x88.21_y268.65),
+  [MPP_PIXEL_YUV420P](#mpp_pixel_yuv420p),
 
-  [MPP_PIXEL_JPEG](#_page29_x104.16_y607.08),
+  [MPP_PIXEL_JPEG](#mpp_pixel_jpeg),
 
-  [MPP_PIXEL_INVALID](#_page28_x93.42_y283.20) }
+  [MPP_PIXEL_INVALID](#mpp_pixel_invalid) }
 
-- enum [mpp_element_id_t](#_page28_x70.87_y318.21) {
+- enum [mpp_element_id_t](#mpp_element_id_t) {
 
-  [MPP_ELEMENT_INVALID](#_page28_x142.16_y444.02),
+  [MPP_ELEMENT_INVALID](#mpp_element_invalid),
 
-  [MPP_ELEMENT_IMG_COMPOSE](#_page28_x130.48_y457.76),
+  [MPP_ELEMENT_IMG_COMPOSE](#mpp_element_img_compose),
 
-  [MPP_ELEMENT_LABELED_RECTANGLE](#_page28_x77.24_y472.42),
+  [MPP_ELEMENT_LABELED_RECTANGLE](#mpp_element_labeled_rectangle),
 
-  [MPP_ELEMENT_TEST](#_page28_x153.40_y487.07),
+  [MPP_ELEMENT_TEST](#mpp_element_test),
 
-  [MPP_ELEMENT_INFERENCE](#_page28_x124.51_y501.62),
+  [MPP_ELEMENT_INFERENCE](#mpp_element_inference),
 
-  [MPP_ELEMENT_CONVERT](#_page28_x132.75_y516.28),
+  [MPP_ELEMENT_CONVERT](#mpp_element_convert),
 
-  [MPP_ELEMENT_NUM](#_page28_x155.90_y530.94) }
+  [MPP_ELEMENT_NUM](#mpp_element_num) }
 
-- enum [mpp_tensor_type_t](#_page28_x70.87_y565.14) {
+- enum [mpp_tensor_type_t](#mpp_tensor_type_t) {
 
-  [MPP_TENSOR_TYPE_FLOAT32](#_page28_x77.24_y691.05),
+  [MPP_TENSOR_TYPE_FLOAT32](#mpp_tensor_type_float32),
 
-  [MPP_TENSOR_TYPE_UINT8](#_page28_x88.95_y705.70),
+  [MPP_TENSOR_TYPE_UINT8](#mpp_tensor_type_uint8),
 
-  [MPP_TENSOR_TYPE_INT8](#_page28_x95.43_y720.36) }
+  [MPP_TENSOR_TYPE_INT8](#mpp_tensor_type_int8) }
 
-- enum [mpp_tensor_order_t](#_page28_x70.87_y755.48) {
+- enum [mpp_tensor_order_t](#mpp_tensor_order_t) {
 
-  [MPP_TENSOR_ORDER_UNKNOWN](#_page29_x77.24_y166.68),
+  [MPP_TENSOR_ORDER_UNKNOWN](#mpp_tensor_order_unknown),
 
-  [MPP_TENSOR_ORDER_NHWC](#_page29_x96.40_y180.42),
+  [MPP_TENSOR_ORDER_NHWC](#mpp_tensor_order_nhwc),
 
-  [MPP_TENSOR_ORDER_NCHW](#_page29_x96.40_y195.07) }
+  [MPP_TENSOR_ORDER_NCHW](#mpp_tensor_order_nchw) }
 
-- enum [mpp_inference_type_t](#_page29_x70.87_y230.19) { 
+- enum [mpp_inference_type_t](#mpp_inference_type_t) { 
   
-  [MPP_INFERENCE_TYPE_TFLITE](#_page29_x77.24_y356.10) }
+  [MPP_INFERENCE_TYPE_TFLITE](#mpp_inference_type_tflite) }
 
-- enum [mpp_camera_stream_type](#_page29_x70.87_y231.19) { 
+- enum [mpp_camera_stream_type](#mpp_camera_stream_type) { 
   
-  [RGB_STREAM](#_page29_x77.24_y357.10),
+  [RGB_STREAM](#rgb_stream),
   
-  [IR_STREAM](#_page29_x77.24_y358.10),
+  [IR_STREAM](#ir_stream),
 
-  [NUM_STREAMS](#_page29_x77.24_y359.10) }
+  [NUM_STREAMS](#num_streams) }
   
 ### 2.1  Detailed Description
 
@@ -559,42 +572,52 @@ This section provides the detailed documentation for the MCU Media Processing Pi
 
 #### 2.1.1 Data Structure Documentation
 
-1. **union<a name="_page17_x70.87_y326.50"></a> mpp\_stats\_t**
+##### mpp_stats_t
+
+**union mpp\_stats\_t**
 
 **Data Fields**
 
 |type|name|description|
 | - | - | - |
-|struct [mpp_stats_t.api](#_page21_x70.87_y477.88)|api|Global execution performance counters.|
-|struct [mpp_stats_t.mpp](#_page21_x70.87_y648.05)|mpp|Pipeline execution performance counters.|
-|struct [mpp_stats_t.elem](#_page22_x70.87_y70.87)|elem|Element execution performance counters.|
+|struct [mpp_stats_t.api](#mpp_stats_tapi)|api|Global execution performance counters.|
+|struct [mpp_stats_t.mpp](#mpp_stats_tmpp)|mpp|Pipeline execution performance counters.|
+|struct [mpp_stats_t.elem](#mpp_stats_telem)|elem|Element execution performance counters.|
 
-2. **struct<a name="_page17_x70.87_y451.66"></a> mpp\_api\_params\_t**
+##### mpp_api_params_t
+
+**struct mpp\_api\_params\_t**
 
 **Data Fields**
 
 |type|name|description|
 | - | - | - |
-|[mpp_stats_t ](#_page17_x70.87_y326.50)∗|stats|API stats.|
+|[mpp_stats_t ](#mpp_stats_t)∗|stats|API stats.|
 |unsigned int|rc\_cycle\_min|minimum cycle duration for RC tasks (ms), 0: sets default value|
 |unsigned int|rc\_cycle\_inc|time increment for RC tasks (ms), 0: sets default value|
 |int|pipeline\_task\_max\_prio|pipeline tasks maximum priority.|
 |int|pipeline_rc_task_prio|pipeline run-to-completion tasks priority. 0: sets default value|
 |int|pipeline_pr_task_prio|pipeline preemptable tasks priority. 0: sets default value|
 
-3. **struct<a name="_page17_x70.87_y590.69"></a> mpp\_params\_t** 
+##### mpp_params_t
+
+**struct mpp\_params\_t**
 
 Pipeline creation parameters.
 
 **Data Fields**
 
-- int(∗**evt\_callback\_f** )([mpp_t ](#_page25_x70.87_y384.91)mpp, [mpp_evt_t evt,](#_page25_x70.87_y704.02) void ∗evt\_data, void ∗user\_data)
-- [mpp_evt_mask_t ](#_page25_x70.87_y516.58)**mask**
-- [mpp_exec_flag_t ](#_page26_x70.87_y162.22)**exec\_flag**
+- int(∗**evt\_callback\_f** )([mpp_t ](#mpp_t)mpp, [mpp_evt_t evt,](#mpp_evt_t) void ∗evt\_data, void ∗user\_data)
+- [mpp_evt_mask_t ](#mpp_evt_mask_t)**mask**
+- [mpp_exec_flag_t ](#mpp_exec_flag_t)**exec\_flag**
 - void ∗**cb\_userdata**
-- [mpp_stats_t ](#_page17_x70.87_y326.50)<a name="_page17_x70.87_y771.02"></a>∗**stats**
+##### mpp_stats_t
 
-4. **struct<a name="_page18_x70.87_y70.87"></a> mpp\_camera\_params\_t**
+- [mpp_stats_t ](#mpp_stats_t)∗**stats**
+
+##### mpp_camera_params_t
+
+**struct mpp\_camera\_params\_t**
 
 Camera parameters. 
 
@@ -604,7 +627,7 @@ Camera parameters.
 | - | - | - |
 |int|height|buffer height|
 |int|width|buffer width|
-|[mpp_pixel_format_t](#_page27_x70.87_y602.11)|format|pixel format|
+|[mpp_pixel_format_t](#mpp_pixel_format_t)|format|pixel format|
 |int|fps|frames per second|
 |bool|stripe|stripe mode|
 |void *|rpmsg\_inst|pointer to rpmsg instance|
@@ -613,7 +636,9 @@ Camera parameters.
 |mpp\_camera\_stream\_cfg|stream[NUM\_STREAMS]|streams configuration|
 |bool|in\_advance\_enqueue|enable in-advance enqueue mode|
 
-5. **struct<a name="_page18_x70.87_y249.26"></a><a name="_page18_x70.87_y234.02"></a> mpp\_img\_params\_t**
+##### mpp_img_params_t
+
+**struct mpp\_img\_params\_t**
 
 Static image parameters. 
 
@@ -623,11 +648,13 @@ Static image parameters.
 | - | - | - |
 |int|height|buffer height|
 |int|width|buffer width|
-|[mpp_pixel_format_t](#_page27_x70.87_y602.11)|format|pixel format|
+|[mpp_pixel_format_t](#mpp_pixel_format_t)|format|pixel format|
 |bool|stripe|stripe mode|
 |int|compressed\_size|size in bytes for compressed format|
 
-6. **struct<a name="_page18_x70.87_y428.08"></a><a name="_page18_x70.87_y412.84"></a> mpp\_display\_params\_t**
+##### mpp_display_params_t
+
+**struct mpp\_display\_params\_t**
 
 Display parameters. 
 
@@ -642,12 +669,14 @@ Display parameters.
 |int|top|active rect: setting to 0 will default to fullscreen|
 |int|right|active rect: setting to 0 will default to fullscreen|
 |int|bottom|active rect: setting to 0 will default to fullscreen|
-|[mpp_rotate_degree_t](#_page26_x70.87_y639.34)|rotate|rotate degree|
-|[mpp_pixel_format_t](#_page27_x70.87_y602.11)|format|pixel format|
+|[mpp_rotate_degree_t](#mpp_rotate_degree_t)|rotate|rotate degree|
+|[mpp_pixel_format_t](#mpp_pixel_format_t)|format|pixel format|
 |bool|stripe|stripe mode|
 |void ∗|handle|pointer to an lvgl image widget|
 
-7. **struct<a name="_page18_x70.87_y695.77"></a><a name="_page18_x70.87_y680.52"></a> mpp\_tensor\_dims\_t** 
+##### mpp_tensor_dims_t
+
+**struct mpp\_tensor\_dims\_t**
 
 Inference tensor dimensions.
 
@@ -656,9 +685,11 @@ Inference tensor dimensions.
 |type|name|description|
 | - | - | - |
 |uint32\_t|size||
-|uint32\_t|data[[MAX_TENSOR_DIMS\]](#_page25_x70.87_y268.89)||
+|uint32\_t|data[[MAX_TENSOR_DIMS\]]||
 
-8. **struct<a name="_page19_x70.87_y150.04"></a><a name="_page19_x70.87_y134.80"></a> mpp\_inference\_tensor\_params\_t**
+##### mpp_inference_tensor_params_t
+
+**struct mpp\_inference\_tensor\_params\_t**
 
 tensor parameters 
 
@@ -667,10 +698,12 @@ tensor parameters
 |type|name|description|
 | - | - | - |
 |const uint8\_t ∗|data|data address|
-|[mpp_tensor_dims_t](#_page18_x70.87_y680.52)|dims|tensor data dimensions|
-|[mpp_tensor_type_t](#_page28_x70.87_y565.14)|type|tensor data type|
+|[mpp_tensor_dims_t](#mpp_tensor_dims_t)|dims|tensor data dimensions|
+|[mpp_tensor_type_t](#mpp_tensor_type_t)|type|tensor data type|
 
-9. **struct<a name="_page19_x70.87_y314.00"></a><a name="_page19_x70.87_y298.76"></a> mpp\_inference\_cb\_param\_t**
+##### mpp_inference_cb_param_t
+
+**struct mpp\_inference\_cb\_param\_t**
 
 Inference callback parameters. 
 
@@ -679,11 +712,13 @@ Inference callback parameters.
 |type|name|description|
 | - | - | - |
 |void ∗|user\_data|callback will pass this pointer|
-|[mpp_inference_tensor_params_t](#_page19_x70.87_y134.80) ∗|out\_tensors[[MPP_INFERENCE_MAX_OUTPUTS]](#_page24_x70.87_y638.86)|output tensors parameters|
+|[mpp_inference_tensor_params_t](#mpp_inference_tensor_params_t) ∗|out\_tensors[[MPP_INFERENCE_MAX_OUTPUTS]]|output tensors parameters|
 |int|inference\_time\_ms|inference run time measurement - output to user|
-|[mpp_inference_type_t](#_page29_x70.87_y230.19)|inference\_type|type of the inference|
+|[mpp_inference_type_t](#mpp_inference_type_t)|inference\_type|type of the inference|
 
-10. **union<a name="_page19_x70.87_y515.76"></a><a name="_page19_x70.87_y500.52"></a> mpp\_color\_t**
+##### mpp_color_t
+
+**union mpp\_color\_t**
 
 mpp color encoding 
 
@@ -692,9 +727,11 @@ mpp color encoding
 |type|name|description|
 | - | - | - |
 |uint32\_t|raw|Raw color.|
-|struct [mpp_color_t.rgb](#_page22_x70.87_y166.66)|rgb|rgb color values RGB color|
+|struct [mpp_color_t.rgb](#mpp_color_trgb)|rgb|rgb color values RGB color|
 
-11. **struct<a name="_page19_x70.87_y675.73"></a><a name="_page19_x70.87_y660.49"></a> mpp\_labeled\_rect\_t**
+##### mpp_labeled_rect_t
+
+**struct mpp\_labeled\_rect\_t**
 
 mpp labeled rectangle element structure 
 
@@ -705,7 +742,7 @@ mpp labeled rectangle element structure
 |uint8\_t|label[64]|label to print|
 |uint16\_t|clear|clear rectangle|
 |uint16\_t|line\_width|rectangle line thickness|
-|[mpp_color_t](#_page19_x70.87_y500.52)|line\_color|rectangle line color|
+|[mpp_color_t](#mpp_color_t)|line\_color|rectangle line color|
 |int16\_t|top|rectangle top position|
 |int16\_t|left|rectangle left position|
 |int16\_t|bottom|rectangle bottom position|
@@ -714,7 +751,9 @@ mpp labeled rectangle element structure
 |uint16\_t|reserved|pad for 32 bits alignment|
 |bool|stripe|stripe mode|
 
-12. **struct<a name="_page20_x70.87_y266.91"></a><a name="_page20_x70.87_y251.67"></a> mpp\_area\_t**
+##### mpp_area_t
+
+**struct mpp\_area\_t**
 
 Image area coordinates. 
 
@@ -727,7 +766,9 @@ Image area coordinates.
 |int|bottom||
 |int|right||
 
-13. **struct<a name="_page20_x70.87_y444.17"></a><a name="_page20_x70.87_y428.93"></a> mpp\_dims\_t**
+##### mpp_dims_t
+
+**struct mpp\_dims\_t**
 
 Image dimensions. 
 
@@ -738,7 +779,9 @@ Image dimensions.
 |unsigned int|width||
 |unsigned int|height||
 
-14. **struct<a name="_page20_x70.87_y594.92"></a><a name="_page20_x70.87_y579.68"></a> mpp\_position\_t**
+##### mpp_position_t
+
+**struct mpp\_position\_t**
 
 Image position. 
 
@@ -746,10 +789,10 @@ Image position.
 
 |type|name|description|
 | - | - | - |
-|int|<a name="_page20_x70.87_y729.29"></a>top||
+|int|<a name="mpp_inference_params_t"></a>top||
 |int|left||
 
-15. **struct<a name="_page21_x70.87_y70.87"></a> mpp\_inference\_params\_t**
+**struct mpp\_inference\_params\_t**
 
 Model parameters. 
 
@@ -762,12 +805,14 @@ Model parameters.
 |uint64\_t|activations\_MemSize|Size of scratch memory used for intermediate computations needed by the model.|
 |int|num\_inputs|model's number of inputs|
 |int|num\_outputs|model's number of outputs|
-|uint64\_t|inputs\_offsets[[MPP_INFERENCE_MAX_INPUTS](#_page24_x289.64_y733.09)]|offset of each input|
-|uint64\_t|outputs\_offsets[[MPP_INFERENCE_MAX_OUTPUTS](#_page24_x70.87_y638.86)]|offset ofeach output|
-|[inference_entry_point_t](#_page25_x70.87_y589.78)|model\_entry\_point|function called to perform the inference|
-|[mpp_tensor_type_t](#_page28_x70.87_y565.14)|model\_input\_tensors\_type|type of input buffer|
+|uint64\_t|inputs\_offsets[[MPP_INFERENCE_MAX_INPUTS](#mpp_inference_max_inputs)]|offset of each input|
+|uint64\_t|outputs\_offsets[[MPP_INFERENCE_MAX_OUTPUTS](#mpp_inference_max_outputs)]|offset ofeach output|
+|[inference_entry_point_t](#inference_entry_point_t)|model\_entry\_point|function called to perform the inference|
+|[mpp_tensor_type_t](#mpp_tensor_type_t)|model\_input\_tensors\_type|type of input buffer|
 
-16. **struct<a name="_page21_x70.87_y342.89"></a><a name="_page21_x70.87_y327.65"></a> mpp\_element\_params\_t**
+##### mpp_element_params_t
+
+**struct mpp\_element\_params\_t**
 
 Static image and Processing elements parameters.
 
@@ -775,10 +820,12 @@ Static image and Processing elements parameters.
 
 |type|name|description|
 | - | - | - |
-|union [mpp_element_params_t.__unnamed5__](#_page22_x70.87_y330.95)|\_\_unnamed\_\_||
-|[mpp_stats_t ](#_page17_x70.87_y326.50)∗|stats||
+|union [mpp_element_params_t.__unnamed5__](#mpp_element_params_t__unnamed5__)|\_\_unnamed\_\_||
+|[mpp_stats_t ](#mpp_stats_t)∗|stats||
 
-17. **struct<a name="_page21_x70.87_y493.12"></a><a name="_page21_x70.87_y477.88"></a> mpp\_stats\_t.api**
+##### mpp_stats_tapi
+
+**struct mpp\_stats\_t.api**
 
 **Data Fields**
 
@@ -791,25 +838,31 @@ Static image and Processing elements parameters.
 |unsigned int|app\_slot|remaining time for application (ms)|
 |unsigned int|cpu\_load|CPU load percentage (%)|
 
-18. **struct<a name="_page21_x70.87_y648.05"></a> mpp\_stats\_t.mpp**
+##### mpp_stats_tmpp
+
+**struct mpp\_stats\_t.mpp**
 
 **Data Fields**
  
 |type|name|description|
 | - | - | - |
-|[mpp_t](#_page25_x70.87_y384.91)|mpp||
+|[mpp_t](#mpp_t)|mpp||
 |unsigned int|mpp\_exec\_time|pipeline execution time (ms)|
 
-19. **struct<a name="_page22_x70.87_y70.87"></a> mpp\_stats\_t.elem**
+##### mpp_stats_telem
+
+**struct mpp\_stats\_t.elem**
 
 **Data Fields**
 
 |type|name|description|
 | - | - | - |
-|[mpp_elem_handle_t](#_page25_x70.87_y443.37)|hnd||
+|[mpp_elem_handle_t](#mpp_elem_handle_t)|hnd||
 |unsigned int|elem\_exec\_time|element execution time (ms)|
 
-20. **struct<a name="_page22_x70.87_y166.66"></a> mpp\_color\_t.rgb**
+##### mpp_color_trgb
+
+**struct mpp\_color\_t.rgb**
 
 rgb color values 
 
@@ -822,25 +875,29 @@ rgb color values
 |uint8\_t|B|Blue byte.|
 |uint8\_t|pad|padding byte|
 
-21. **union<a name="_page22_x70.87_y346.19"></a><a name="_page22_x70.87_y330.95"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_**
+##### mpp_element_params_t__unnamed5__
+
+**union mpp\_element\_params\_t.\_\_unnamed5\_\_**
 
 **Data Fields**
  
 |type|name|description|
 | - | - | - |
-|[mpp_camera_params_t](#_page18_x70.87_y70.87)|camera|Camera element's parameters|
-|struct [mpp_element_params_t.__unnamed5__.static\_image](#_page22_x70.87_y668.79)|static\_image|Static Image element's parameters.|
-|struct [mpp_element_params_t.__unnamed5__.compose](#_page22_x70.87_y639.33)|compose|Compose element's parameters.|
-|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.labels](#_page22_x70.87_y771.02)</p>|labels|Labeled Rectangle element's parameters.|
-|struct [mpp_element_params_t.__unnamed5__.convert](#_page23_x70.87_y206.38)|convert|Convert element's parameters.|
-|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.resize](#_page23_x70.87_y487.05)</p>|resize|Resize element's parameters.|
-|struct [mpp_element_params_t.__unnamed5__.color_conv](#_page23_x70.87_y637.69)|color\_conv|Color convert element's parameters.|
-|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.rotate](#_page23_x70.87_y771.02)</p>|rotate|Rotate element's parameters.|
-|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.test](#_page24_x70.87_y176.96)</p>|test|Test element's parameters.|
-|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.decode](#_page25_x70.87_y70.87)|decode|Decoder element's parameters.|
-|struct [mpp_element_params_t.__unnamed5__.ml_inference](#_page24_x70.87_y356.50)|ml\_inference|ML inference element's parameters.|
+|[mpp_camera_params_t](#mpp_camera_params_t)|camera|Camera element's parameters|
+|struct [mpp_element_params_t.__unnamed5__.static\_image](#mpp_element_params_t__unnamed5__static_image)|static\_image|Static Image element's parameters.|
+|struct [mpp_element_params_t.__unnamed5__.compose](#mpp_element_params_t__unnamed5__compose)|compose|Compose element's parameters.|
+|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.labels](#mpp_element_params_t__unnamed5__labels)</p>|labels|Labeled Rectangle element's parameters.|
+|struct [mpp_element_params_t.__unnamed5__.convert](#mpp_element_params_t__unnamed5__convert)|convert|Convert element's parameters.|
+|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.resize](#mpp_element_params_t__unnamed5__resize)</p>|resize|Resize element's parameters.|
+|struct [mpp_element_params_t.__unnamed5__.color_conv](#mpp_element_params_t__unnamed5__color_conv)|color\_conv|Color convert element's parameters.|
+|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.rotate](#mpp_element_params_t__unnamed5__rotate)</p>|rotate|Rotate element's parameters.|
+|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.test](#mpp_element_params_t__unnamed5__test)</p>|test|Test element's parameters.|
+|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.decode](#mpp_element_params_t__unnamed5__decode)|decode|Decoder element's parameters.|
+|struct [mpp_element_params_t.__unnamed5__.ml_inference](#mpp_element_params_t__unnamed5__ml_inference)|ml\_inference|ML inference element's parameters.|
 
-22. **struct<a name="_page22_x70.87_y668.79"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.static\_image**
+##### mpp_element_params_t__unnamed5__static_image
+
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.static\_image**
 
 Static Image element's parameters. 
 
@@ -848,10 +905,12 @@ Static Image element's parameters.
 
 |type|name|description|
 | - | - | - |
-|[mpp_img_params_t ](#_page18_x70.87_y527.09)|img\_params|static image parameters|
+|[mpp_img_params_t ](#mpp_img_params_t)|img\_params|static image parameters|
 |void ∗|img\_buffer|static image buffer address|
 
-23. **struct<a name="_page22_x70.87_y639.33"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.compose**
+##### mpp_element_params_t__unnamed5__compose
+
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.compose**
 
 Compose element's parameters. 
 
@@ -872,7 +931,7 @@ Compose element's parameters.
 |int|out\_width|output buffer width|
 |int|out\_height|output buffer height|
 
-24. **struct<a name="_page23_x70.87_y70.87"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.labels**
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.labels**
 
 Labeled Rectangle element's parameters. 
 
@@ -882,12 +941,14 @@ Labeled Rectangle element's parameters.
 | - | - | - |
 |uint32\_t|max\_rect|maximum number of rectangles|
 |uint32\_t|detected\_rect|detected rectangles|
-|[mpp_labeled_rect_t ](#_page19_x70.87_y660.49)∗|rectangles|array of rectangle data|
+|[mpp_labeled_rect_t ](#mpp_labeled_rect_t)∗|rectangles|array of rectangle data|
 |uint32\_t|max\_landmk|maximum number of landmarks|
 |uint32\_t|detected\_landmk|detected landmarks|
 |mpp\_landmark\_t *|landmarks|array of landmark data|
 
-25. **struct<a name="_page23_x70.87_y221.62"></a><a name="_page23_x70.87_y206.38"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.convert**
+##### mpp_element_params_t__unnamed5__convert
+
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.convert**
 
 Convert element's parameters. 
 
@@ -895,19 +956,21 @@ Convert element's parameters.
 
 |type|name|description|
 | - | - | - |
-|[mpp_dims_t](#_page20_x70.87_y428.93)|out\_buf|output buffer dimensions|
-|[mpp_pixel_format_t](#_page27_x70.87_y602.11)|pixel\_format|new pixel format|
-|[mpp_rotate_degree_t](#_page26_x70.87_y639.34)|angle|rotation angle|
-|[mpp_flip_mode_t](#_page27_x70.87_y165.29)|flip|flip mode|
-|[mpp_area_t](#_page20_x70.87_y251.67)|crop|input crop area|
-|[mpp_position_t](#_page20_x70.87_y579.68)|out\_window|output window position|
-|[mpp_dims_t](#_page20_x70.87_y428.93)|scale|scaling dimensions|
-|[mpp_convert_ops_t](#_page27_x70.87_y369.85)|ops|operation selector mask|
+|[mpp_dims_t](#mpp_dims_t)|out\_buf|output buffer dimensions|
+|[mpp_pixel_format_t](#mpp_pixel_format_t)|pixel\_format|new pixel format|
+|[mpp_rotate_degree_t](#mpp_rotate_degree_t)|angle|rotation angle|
+|[mpp_flip_mode_t](#mpp_flip_mode_t)|flip|flip mode|
+|[mpp_area_t](#mpp_area_t)|crop|input crop area|
+|[mpp_position_t](#mpp_position_t)|out\_window|output window position|
+|[mpp_dims_t](#mpp_dims_t)|scale|scaling dimensions|
+|[mpp_convert_ops_t](#mpp_convert_ops_t)|ops|operation selector mask|
 |const char ∗|dev\_name|device name used for graphics|
 |bool|stripe\_in|input stripe mode|
 |bool|stripe\_out|output stripe mode|
 
-26. **struct<a name="_page23_x70.87_y502.29"></a><a name="_page23_x70.87_y487.05"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.resize**
+##### mpp_element_params_t__unnamed5__resize
+
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.resize**
 
 Resize element's parameters. 
 
@@ -918,7 +981,9 @@ Resize element's parameters.
 |unsigned int|width||
 |unsigned int|height||
 
-27. **struct<a name="_page23_x70.87_y652.93"></a><a name="_page23_x70.87_y637.69"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.color\_conv**
+##### mpp_element_params_t__unnamed5__color_conv
+
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.color\_conv**
 
 Color convert element's parameters. 
 
@@ -926,9 +991,9 @@ Color convert element's parameters.
 
 |type|name|description|
 | - | - | - |
-|[mpp_pixel_format_t](#_page27_x70.87_y602.11)|<a name="_page23_x70.87_y771.02"></a>pixel\_format||
+|[mpp_pixel_format_t](#mpp_pixel_format_t)|<a name="mpp_element_params_t__unnamed5__rotate"></a>pixel\_format||
 
-28. **struct<a name="_page24_x70.87_y70.87"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.rotate**
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.rotate**
 
 Rotate element's parameters. 
 
@@ -936,9 +1001,11 @@ Rotate element's parameters.
 
 |type|name|description|
 | - | - | - |
-|[mpp_rotate_degree_t](#_page26_x70.87_y639.34)|angle||
+|[mpp_rotate_degree_t](#mpp_rotate_degree_t)|angle||
 
-29. **struct<a name="_page24_x70.87_y192.20"></a><a name="_page24_x70.87_y176.96"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.test**
+##### mpp_element_params_t__unnamed5__test
+
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.test**
 
 Test element's parameters.
 
@@ -949,9 +1016,11 @@ Test element's parameters.
 |\_Bool|inp||
 |unsigned int|width||
 |unsigned int|height||
-|[mpp_pixel_format_t](#_page27_x70.87_y602.11)|format||
+|[mpp_pixel_format_t](#mpp_pixel_format_t)|format||
 
-30. **struct<a name="_page25_x70.87_y70.87"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.decode**
+##### mpp_element_params_t__unnamed5__decode
+
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.decode**
 
 Decoder element's parameters.
 
@@ -962,9 +1031,11 @@ Decoder element's parameters.
 |const char ∗|dev\_name|device name used for decoder|
 |unsigned int|width||
 |unsigned int|height||
-|[mpp_pixel_format_t](#_page29_x70.87_y205.31)|out\_format||
+|[mpp_pixel_format_t](#mpp_pixel_format_t)|out\_format||
 
-31. **struct<a name="_page24_x70.87_y371.74"></a><a name="_page24_x70.87_y356.50"></a> mpp\_element\_params\_t.\_\_unnamed5\_\_.ml\_inference**
+##### mpp_element_params_t__unnamed5__ml_inference
+
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.ml\_inference**
 
 ML inference element's parameters.
 
@@ -973,14 +1044,16 @@ ML inference element's parameters.
 |type|name|description|
 | - | - | - |
 |const void ∗|model\_data|pointer to model binary|
-|[mpp_inference_type_t](#_page29_x70.87_y230.19)|type|inference type|
+|[mpp_inference_type_t](#mpp_inference_type_t)|type|inference type|
 |int|model\_size|model binary size|
 |float|model\_input\_mean|model 'mean' of input values, used for normalization|
 |float|model\_input\_std|model 'standard deviation' of input values, used for normalization|
-|[mpp_tensor_order_t](#_page28_x70.87_y755.48)|tensor\_order|model input tensor component order|
-|[mpp_inference_params_t](#_page20_x70.87_y729.29)|inference\_params|model specific parameters used by the inference|
+|[mpp_tensor_order_t](#mpp_tensor_order_t)|tensor\_order|model input tensor component order|
+|[mpp_inference_params_t](#mpp_inference_params_t)|inference\_params|model specific parameters used by the inference|
 
-32. **struct <a name="_page17_x70.87_y772.02"></a> mpp_camera_stream_cfg**
+##### mpp_camera_stream_cfg
+
+**struct  mpp_camera_stream_cfg**
 
 Camera stream configuration for multi-stream cameras.
 
@@ -991,7 +1064,7 @@ Camera stream configuration for multi-stream cameras.
 |mpp\_camera\_stream_type|type|Stream type (member of enum mpp\_camera\_stream\_type)|
 |bool|active|Stream is active or not.|
 
-33. **struct <a name="_page19_x70.87_y661.49></a> mpp_landmark_t**
+**struct mpp_landmark_t**
 
 mpp landmark structure
 
@@ -1009,57 +1082,69 @@ mpp landmark structure
 
 #### 2.1.2 Macro Definition Documentation
 
-1. **MPP\_INFERENCE\_MAX\_OUTPUTS**
+**MPP\_INFERENCE\_MAX\_OUTPUTS**
 
-<a name="_page24_x70.87_y638.86"></a>#define MPP\_INFERENCE\_MAX\_OUTPUTS
+##### mpp_inference_max_outputs
+
+#define MPP\_INFERENCE\_MAX\_OUTPUTS
 
 Maximum number of inference inputs and outputs. Maximum number of outputs supported by the pipeline
 
-2. <a name="_page24_x289.64_y733.09"></a>**MPP\_INFERENCE\_MAX\_INPUTS**
+##### mpp_inference_max_inputs
 
-<a name="_page25_x70.87_y70.87"></a>#define MPP\_INFERENCE\_MAX\_INPUTS
+
+##### mpp_element_params_t__unnamed5__decode
+
+#define MPP\_INFERENCE\_MAX\_INPUTS
 
 Maximum number of inputs supported by the pipeline.
 
-3. **MPP\_INVALID**
 
-<a name="_page25_x70.87_y138.67"></a><a name="_page25_x70.87_y124.26"></a>#define MPP\_INVALID Invalid pipeline handle.
+##### mpp_invalid
 
-4. **MPP\_EVENT\_ALL**
+#define MPP\_INVALID Invalid pipeline handle.
 
-<a name="_page25_x70.87_y211.88"></a><a name="_page25_x70.87_y197.47"></a>#define MPP\_EVENT\_ALL
 
-<a name="_page25_x70.87_y268.89"></a>Bit mask to receive all Events.
+##### mpp_event_all
 
-5. **MAX\_TENSOR\_DIMS**
+#define MPP\_EVENT\_ALL
 
-<a name="_page25_x70.87_y283.30"></a>#define MAX\_TENSOR\_DIMS
+##### max_tensor_dims
+
+Bit mask to receive all Events.
+
+#define MAX\_TENSOR\_DIMS
 
 Maximum number of dimensions for tensors.
 
 #### 2.1.3 Typedef Documentation
 
-1. **mpp\_t**
 
-<a name="_page25_x70.87_y384.91"></a>typedef void∗ [mpp_t ](#_page25_x70.87_y384.91)Pipeline handle type.
+##### mpp_t
 
-2. **mpp\_elem\_handle\_t**
+typedef void∗ [mpp_t ](#mpp_t)Pipeline handle type.
 
-<a name="_page25_x70.87_y457.78"></a><a name="_page25_x70.87_y443.37"></a>typedef uintptr\_t [mpp_elem_handle_t ](#_page25_x70.87_y443.37)Element handle type.
 
-3. **mpp\_evt\_mask\_t**
+##### mpp_elem_handle_t
 
-<a name="_page25_x70.87_y530.99"></a><a name="_page25_x70.87_y516.58"></a>typedef unsigned int [mpp_evt_mask_t ](#_page25_x70.87_y516.58)Event mask for pipeline creation.
+typedef uintptr\_t [mpp_elem_handle_t ](#mpp_elem_handle_t)Element handle type.
 
-4. **inference\_entry\_point\_t**
 
-<a name="_page25_x70.87_y604.20"></a><a name="_page25_x70.87_y589.78"></a>typedef int(∗ inference\_entry\_point\_t) (uint8\_t ∗, uint8\_t ∗, uint8\_t ∗) Bundle inference function type.
+##### mpp_evt_mask_t
+
+typedef unsigned int [mpp_evt_mask_t ](#mpp_evt_mask_t)Event mask for pipeline creation.
+
+
+##### inference_entry_point_t
+
+typedef int(∗ inference\_entry\_point\_t) (uint8\_t ∗, uint8\_t ∗, uint8\_t ∗) Bundle inference function type.
 
 #### 2.1.4 Enumeration Type Documentation
 
-1. **mpp\_evt\_t**
 
-<a name="_page25_x70.87_y704.02"></a>enum [mpp_evt_t](#_page25_x70.87_y704.02)
+##### mpp_evt_t
+
+enum [mpp_evt_t](#mpp_evt_t)
 
 Pipeline generated events.
 
@@ -1067,14 +1152,15 @@ Pipeline generated events.
 
 |label|description|
 | - | - |
-|<a name="_page26_x171.80_y85.99"></a>MPP\_EVENT\_INVALID|invalid event|
-|<a name="_page26_x77.24_y99.73"></a>MPP\_EVENT\_INFERENCE\_OUTPUT\_READY|inference out is ready|
-|<a name="_page26_x79.86_y114.28"></a>MPP\_EVENT\_INTERNAL\_TEST\_RESERVED|INTERNAL: DO NOT USE.|
-|<a name="_page26_x185.55_y128.02"></a>MPP\_EVENT\_NUM|DO NOT USE.|
+|<a name="mpp_event_invalid"></a>MPP\_EVENT\_INVALID|invalid event|
+|<a name="mpp_event_inference_output_ready"></a>MPP\_EVENT\_INFERENCE\_OUTPUT\_READY|inference out is ready|
+|<a name="mpp_event_internal_test_reserved"></a>MPP\_EVENT\_INTERNAL\_TEST\_RESERVED|INTERNAL: DO NOT USE.|
+|<a name="mpp_event_num"></a>MPP\_EVENT\_NUM|DO NOT USE.|
 
-2. **mpp\_exec\_flag\_t**
 
-<a name="_page26_x70.87_y177.46"></a><a name="_page26_x70.87_y162.22"></a>enum [mpp_exec_flag_t ](#_page26_x70.87_y162.22)
+##### mpp_exec_flag_t
+
+enum [mpp_exec_flag_t ](#mpp_exec_flag_t)
 
 Execution parameters.
 
@@ -1092,26 +1178,28 @@ Note: It is not possible to request run-to-completion execution when spliting pr
 
 |label|description|
 | - | - |
-|<a name="_page26_x84.72_y396.74"></a>MPP\_EXEC\_INHERIT|inherit from parent(s)|
-|<a name="_page26_x107.64_y411.29"></a>MPP\_EXEC\_RC|run-to-completion|
-|<a name="_page26_x77.24_y425.84"></a>MPP\_EXEC\_PREEMPT|preemptable|
+|<a name="mpp_exec_inherit"></a>MPP\_EXEC\_INHERIT|inherit from parent(s)|
+|<a name="mpp_exec_rc"></a>MPP\_EXEC\_RC|run-to-completion|
+|<a name="mpp_exec_preempt"></a>MPP\_EXEC\_PREEMPT|preemptable|
 
-3. **mpp\_stats\_grp\_t**
 
-<a name="_page26_x70.87_y476.09"></a><a name="_page26_x70.87_y460.85"></a>enum [mpp_stats_grp_t ](#_page26_x70.87_y460.85)
+##### mpp_stats_grp_t
+
+enum [mpp_stats_grp_t ](#mpp_stats_grp_t)
 
 **Enumerator**
 
 |label|description|
 | - | - |
-|<a name="_page26_x105.14_y561.28"></a>MPP\_STATS\_GRP\_API|API (global) stats.|
-|<a name="_page26_x100.16_y575.93"></a>MPP\_STATS\_GRP\_MPP|mpp\_t stats|
-|<a name="_page26_x77.24_y590.48"></a>MPP\_STATS\_GRP\_ELEMENT|element stats|
-|<a name="_page26_x99.17_y604.22"></a>MPP\_STATS\_GRP\_NUM|number of groups|
+|<a name="mpp_stats_grp_api"></a>MPP\_STATS\_GRP\_API|API (global) stats.|
+|<a name="mpp_stats_grp_mpp"></a>MPP\_STATS\_GRP\_MPP|mpp\_t stats|
+|<a name="mpp_stats_grp_element"></a>MPP\_STATS\_GRP\_ELEMENT|element stats|
+|<a name="mpp_stats_grp_num"></a>MPP\_STATS\_GRP\_NUM|number of groups|
 
-4. **mpp\_rotate\_degree\_t**
 
-<a name="_page26_x70.87_y654.58"></a><a name="_page26_x70.87_y639.34"></a>enum [mpp_rotate_degree_t ](#_page26_x70.87_y639.34)
+##### mpp_rotate_degree_t
+
+enum [mpp_rotate_degree_t ](#mpp_rotate_degree_t)
 
 Rotation value.
 
@@ -1119,14 +1207,15 @@ Rotation value.
 
 |label|description|
 | - | - |
-|<a name="_page27_x87.21_y86.20"></a>ROTATE\_0|0 degree|
-|<a name="_page27_x82.23_y100.86"></a>ROTATE\_90|90 degrees|
-|<a name="_page27_x77.24_y115.51"></a>ROTATE\_180|180 degrees|
-|<a name="_page27_x77.24_y130.17"></a>ROTATE\_270|270 degrees|
+|<a name="rotate_0"></a>ROTATE\_0|0 degree|
+|<a name="rotate_90"></a>ROTATE\_90|90 degrees|
+|<a name="rotate_180"></a>ROTATE\_180|180 degrees|
+|<a name="rotate_270"></a>ROTATE\_270|270 degrees|
 
-5. **mpp\_flip\_mode\_t**
 
-<a name="_page27_x70.87_y180.53"></a><a name="_page27_x70.87_y165.29"></a>enum [mpp_flip_mode_t ](#_page27_x70.87_y165.29)
+##### mpp_flip_mode_t
+
+enum [mpp_flip_mode_t ](#mpp_flip_mode_t)
 
 Flip type. 
 
@@ -1134,14 +1223,15 @@ Flip type.
 
 |label|description|
 | - | - |
-|<a name="_page27_x108.05_y291.20"></a>FLIP\_NONE|no flip|
-|<a name="_page27_x77.24_y305.75"></a>FLIP\_HORIZONTAL|horizontal flip|
-|<a name="_page27_x90.38_y320.30"></a>FLIP\_VERTICAL|vertical flip|
-|<a name="_page27_x109.40_y334.85"></a>FLIP\_BOTH|vertical and horizontal flip|
+|<a name="flip_none"></a>FLIP\_NONE|no flip|
+|<a name="flip_horizontal"></a>FLIP\_HORIZONTAL|horizontal flip|
+|<a name="flip_vertical"></a>FLIP\_VERTICAL|vertical flip|
+|<a name="flip_both"></a>FLIP\_BOTH|vertical and horizontal flip|
 
-6. **mpp\_convert\_ops\_t**
 
-<a name="_page27_x70.87_y385.09"></a><a name="_page27_x70.87_y369.85"></a>enum [mpp_convert_ops_t](#_page27_x70.87_y369.85)
+##### mpp_convert_ops_t
+
+enum [mpp_convert_ops_t](#mpp_convert_ops_t)
 
 The convert operations selector flags. 
 
@@ -1149,16 +1239,17 @@ The convert operations selector flags.
 
 |label|description|
 | - | - |
-|<a name="_page27_x114.33_y495.87"></a>MPP\_CONVERT\_NONE|no frame conversion|
-|<a name="_page27_x106.55_y509.61"></a>MPP\_CONVERT\_ROTATE|frame rotation and flip|
-|<a name="_page27_x110.83_y524.16"></a>MPP\_CONVERT\_SCALE|scaling from input\_frame toward output window|
-|<a name="_page27_x108.35_y538.82"></a>MPP\_CONVERT\_COLOR|frame color conversion|
-|<a name="_page27_x114.51_y552.56"></a>MPP\_CONVERT\_CROP|input frame crop|
-|<a name="_page27_x77.24_y567.10"></a>MPP\_CONVERT\_OUT\_WINDOW|output window|
+|<a name="mpp_convert_none"></a>MPP\_CONVERT\_NONE|no frame conversion|
+|<a name="mpp_convert_rotate"></a>MPP\_CONVERT\_ROTATE|frame rotation and flip|
+|<a name="mpp_convert_scale"></a>MPP\_CONVERT\_SCALE|scaling from input\_frame toward output window|
+|<a name="mpp_convert_color"></a>MPP\_CONVERT\_COLOR|frame color conversion|
+|<a name="mpp_convert_crop"></a>MPP\_CONVERT\_CROP|input frame crop|
+|<a name="mpp_convert_out_window"></a>MPP\_CONVERT\_OUT\_WINDOW|output window|
 
-7. **mpp\_pixel\_format\_t**
 
-<a name="_page27_x70.87_y617.35"></a><a name="_page27_x70.87_y602.11"></a>enum [mpp_pixel_format_t ](#_page27_x70.87_y602.11)
+##### mpp_pixel_format_t
+
+enum [mpp_pixel_format_t ](#mpp_pixel_format_t)
 
 Pixel format. 
 
@@ -1166,31 +1257,32 @@ Pixel format.
 
 |label|description|
 | - | - |
-|<a name="_page27_x102.17_y726.24"></a>MPP\_PIXEL\_ARGB|ARGB 32 bits.|
-|<a name="_page27_x102.17_y739.98"></a>MPP\_PIXEL\_BGRA|BGRA 32 bits.|
-|<a name="_page27_x102.17_y753.72"></a>MPP\_PIXEL\_RGBA|RGBA 32 bits.|
-|<a name="_page28_x102.17_y503.25"></a>MPP\_PIXEL\_BGRX|BGRX 32 bits.|
-|<a name="_page28_x102.17_y516.99"></a>MPP\_PIXEL\_RGBX|RGBX 32 bits.|
-|<a name="_page28_x108.15_y86.20"></a>MPP\_PIXEL\_RGB|RGB 24 bits.|
-|<a name="_page28_x93.19_y99.94"></a>MPP\_PIXEL\_RGB565|RGB 16 bits.|
-|<a name="_page28_x108.15_y113.67"></a>MPP\_PIXEL\_BGR|BGR 24 bits.|
-|<a name="_page28_x88.11_y127.41"></a>MPP\_PIXEL\_GRAY888|gray 3x8 bits|
-|<a name="_page28_x82.13_y142.07"></a>MPP\_PIXEL\_GRAY888X|gray 3x8 bits +8 unused bits|
-|<a name="_page28_x103.07_y156.73"></a>MPP\_PIXEL\_GRAY|gray 8 bits|
-|<a name="_page28_x93.09_y171.39"></a>MPP\_PIXEL\_GRAY16|gray 16 bits|
-|<a name="_page28_x83.22_y185.84"></a>MPP\_PIXEL\_YUV1P444|YUVX interleaved 4:4:4.|
-|<a name="_page28_x77.24_y199.37"></a>MPP\_PIXEL\_VYUY1P422|VYUY interleaved 4:2:2.|
-|<a name="_page28_x77.24_y212.90"></a>MPP\_PIXEL\_UYVY1P422|UYVY interleaved 4:2:2.|
-|<a name="_page28_x103.16_y226.43"></a>MPP\_PIXEL\_YUYV|YUYV interleaved 4:2:2.|
-|<a name="_page28_x87.22_y239.97"></a>MPP\_PIXEL\_DEPTH16|depth 16 bits|
-|<a name="_page28_x92.21_y254.31"></a>MPP\_PIXEL\_DEPTH8|depth 8 bits|
-|<a name="_page28_x88.21_y268.65"></a>MPP\_PIXEL\_YUV420P|YUV planar 4:2:0.|
-|<a name="_page29_x104.16_y607.08"></a>MPP\_PIXEL\_JPEG|JPEG.|
-|<a name="_page28_x93.42_y283.20"></a>MPP\_PIXEL\_INVALID|invalid pixel format|
+|<a name="mpp_pixel_argb"></a>MPP\_PIXEL\_ARGB|ARGB 32 bits.|
+|<a name="mpp_pixel_bgra"></a>MPP\_PIXEL\_BGRA|BGRA 32 bits.|
+|<a name="mpp_pixel_rgba"></a>MPP\_PIXEL\_RGBA|RGBA 32 bits.|
+|<a name="mpp_pixel_bgrx"></a>MPP\_PIXEL\_BGRX|BGRX 32 bits.|
+|<a name="mpp_pixel_rgbx"></a>MPP\_PIXEL\_RGBX|RGBX 32 bits.|
+|<a name="mpp_pixel_rgb"></a>MPP\_PIXEL\_RGB|RGB 24 bits.|
+|<a name="mpp_pixel_rgb565"></a>MPP\_PIXEL\_RGB565|RGB 16 bits.|
+|<a name="mpp_pixel_bgr"></a>MPP\_PIXEL\_BGR|BGR 24 bits.|
+|<a name="mpp_pixel_gray888"></a>MPP\_PIXEL\_GRAY888|gray 3x8 bits|
+|<a name="mpp_pixel_gray888x"></a>MPP\_PIXEL\_GRAY888X|gray 3x8 bits +8 unused bits|
+|<a name="mpp_pixel_gray"></a>MPP\_PIXEL\_GRAY|gray 8 bits|
+|<a name="mpp_pixel_gray16"></a>MPP\_PIXEL\_GRAY16|gray 16 bits|
+|<a name="mpp_pixel_yuv1p444"></a>MPP\_PIXEL\_YUV1P444|YUVX interleaved 4:4:4.|
+|<a name="mpp_pixel_vyuy1p422"></a>MPP\_PIXEL\_VYUY1P422|VYUY interleaved 4:2:2.|
+|<a name="mpp_pixel_uyvy1p422"></a>MPP\_PIXEL\_UYVY1P422|UYVY interleaved 4:2:2.|
+|<a name="mpp_pixel_yuyv"></a>MPP\_PIXEL\_YUYV|YUYV interleaved 4:2:2.|
+|<a name="mpp_pixel_depth16"></a>MPP\_PIXEL\_DEPTH16|depth 16 bits|
+|<a name="mpp_pixel_depth8"></a>MPP\_PIXEL\_DEPTH8|depth 8 bits|
+|<a name="mpp_pixel_yuv420p"></a>MPP\_PIXEL\_YUV420P|YUV planar 4:2:0.|
+|<a name="mpp_pixel_jpeg"></a>MPP\_PIXEL\_JPEG|JPEG.|
+|<a name="mpp_pixel_invalid"></a>MPP\_PIXEL\_INVALID|invalid pixel format|
 
-8. **mpp\_element\_id\_t**
 
-<a name="_page28_x70.87_y333.45"></a><a name="_page28_x70.87_y318.21"></a>enum [mpp_element_id_t ](#_page28_x70.87_y318.21)
+##### mpp_element_id_t
+
+enum [mpp_element_id_t ](#mpp_element_id_t)
 
 Processing element ids.
 
@@ -1198,18 +1290,19 @@ Processing element ids.
 
 |label|description|
 | - | - |
-|<a name="_page28_x142.16_y444.02"></a>MPP\_ELEMENT\_INVALID|Invalid element.|
-|<a name="_page28_x130.48_y457.76"></a>MPP\_ELEMENT\_IMG\_COMPOSE|Image composition - compose a simple GUI: logo and text area with the input stream.|
-|<a name="_page28_x77.24_y472.42"></a>MPP\_ELEMENT\_LABELED\_RECTANGLE|Labeled rectangle - bounding box.|
-|<a name="_page28_x153.40_y487.07"></a>MPP\_ELEMENT\_TEST|Test inplace element - NOT FOR USE.|
-|<a name="_page28_x124.51_y501.62"></a>MPP\_ELEMENT\_INFERENCE|Inference engine.|
-|<a name="_page28_x132.75_y516.28"></a>MPP\_ELEMENT\_CONVERT|Image conversion: resolution, orientation, color format.|
-|<a name="_page30_x116.04_y172.91"></a>MPP\_ELEMENT\_IMG\_DECODE|Image decompression: JPEG, PNG.|
-|<a name="_page28_x155.90_y530.94"></a>MPP\_ELEMENT\_NUM|DO NOT USE.|
+|<a name="mpp_element_invalid"></a>MPP\_ELEMENT\_INVALID|Invalid element.|
+|<a name="mpp_element_img_compose"></a>MPP\_ELEMENT\_IMG\_COMPOSE|Image composition - compose a simple GUI: logo and text area with the input stream.|
+|<a name="mpp_element_labeled_rectangle"></a>MPP\_ELEMENT\_LABELED\_RECTANGLE|Labeled rectangle - bounding box.|
+|<a name="mpp_element_test"></a>MPP\_ELEMENT\_TEST|Test inplace element - NOT FOR USE.|
+|<a name="mpp_element_inference"></a>MPP\_ELEMENT\_INFERENCE|Inference engine.|
+|<a name="mpp_element_convert"></a>MPP\_ELEMENT\_CONVERT|Image conversion: resolution, orientation, color format.|
+|MPP\_ELEMENT\_IMG\_DECODE|Image decompression: JPEG, PNG.|
+|<a name="mpp_element_num"></a>MPP\_ELEMENT\_NUM|DO NOT USE.|
 
-9. **mpp\_tensor\_type\_t**
 
-<a name="_page28_x70.87_y580.38"></a><a name="_page28_x70.87_y565.14"></a>enum [mpp_tensor_type_t ](#_page28_x70.87_y565.14)
+##### mpp_tensor_type_t
+
+enum [mpp_tensor_type_t ](#mpp_tensor_type_t)
 
 Inference tensor type. 
 
@@ -1217,13 +1310,13 @@ Inference tensor type.
 
 |label|description|
 | - | - |
-|<a name="_page28_x77.24_y691.05"></a>MPP\_TENSOR\_TYPE\_FLOAT32|<a name="_page28_x70.87_y755.48"></a>floating point 32 bits|
-|<a name="_page28_x88.95_y705.70"></a>MPP\_TENSOR\_TYPE\_UINT8|unsigned integer 8 bits|
-|<a name="_page28_x95.43_y720.36"></a>MPP\_TENSOR\_TYPE\_INT8|signed integer 8 bits|
+|<a name="mpp_tensor_type_float32"></a>MPP\_TENSOR\_TYPE\_FLOAT32|<a name="mpp_tensor_order_t"></a>floating point 32 bits|
+|<a name="mpp_tensor_type_uint8"></a>MPP\_TENSOR\_TYPE\_UINT8|unsigned integer 8 bits|
+|<a name="mpp_tensor_type_int8"></a>MPP\_TENSOR\_TYPE\_INT8|signed integer 8 bits|
 
-10. **mpp\_tensor\_order\_t**
+**mpp\_tensor\_order\_t**
 
-<a name="_page29_x70.87_y70.87"></a>enum [mpp_tensor_order_t ](#_page28_x70.87_y755.48)
+enum [mpp_tensor_order_t ](#mpp_tensor_order_t)
 
 Inference input tensor order.
 
@@ -1231,13 +1324,14 @@ Inference input tensor order.
 
 |label|description|
 | - | - |
-|<a name="_page29_x77.24_y166.68"></a>MPP\_TENSOR\_ORDER\_UNKNOWN|order not set|
-|<a name="_page29_x96.40_y180.42"></a>MPP\_TENSOR\_ORDER\_NHWC|order: Batch, Height, Width, Channels|
-|<a name="_page29_x96.40_y195.07"></a>MPP\_TENSOR\_ORDER\_NCHW|order: Batch, Channels, Height, Width|
+|<a name="mpp_tensor_order_unknown"></a>MPP\_TENSOR\_ORDER\_UNKNOWN|order not set|
+|<a name="mpp_tensor_order_nhwc"></a>MPP\_TENSOR\_ORDER\_NHWC|order: Batch, Height, Width, Channels|
+|<a name="mpp_tensor_order_nchw"></a>MPP\_TENSOR\_ORDER\_NCHW|order: Batch, Channels, Height, Width|
 
-11. **mpp\_inference\_type\_t**
 
-<a name="_page29_x70.87_y245.43"></a><a name="_page29_x70.87_y230.19"></a>enum [mpp_inference_type_t ](#_page29_x70.87_y230.19)
+##### mpp_inference_type_t
+
+enum [mpp_inference_type_t ](#mpp_inference_type_t)
 
 Inference type. 
 
@@ -1245,35 +1339,36 @@ Inference type.
 
 |label|description|
 | - | - |
-|<a name="_page29_x77.24_y356.10"></a>MPP\_INFERENCE\_TYPE\_TFLITE|TensorFlow-Lite.|
+|<a name="mpp_inference_type_tflite"></a>MPP\_INFERENCE\_TYPE\_TFLITE|TensorFlow-Lite.|
 
-12. **mpp\_camera\_stream\_type**
 
-<a name="_page29_x70.87_y231.19"></a>enum [mpp_camera_stream_type ](#_page29_x70.87_y231.19)
+##### mpp_camera_stream_type
+
+enum [mpp_camera_stream_type ](#mpp_camera_stream_type)
 
 **Enumerator**
 
 |label|description|
 | - | - |
-|<a name="_page29_x77.24_y357.10"></a>RGB\_STREAM|Frames received by the virtual camera element ar in rgb format|
-|<a name="_page29_x77.24_y358.10"></a>IR\_STREAM|Frames received by the virtual camera element ar in ir format|
-|<a name="_page29_x77.24_y359.10"></a>NUM\_STREAMS|Total number of frame types suported by virtual camera element|
+|<a name="rgb_stream"></a>RGB\_STREAM|Frames received by the virtual camera element ar in rgb format|
+|<a name="ir_stream"></a>IR\_STREAM|Frames received by the virtual camera element ar in ir format|
+|<a name="num_streams"></a>NUM\_STREAMS|Total number of frame types suported by virtual camera element|
 
 ## 3. Return\_codes
 
-<a name="_page29_x70.87_y404.84"></a><a name="_page29_x70.87_y444.70"></a>
+##### return_codes
 
 **Macros**
 
-- #define [MPP_SUCCESS](#_page29_x70.87_y699.46)
-- #define [MPP_ERROR](#_page29_x70.87_y771.21)
-- #define [MPP_INVALID_ELEM](#_page30_x70.87_y135.83)
-- #define [MPP_INVALID_PARAM](#_page30_x70.87_y226.75)
-- #define [MPP_ERR_ALLOC_MUTEX](#_page30_x70.87_y317.77)
-- #define [MPP_INVALID_MUTEX](#_page30_x70.87_y408.91)
-- #define [MPP_MUTEX_TIMEOUT](#_page30_x70.87_y499.83)
-- #define [MPP_MUTEX_ERROR](#_page30_x70.87_y589.07)
-- #define [MPP_MALLOC_ERROR](#_page30_x70.87_y680.10)
+- #define [MPP_SUCCESS](#mpp_success)
+- #define [MPP_ERROR](#mpp_error)
+- #define [MPP_INVALID_ELEM](#mpp_invalid_elem)
+- #define [MPP_INVALID_PARAM](#mpp_invalid_param)
+- #define [MPP_ERR_ALLOC_MUTEX](#mpp_err_alloc_mutex)
+- #define [MPP_INVALID_MUTEX](#mpp_invalid_mutex)
+- #define [MPP_MUTEX_TIMEOUT](#mpp_mutex_timeout)
+- #define [MPP_MUTEX_ERROR](#mpp_mutex_error)
+- #define [MPP_MALLOC_ERROR](#mpp_malloc_error)
 
 ### 3.1 Detailed Description
 
@@ -1281,56 +1376,64 @@ MPP APIs return status definitions.
 
 #### 3.1.1 Macro Definition Documentation
 
-1. **MPP\_SUCCESS**
 
-<a name="_page29_x70.87_y699.46"></a>#define MPP\_SUCCESS <a name="_page29_x70.87_y771.21"></a>
+##### mpp_success
+
+#define MPP\_SUCCESS
 
 Success return code.
 
-2. **MPP\_ERROR**
 
-<a name="_page30_x70.87_y70.87"></a>#define MPP\_ERROR
+##### mpp_error
+
+#define MPP\_ERROR
 
 A generic error occured.
 
-3. **MPP\_INVALID\_ELEM**
 
-<a name="_page30_x70.87_y150.87"></a><a name="_page30_x70.87_y135.83"></a>#define MPP\_INVALID\_ELEM 
+##### mpp_invalid_elem
+
+#define MPP\_INVALID\_ELEM
 
 Invalid element provided.
 
-4. **MPP\_INVALID\_PARAM**
 
-<a name="_page30_x70.87_y241.79"></a><a name="_page30_x70.87_y226.75"></a>#define MPP\_INVALID\_PARAM 
+##### mpp_invalid_param
+
+#define MPP\_INVALID\_PARAM
 
 Invalid parameter provided.
 
-5. **MPP\_ERR\_ALLOC\_MUTEX**
 
-<a name="_page30_x70.87_y332.81"></a><a name="_page30_x70.87_y317.77"></a>#define MPP\_ERR\_ALLOC\_MUTEX 
+##### mpp_err_alloc_mutex
+
+#define MPP\_ERR\_ALLOC\_MUTEX
 
 Error occured while allocating mutex.
 
-6. **MPP\_INVALID\_MUTEX**
 
-<a name="_page30_x70.87_y423.95"></a><a name="_page30_x70.87_y408.91"></a>#define MPP\_INVALID\_MUTEX 
+##### mpp_invalid_mutex
+
+#define MPP\_INVALID\_MUTEX
 
 Invalid mutex provided.
 
-7. **MPP\_MUTEX\_TIMEOUT**
 
-<a name="_page30_x70.87_y514.87"></a><a name="_page30_x70.87_y499.83"></a>#define MPP\_MUTEX\_TIMEOUT <a name="_page30_x70.87_y589.07"></a>
+##### mpp_mutex_timeout
+
+#define MPP\_MUTEX\_TIMEOUT
 
 Mutex timeout occured.
 
-8. **MPP\_MUTEX\_ERROR**
 
-<a name="_page30_x70.87_y604.11"></a>#define MPP\_MUTEX\_ERROR <a name="_page30_x70.87_y680.10"></a>
+##### mpp_malloc_error
+
+#define MPP\_MUTEX\_ERROR
 
 Mutex error occured.
 
-9. **MPP\_MALLOC\_ERROR**
 
-<a name="_page30_x70.87_y695.14"></a>#define MPP\_MALLOC\_ERROR 
+#define MPP\_MALLOC\_ERROR 
 
 Memory allocation error occured.
+

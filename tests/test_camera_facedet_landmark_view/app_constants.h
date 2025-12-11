@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -11,8 +11,6 @@
 #include "mpp_config.h"
 #include "mpp_api_types.h"
 #include "fsl_common.h"
-
-#include APP_TFLITE_SCRFD_KPS_INFO
 
 #if (SOURCE_STATIC_IMAGE == 1)
 #include APP_STATIC_IMAGE_PATH

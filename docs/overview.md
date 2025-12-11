@@ -62,17 +62,17 @@ The eIQ component is integrated into the MCUXpresso SDK Builder delivery system 
 
 To include eIQ Media Processing Pipeline into the MCUXpresso SDK package, select both “eIQ” and “FreeRTOS” in the software component selector on the SDK Builder page.
 
-For details, see, [Figure 1](#_page3_x50.00_y120.00).
+For details, see, [Figure 1](#figure-1).
 
-<a name="_page3_x50.00_y120.00"></a>**Figure 1. MCUXpresso SDK Builder software component selector![](images/figure1.png)**
+<a name="figure-1"></a>**Figure 1. MCUXpresso SDK Builder software component selector![](images/figure1.png)**
 
 Once the MCUXpresso SDK board package is downloaded, it can be extracted on a local machine or imported into the Visual Studio Code IDE. For more information on the MCUXpresso SDK board support package, see the section Getting Started > Zip package.
 
 **2.1. How to get example applications**
 
-The eIQ Media Processing Pipeline is provided with a set of example applications. For details, see [Table 1](#_page5_x50.00_y120.00). The applications demonstrate the usage of the API in several use cases.
+The eIQ Media Processing Pipeline is provided with a set of example applications. For details, see [Table 1](#table-1). The applications demonstrate the usage of the API in several use cases.
 
-<a name="_page5_x50.00_y120.00"></a>**Table 1. Example applications**
+<a name="table-1"></a>**Table 1. Example applications**
 
 |**Name**|**Description**|**Availability**|
 | - | - | - |
@@ -82,18 +82,18 @@ The eIQ Media Processing Pipeline is provided with a set of example applications
 |camera\_persondetect\_view|<p>This example shows how to use the library to create a use case for person detection using camera as a source.</p><p>To generate a new static image for this example, see the documentation at: eiq/mpp/tools/image\_ conversion.readme.</p><p>The machine learning framework used is TensorFlow Lite Micro.</p><p>The person detection model used is a quantized FastestDet model that detects multiple persons in an input image.</p>|EVKB-MIMXRT1170 FRDM-MCXN947|
 |static\_image\_nanodet\_ m\_view|<p>This example shows how to use the library to create an object detection use case using a static image as a source.</p><p>The machine learning framework is TensorFlow Lite Micro.</p><p>The object detection model used is quantized Nanodet m with two output tensors. The model performs multiple objects detection among 80 classes.</p><p>The application also performs Intersection Over Union (IOU) and Non-Maximum Suppression (NMS) to pick the best box for each detected object.</p>|EVKB-MIMXRT1170 EVK-IMXRT700 FRDM-MCXN947|
 
-When using Visual Studio Code IDE, the example applications can be imported through the MCUXpresso plugin in Quickstart Panel > Import Example from Repository as shown in [Figure 2](#_page6_x50.00_y120.00).
+When using Visual Studio Code IDE, the example applications can be imported through the MCUXpresso plugin in Quickstart Panel > Import Example from Repository as shown in [Figure 2](#figure-2).
 
-<a name="_page6_x50.00_y120.00"></a>**Figure 2. MCUXpresso SDK import projects wizard![](images/figure4.png)**
+<a name="figure-2"></a>**Figure 2. MCUXpresso SDK import projects wizard![](images/figure4.png)**
 
-The *boards* directory contains example application projects for supported toolchains, see [Figure 3](#_page4_x50.00_y120.00). 
-When using Command line, the example applications can be built using scripts for GCC toolchain in SDK folder /boards/<board\_name>/eiq\_examples/ <a name="_page6_x50.00_y571.31"></a><example\_name>/armgcc/.
+The *boards* directory contains example application projects for supported toolchains, see [Figure 3](#figure-3). 
+When using Command line, the example applications can be built using scripts for GCC toolchain in SDK folder /boards/<board\_name>/eiq\_examples/ <a name=""></a><example\_name>/armgcc/.
 
-<a name="_page4_x50.00_y120.00"></a>**Figure 3. MCUXpresso SDK board package directory structure for examples![](images/figure2.png)**
+<a name="figure-3"></a>**Figure 3. MCUXpresso SDK board package directory structure for examples![](images/figure2.png)**
  
-The *middleware/eiq* directory contains contains both the Inference engine code and the Media Processing Pipeline code in folder 'mpp', see [Figure 4](#_page4_x50.00_y314.28).
+The *middleware/eiq* directory contains contains both the Inference engine code and the Media Processing Pipeline code in folder 'mpp', see [Figure 4](#figure-4).
 
-<a name="_page4_x50.00_y314.28"></a>**Figure 4. MCUXpresso SDK board package directory structure for mpp![](images/figure3.png)**
+<a name="figure-4"></a>**Figure 4. MCUXpresso SDK board package directory structure for mpp![](images/figure3.png)**
 
 
 ## 3. Example
@@ -108,7 +108,7 @@ The image classification model used is quantized Mobilenet convolutional neural 
 
 
 **Figure 5. Application overview**
-<a name="_page7_x50.00_y120.00"></a> ![](images/application_overview.svg)
+<a name=""></a> ![](images/application_overview.svg)
 
 **3.2 Detailed description**
 
@@ -140,7 +140,7 @@ The application creates two pipelines:
 
 **3.4 Example output**
 
-After building the example application and downloading it to the target, the execution stops in the *main* function. When the execution resumes, an output message displays on the connected terminal. For example, [Figure 6](#_page8_x50.00_y190.90) shows the output of the camera\_mobilenet\_view\_tflm example application printed to the <a name="_page8_x50.00_y190.90"></a> PuTTY console window.
+After building the example application and downloading it to the target, the execution stops in the *main* function. When the execution resumes, an output message displays on the connected terminal. For example, [Figure 6](#figure-6) shows the output of the camera\_mobilenet\_view\_tflm example application printed to the <a name="figure-6"></a> PuTTY console window.
 
 **Figure 6. PuTTY console window**
 

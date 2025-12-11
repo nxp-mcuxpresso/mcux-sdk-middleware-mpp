@@ -252,13 +252,13 @@ SECTIONS
     __noncachedata_init_end__ = .;   /* create a global symbol at initialized ncache data end */
   } > m_ncache
   . = __noncachedata_init_end__;
-  .npu_ncache :
+  .npu_ncache(NOLOAD) :
   {
     KEEP(*(.npu_ncache_data))
     KEEP(*(.npu_ncache_data*))
   } > m_ncache
   ASSERT(. < 0x20580000, "Error: .npu_ncache cannot go beyond SRAM P18")
-  .ncache :
+  .ncache(NOLOAD) :
   {
     KEEP(*(NonCacheable))
     . = ALIGN(4);

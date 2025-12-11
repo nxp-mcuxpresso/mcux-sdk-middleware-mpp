@@ -190,7 +190,14 @@ static void app_task(void *params) {
     elem_params.convert.angle = APP_DISPLAY_LANDSCAPE_ROTATE;
     elem_params.convert.flip = APP_SRC_DISPLAY_FLIP;
     elem_params.convert.pixel_format = args->display_format;
+#ifdef SCALED_VIEW
+    /* scaling parameters */
+    elem_params.convert.scale.width =  SCALED_VIEW_WIDTH;
+    elem_params.convert.scale.height = SCALED_VIEW_HEIGHT;
+    elem_params.convert.ops = MPP_CONVERT_COLOR | MPP_CONVERT_ROTATE | MPP_CONVERT_SCALE;
+#else
     elem_params.convert.ops = MPP_CONVERT_COLOR | MPP_CONVERT_ROTATE;
+#endif
     ret = mpp_element_add(mp, MPP_ELEMENT_CONVERT, &elem_params, NULL);
     if (ret) {
         PRINTF("Failed to add element CONVERT - op COLOR|ROTATE\n");

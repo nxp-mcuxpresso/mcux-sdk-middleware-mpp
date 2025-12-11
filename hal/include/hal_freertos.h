@@ -36,6 +36,6 @@
 #endif
 
 /* max number of tasks expected in the system */
-#define HAL_MAX_TASKS 20
+#define HAL_MAX_TASKS 30
 
 #endif /* _HAL_FREERTOS_H */

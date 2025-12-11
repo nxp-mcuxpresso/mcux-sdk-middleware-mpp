@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP.
+ * Copyright 2022-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -21,7 +21,7 @@
 
 /* MPP version */
 #define MPP_VERSION_MAJOR 3
-#define MPP_VERSION_MINOR 6
+#define MPP_VERSION_MINOR 7
 #ifdef MPP_COMMIT
 #define MPP_VERSION_COMMIT MPP_COMMIT
 #else

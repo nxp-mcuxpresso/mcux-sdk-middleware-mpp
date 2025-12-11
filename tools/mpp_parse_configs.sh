@@ -40,4 +40,8 @@ while IFS=':' read -r f1 f2; do
     fi
 done < "${file}"
 
-echo ${configs}
+# Strip leading and trailing spaces
+configs="${configs#"${configs%%[![:space:]]*}"}"
+configs="${configs%"${configs##*[![:space:]]}"}"
+
+printf '%s' "${configs}"

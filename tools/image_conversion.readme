@@ -1,60 +1,203 @@
-Overview
-========
+# Image Operation Tool for MPP
 
-The Media Processing Pipeline allows running inference on a still image provided
-as input. This image must comply to a format supported by the library.
+## Overview
+The `image_operation.py` script is a comprehensive image processing tool designed for the Media Processing Pipeline (MPP). It can read binary or standard image files, display them, and perform various operations including format conversion, resizing, cropping, channel swapping, and C header file generation for embedded systems.
 
-On i.MX RT1170 and i.MX RT1050, the 2D image processing block, responsible for
-performing color space conversion, rotation and scaling runs on the PxP hardware
-accelerator. It supports BGRA as an input format.
+The tool supports multiple pixel formats and can handle conversions between RGB, YUV, and packed formats. It also provides advanced features like aspect ratio preservation, image cropping, and checksum calculation.
 
-In order to avoid using CPU cycles when performing 2D operation on still images,
-the rgba2bgra tool can be used, in combination with other tools, to convert the
-still image into a BGRA raw format that can then be process by the PxP hardware
-accelerator.
+## Software Requirements and Dependencies
+The script requires the following tools and libraries:
+- Python 3
+- OpenCV (`cv2`)
+- NumPy
+- Pillow (PIL)
 
-Software requirements and dependencies
-======================================
+### Install dependencies on Ubuntu:
 
-The image conversion can be achieved with the following tools:
-- ffmpeg OR imagemagick
-- xxd
-- rgba2bgra.py
 
-The rgba2bgra is a python3 application which allows to re-order the RGBA channels
-of an image into BGRA for processing by the Media Processing Pipeline library.
+sudo apt install python3
 
-Please make sure these tools are installed on your platform before converting an image.
 
-To retrieve the latest version of the dependency tools on MS-Windows
-- https://www.python.org/downloads/windows/ for Python 3
-- https://ffmpeg.org/download.html for ffmpeg
-- https://imagemagick.org/script/download.php for imagemagick
-- https://sourceforge.net/projects/xxd-for-windows/ for xxd
 
-To retrieve the latest version of the dependency tools on Ubuntu
-- sudo apt install ffmpeg
-- sudo apt install python3
-- sudo apt install imagemagick
-- sudo apt install xxd
+pip install opencv-python numpy pillow
 
-How to use
-==========
 
-The following examples shows how to convert a png image into a C header file
-containing the BGRA contents of the image for consumption by the Media Processing
-Pipeline library.
+### Install dependencies on Windows:
+- [Python 3](https://www.python.org/downloads/windows/)
+- Install packages via `pip`:
 
-The following steps have to be followed all the time:
-1- Convert an input image to its RGBA representation
-2- Re-order the channels to get the BGRA representation of the image
-3- Build a C array of the BGRA representation of the image and store it in a C header file
 
-These steps are run in command-line in a shell interpreter.
+pip install opencv-python numpy pillow
 
-The following example shows how to perform the processing using a png file called img_filename.png,
-that will, at the same time, scaled down to 320x240.
 
-$ convert img_filename.png -resize 320x240 -background black -gravity center -extent 320x240 -depth 8 img_filename.bgra
-$ python3 ./tools/rgba2bgra.py -i img_filename.rgba -o img_filename.bgra -W 320 -H 240
-$ xxd -i img_filename.bgra > img_filename_bgra.h
+## Supported Formats
+
+RGB565, RGB, BGR, RGBA, BGRA, GRAY,
+YUV420, YUV444P, YUV1P444, NV12, NV21,
+YUYV, UYVY422, VYUY422, YUVX, VUYX,
+YCBCRA, YCRCBA, JPEG, PNG, BMP
+
+
+## How to Use
+Run the script from the command line:
+
+
+python image_operation.py -i input.bin -W 640 -H 480 -f RGB565 [OPTIONS]
+
+
+### Parameters
+- `-i, --input` : Input image file path (binary or standard image) **[Required]**
+- `-W, --width` : Input image width (required for binary formats, optional for JPEG/PNG/BMP)
+- `-H, --height`: Input image height (required for binary formats, optional for JPEG/PNG/BMP)
+- `-f, --format`: Input pixel format (see supported formats) **[Required]**
+- `-ow, --output-width` : Output image width (optional)
+- `-oh, --output-height`: Output image height (optional)
+- `-of, --output-format`: Output pixel format (optional)
+- `-o, --output` : Output file path (optional)
+- `-q, --quality`: JPEG quality (1–100, default: 95)
+- `-c, --compression`: PNG compression level (0–9, default: 9)
+- `-k, --keep-aspect-ratio`: Keep aspect ratio when resizing (adds padding if needed)
+- `-b, --background`: Background color for padding: `black` or `white` (default: black)
+- `--crop`: Crop region in format: `left:top[:width[:height]]` (width and height are optional)
+- `-s, --swap-ch0-ch2`: Swap channels 0 and 2 of input image and save to output file (no display)
+- `-gh, --generate-header`: Generate C header file at specified path
+
+## Features
+
+### 1. Format Conversion
+Convert between various pixel formats including RGB, BGR, YUV variants, and packed formats.
+
+### 2. Image Resizing
+Resize images to specified dimensions with optional aspect ratio preservation and padding.
+
+### 3. Image Cropping
+Crop images to a specific region using the `--crop` parameter.
+
+### 4. Channel Swapping
+Swap channels 0 and 2 (useful for RGB↔BGR conversion at the binary level).
+
+### 5. Auto-Detection
+Automatically detects JPEG, PNG, and BMP files by examining file headers (magic bytes).
+
+### 6. Checksum Calculation
+Computes checksums for binary images using the Pisano with End-Around Carry (PEAC) algorithm.
+
+### 7. Header File Generation
+Generates C header files with image data, dimensions, format definitions, and MPP pixel format enums.
+If the -gh argument has the .h extension, it creates a header file with the exact name given.
+Otherwise, it appends the widht, height, format and .h extension to the filename.
+
+## Examples
+
+### Convert a binary RGB565 image to RGB format and resize:
+
+
+python image_operation.py -i input.bin -W 640 -H 480 -f RGB565 -ow 320 -oh 240 -of RGB -o output.bin
+
+
+### Convert a JPEG image to BGRA and generate a header file:
+
+
+python image_operation.py -i input.jpg -f JPEG -of BGRA -gh image_data.h
+
+
+### Resize with aspect ratio preservation and white padding:
+
+
+python image_operation.py -i input.bin -W 1920 -H 1080 -f RGB -ow 640 -oh 480 -k -b white -o output.bin
+
+
+### Crop an image region:
+
+
+python image_operation.py -i input.bin -W 640 -H 480 -f RGB --crop 100:100:320:240 -o cropped.bin
+
+
+### Crop with automatic width/height (uses maximum available):
+
+
+python image_operation.py -i input.bin -W 640 -H 480 -f RGB --crop 100:100 -o cropped.bin
+
+
+### Swap channels 0 and 2 (RGB to BGR at binary level):
+
+
+python image_operation.py -i input.bin -W 640 -H 480 -f RGB -s -o swapped.bin
+
+
+### Convert YUV420 to NV12 format:
+
+
+python image_operation.py -i input.yuv -W 1280 -H 720 -f YUV420 -of NV12 -o output.bin
+
+
+### Save as JPEG with custom quality:
+
+
+python image_operation.py -i input.bin -W 640 -H 480 -f RGB -of JPEG -q 85 -o output.jpg
+
+
+### Save as PNG with maximum compression:
+
+
+python image_operation.py -i input.bin -W 640 -H 480 -f RGB -of PNG -c 9 -o output.png
+
+
+### Process JPEG without specifying dimensions (auto-detected):
+
+
+python image_operation.py -i photo.jpg -f JPEG -of RGB -o output.bin
+
+
+## Header File Generation
+When `-gh` is specified, the script generates a C header file containing:
+- Copyright notice and generation metadata
+- Image dimensions (width, height)
+- Pixel format (MPP enum format)
+- Channel count
+- Raw image data as a byte array
+- Data length constant
+
+### Generated Header Example:
+
+#ifndef __IMAGE_640_480_RGB_H__
+#define __IMAGE_640_480_RGB_H__
+
+#define SRC_IMAGE_IMAGE_640_480_RGB_WIDTH           640
+#define SRC_IMAGE_IMAGE_640_480_RGB_HEIGHT          480
+#define SRC_IMAGE_IMAGE_640_480_RGB_CHANNELS_NUMBER 3
+#define SRC_IMAGE_IMAGE_640_480_RGB_FORMAT          MPP_PIXEL_RGB
+
+static const unsigned char image_640_480_rgb_data[] = {
+  0x12, 0x34, 0x56, ...
+};
+const unsigned int image_640_480_rgb_data_len = 921600;
+
+#endif /* __IMAGE_640_480_RGB_H__ */
+
+
+This is useful for embedding image data in firmware or MPP applications.
+
+## Checksum Calculation
+For binary format outputs, the tool automatically calculates a 32-bit checksum using the Pisano with End-Around Carry (PEAC) algorithm, which provides reliability similar to CRC32 but with better performance.
+
+The checksum is displayed in the console output and can be used for data integrity verification.
+
+## Notes
+- Width and height parameters are **required** for binary formats but **optional** for JPEG, PNG, and BMP files (auto-detected from file headers)
+- The tool automatically detects standard image formats (JPEG, PNG, BMP) by examining file magic bytes
+- When cropping, if width and height are not specified, the maximum available dimensions are used
+- Aspect ratio preservation (`-k`) adds padding to maintain proportions when resizing
+- Channel swapping (`-s`) operates on raw binary data and saves without displaying
+- All operations display the original and converted images using OpenCV windows
+- Press any key to close image display windows and continue
+- Temporary files are automatically cleaned up after processing
+
+## Error Handling
+The script includes robust error handling for:
+- Invalid file paths and permissions
+- Insufficient data for specified formats
+- Invalid format conversions
+- Memory constraints for large files
+- Invalid crop parameters
+- Out-of-range quality and compression values

@@ -11,8 +11,8 @@
 #include "mpp_config.h"
 #include "mpp_api_types.h"
 #include "fsl_common.h"
+
 #include APP_TFLITE_MOBILEFACENET_INFO
-#include APP_TFLITE_SCRFD_KPS_INFO
 #include APP_TFLITE_ANTISPOOFING_INFO
 
 #define VIEW_SRC_WIDTH  RGB_CAMERA_WIDTH

@@ -65,13 +65,14 @@ static int compose_func(_elem_t *elem)
     int ret = MPP_SUCCESS;
     gfx_surface_t input_surface, output_surface;
     gfx_surface_t image_surface;
-    bool can_compose = (elem->dev.gfx->ops && elem->dev.gfx->ops->compose);
-    bool can_blit = (elem->dev.gfx->ops && elem->dev.gfx->ops->blit);
-    
+
     if (!elem || !elem->dev.gfx) {
         MPP_LOGE("Compose: Invalid element or graphics device\r\n");
         return MPP_INVALID_PARAM;
     }
+
+    bool can_compose = (elem->dev.gfx->ops && elem->dev.gfx->ops->compose);
+    bool can_blit = (elem->dev.gfx->ops && elem->dev.gfx->ops->blit);
 
     const mpp_element_params_t *params = &elem->params;
 
@@ -202,7 +203,7 @@ unsigned int elem_img_compose_setup(_elem_t *elem)
         /* sanity checks */
         if (elem == NULL)
         {
-            MPP_LOGE("invalid input buffer - elem (0x%x)\n", elem);
+            MPP_LOGE("Input elem pointer is NULL\n");
             ret = MPP_INVALID_PARAM;
             break;
         }
@@ -339,7 +340,7 @@ uint32_t mpp_compose_update(_elem_t *elem, mpp_element_params_t *params)
     do {
         /* sanity checks */
         if (elem == NULL) {
-            MPP_LOGE("invalid input buffer - elem (0x%x)\n", elem);
+            MPP_LOGE("Input elem pointer is NULL\n");
             ret = MPP_INVALID_PARAM;
             break;
         }
@@ -349,7 +350,7 @@ uint32_t mpp_compose_update(_elem_t *elem, mpp_element_params_t *params)
             break;
         }
         if (params == NULL) {
-            MPP_LOGE("invalid input buffer - params (0x%x)\n", params);
+            MPP_LOGE("Input params pointer is NULL\n");
             ret = MPP_INVALID_PARAM;
             break;
         }

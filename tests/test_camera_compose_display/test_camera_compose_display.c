@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -110,7 +110,7 @@ __ALIGNED(64) uint8_t  g_text_img[TEXT_WIDTH*TEXT_HEIGHT*TEXT_BPP];
 #define MAX_WORD_SIZE 32
 
 /* enable/disable animation of logo and text positions */
-//#define COMPOSE_ANIMATION
+#define COMPOSE_ANIMATION
 
 /* Define image indices for the composition array */
 typedef enum {
@@ -475,6 +475,12 @@ static void app_task(void *params) {
             int start_time = hal_get_exec_time();
             draw_text_area(g_text_img, sizeof(g_text_img), &txt_info);
             txt_info.draw_txt_time = hal_get_exec_time() - start_time;
+        }
+        /* stop & start */
+        if ((var != 0) && (var % 100 == 0)) {
+            mpp_stop(mp);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+            mpp_start(mp, 0, false);
         }
 
 #ifdef TOGGLE_TEXT_VISIBILITY

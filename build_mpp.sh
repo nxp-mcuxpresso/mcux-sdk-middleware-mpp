@@ -340,6 +340,9 @@ while getopts "ab:e:h?id:Dp:c:f:t:s:g:C:Sv" opt; do
     esac
 done
 
+EXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS%\"}"   # Remove trailing quote
+EXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS#\"}"   # Remove leading quote
+
 if [ ! -d ${SDK_DIR} ]; then
     echo "sdk directory ${SDK_DIR} does not exist"
     echo "specify the sdk dir using -s option (see ./build_mpp -h for more details)"

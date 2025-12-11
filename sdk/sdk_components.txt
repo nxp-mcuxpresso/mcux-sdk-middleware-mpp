@@ -29,3 +29,8 @@ usb
 mcux-sdk-middleware-multicore
 rpmsg-lite
 mcux-mcmgr
+multicore-xaf
+voice_spot
+audio-voice-components
+emwin
+naturedsp

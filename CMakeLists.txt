@@ -71,6 +71,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/hal_camera_mipi_ov5640.c
         SOURCES hal/hal_draw.c
         SOURCES hal/hal_display_lcdifv2_rk055.c
+        SOURCES hal/hal_display_fbdev.c
         SOURCES hal/hal_graphics_pxp.c
         SOURCES hal/hal_graphics_cpu.c
         SOURCES hal/hal_static_image.c

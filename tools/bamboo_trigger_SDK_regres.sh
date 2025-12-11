@@ -26,7 +26,7 @@ SDK_VERSION="main"
 MCU_SDK_TEST_VERSION="main"
 BUILD_CFG="release"
 CLEAN_LOGS_IF_PASS="no"
-NEXUS_DIR_LINK="https://${bamboo_NEXUS_INSTANCE}-nxrm.sw.nxp.com/#browse/browse:${bamboo_NEXUS_REPO}:${bamboo_NEXUS_DIRECTORY}/${bamboo_planKey}/${bamboo_buildNumber}"
+NEXUS_DIR_LINK="https://${bamboo_NEXUS_INSTANCE}-nxrm.sw.nxp.com/#browse/browse:${bamboo_NEXUS_REPO}:${bamboo_NEXUS_DIRECTORY}%2F${bamboo_planKey}%2F${bamboo_buildNumber}"
 
 # BAMBOO plan does not need the default BUILD_CFG set when running this script
 if [[ "${bamboo_planKey}" != "" ]]; then
@@ -326,7 +326,7 @@ add_new_md_entry()
     n_skipped=$4
     n_total=$5
 
-    binaries_link="${NEXUS_DIR_LINK}/build_${board_name}"
+    binaries_link="${NEXUS_DIR_LINK}%2Fbuild_${board_name}"
 
     echo "| ${board_name} | ${n_passed} | ${n_failed} | ${n_skipped} | ${n_total} | [nexus_${board_name}](${binaries_link}) |" >> ${DAPENG_TEST_REPORT_MD_FILE}
 }

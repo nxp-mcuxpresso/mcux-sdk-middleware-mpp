@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 NXP.
+ * Copyright 2020-2026 NXP
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -19,6 +19,9 @@
 
 #include <hal_static_image.h>
 #include <string.h>
+#include <limits.h>
+#include <assert.h>
+
 #include "hal.h"
 #include "hal_utils.h"
 
@@ -43,7 +46,10 @@ hal_image_status_t HAL_Image_Dequeue(static_image_t *elt, hw_buf_desc_t *out_buf
 {
     hal_image_status_t ret = MPP_kStatus_HAL_ImageSuccess;
     static_image_static_config_t config = elt->config;
-    int image_stride = config.width * get_bitpp(config.format) / 8;
+    /* INT32-C: Prevent multiplication overflow */
+    int bitpp = get_bitpp(config.format);
+    assert(config.width <= INT_MAX / bitpp);
+    int image_stride = (config.width * bitpp) / 8;
     int dest_stride = out_buf->stride;
     HAL_LOGI("++HAL_IMAGE_Dequeue\n");
 
@@ -61,21 +67,36 @@ hal_image_status_t HAL_Image_Dequeue(static_image_t *elt, hw_buf_desc_t *out_buf
     {   /* uncompressed image */
         if(config.stripe)
         {
+            /* INT32-C: Validate stripe index to prevent overflow */
+            assert(elt->stripe_idx >= 0 && elt->stripe_idx < IMG_NB_STRIPE);
+            
             /* copy stripe line by line */
             int stripe_h = config.height / IMG_NB_STRIPE;
+            
+            /* INT32-C: Validate stripe height multiplication */
+            assert(stripe_h <= INT_MAX / IMG_NB_STRIPE);
+            
             for (int y = 0; y < stripe_h; y++) {
+                /* INT32-C: Prevent multiplication overflow in offset calculations */
+                assert(dest_stride <= INT_MAX / stripe_h);
+                assert(image_stride <= INT_MAX / config.height);
+                
                 memcpy(out_buf->addr + dest_stride*y,
                        elt->buffer + image_stride*(stripe_h*elt->stripe_idx + y),
                        image_stride);
             }
-            /* pass stripe number [1 ; IMG_NB_STRIPE] */
+            /* INT32-C: Pass stripe number [1 ; IMG_NB_STRIPE] - safe range */
             *stripe_num = elt->stripe_idx + 1;
-            /* define next stripe index */
+            /* INT32-C: Define next stripe index - bounds checked above */
             elt->stripe_idx++;
             if (elt->stripe_idx >= IMG_NB_STRIPE) elt->stripe_idx = 0;
         }
         else
         {
+            /* INT32-C: Validate loop bounds for whole image copy */
+            assert(dest_stride <= INT_MAX / config.height);
+            assert(image_stride <= INT_MAX / config.height);
+            
             /* copy whole image line by line */
             for (int y = 0; y < config.height; y++) {
                 memcpy(out_buf->addr + dest_stride*y,

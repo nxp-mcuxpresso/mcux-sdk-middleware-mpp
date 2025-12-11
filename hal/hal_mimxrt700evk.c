@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 NXP.
+ * Copyright 2024-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -60,10 +60,12 @@ int hal_gfx_setup(const char *name, gfx_dev_t *dev)
 
 /* Display setup */
 int HAL_DisplayDev_Lcdifv2Rk055_setup(display_dev_t *dev);
+int HAL_DisplayDev_Fbdev_setup(display_dev_t *dev);
 
 hal_display_setup_t display_setup[] =
 {
     {"Lcdifv2Rk055", HAL_DisplayDev_Lcdifv2Rk055_setup},
+    {"FBdev", HAL_DisplayDev_Fbdev_setup},
 };
 
 int setup_display_dev(hal_display_setup_t display_setup[], int display_nb,

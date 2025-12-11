@@ -1,6 +1,6 @@
 # eIQ MPP Hardware Abstraction Layer API
 
-MPP-HAL VERSION 3.6
+MPP-HAL VERSION 3.7
 
 ## Chapter 1
 
@@ -25,14 +25,14 @@ Here is an overview:
 **Figure 1.1 HAL overview**
 
 #### 1.1.2 MPP HAL components
-1. **Source<a name="_page5_x70.87_y491.80"></a> elements HAL**
+1. **Source elements HAL**
 - Camera
 - Static image
-2. **processing<a name="_page5_x70.87_y583.41"></a> elements HAL**
+2. **processing elements HAL**
 - Graphics driver
 - Vision algorithms
 - Labeled rectangle
-3. **Sink<a name="_page5_x70.87_y695.17"></a> elements HAL**
+3. **Sink elements HAL**
 - Display
 
 #### 1.1.3 Supported devices
@@ -51,10 +51,14 @@ At present, the MPP HAL supports the following devices:
     * RK043FN02H-CT
     * Mikroe TFT Proto 5(SSD1963 controller)
     * NXP's LCD-PAR-S035 (ST7796S controller)
+    * FBdev
 - Graphics:
     * PXP
     * CPU
     * GPU
+- JPEG Decoder:
+    * JPEG SW
+    * JPEG HW
 #### 1.1.4 Supported boards
 
 Currently, the MPP HAL supports the following boards:
@@ -106,82 +110,81 @@ Enabling/Disabling Hal components and devices:
 
 **Data Structures**
 
-- struct[ camera_dev_static_config_t](#_page12_x70.87_y161.91)
-- struct[ camera_dev_private_capability_t](#_page12_x70.87_y603.13)
-- struct[ camera_dev_t](#_page12_x70.87_y752.95)
-- struct[ static_image_static_config_t](#_page13_x70.87_y356.78)
-- struct[ static_image_t](#_page13_x70.87_y607.63)
-- struct[ gfx_surface_t](#_page14_x70.87_y70.87)
-- struct[ gfx_rotate_config_t](#_page14_x70.87_y319.68)
-- struct[ gfx_dev_t](#_page14_x70.87_y470.63)
-- struct[ hal_rect_t](#_page14_x70.87_y652.72)
-- struct[ vdec_dev_t](#_page15_x70.87_y134.51)
-- struct[ model_param_t](#_page15_x70.87_y286.04)
-- struct[ valgo_dev_private_capability_t](#_page16_x70.87_y707.58)
-- struct[ vision_frame_t](#_page17_x70.87_y121.40)
-- struct[ vision_algo_dev_t](#_page17_x70.87_y314.97)
-- struct[ display_dev_private_capability_t](#_page17_x70.87_y543.04)
-- struct[ display_dev_t](#_page18_x70.87_y208.50)
-- struct[ hw_buf_desc_t](#_page18_x70.87_y473.31)
-- struct[ hal_img_decoder_setup_t](#_page18_x70.87_y709.18)
-- struct[ hal_graphics_setup_t](#_page19_x70.87_y135.04)
-- struct[ hal_display_setup_t](#_page19_x70.87_y246.14)
-- struct[ hal_camera_setup_t](#_page19_x70.87_y356.68)
-- struct[ checksum_data_t](#_page19_x70.87_y466.41)
+- struct[ camera_dev_static_config_t](#camera_dev_static_config_t)
+- struct[ camera_dev_private_capability_t](#camera_dev_private_capability_t)
+- struct[ camera_dev_t](#camera_dev_t)
+- struct[ static_image_static_config_t](#static_image_static_config_t)
+- struct[ static_image_t](#static_image_t)
+- struct[ gfx_surface_t](#gfx_surface_t)
+- struct[ gfx_rotate_config_t](#gfx_rotate_config_t)
+- struct[ gfx_dev_t](#gfx_dev_t)
+- struct[ hal_rect_t](#hal_rect_t)
+- struct[ vdec_dev_t](#vdec_dev_t)
+- struct[ model_param_t](#model_param_t)
+- struct[ valgo_dev_private_capability_t](#valgo_dev_private_capability_t)
+- struct[ vision_frame_t](#vision_frame_t)
+- struct[ vision_algo_dev_t](#vision_algo_dev_t)
+- struct[ display_dev_private_capability_t](#display_dev_private_capability_t)
+- struct[ display_dev_t](#display_dev_t)
+- struct[ hw_buf_desc_t](#hw_buf_desc_t)
+- struct[ hal_img_decoder_setup_t](#hal_img_decoder_setup_t)
+- struct[ hal_graphics_setup_t](#hal_graphics_setup_t)
+- struct[ hal_display_setup_t](#hal_display_setup_t)
+- struct[ hal_camera_setup_t](#hal_camera_setup_t)
+- struct[ checksum_data_t](#checksum_data_t)
 
 **Macros**
 
-- #define[ HAL_GFX_DEV_CPU_NAME](#_page19_x70.87_y643.82)
-- #define[ GUI_PRINTF_BUF_SIZE](#_page19_x397.39_y759.07)
-- #define[ GUI_PRINTF_BUF_SIZE](#_page19_x397.39_y759.07)
-- #define[ HAL_VDEC_DEV_NAME](#_page20_x70.87_y250.36)
-- #define[ MAX_INPUT_PORTS](#_page20_x115.13_y383.36)
-- #define [MAX_INPUT_PORTS ]
-- #define[ HAL_DEVICE_NAME_MAX_LENGTH](#_page20_x247.59_y492.45)
+- #define[ HAL_GFX_DEV_CPU_NAME](#hal_gfx_dev_cpu_name)
+- #define[ GUI_PRINTF_BUF_SIZE](#gui_printf_buf_size)
+- #define[ GUI_PRINTF_BUF_SIZE](#gui_printf_buf_size)
+- #define[ HAL_VDEC_DEV_NAME](#hal_vdec_dev_name)
+- #define[ MAX_INPUT_PORTS](#max_input_ports)
+- #define[ HAL_DEVICE_NAME_MAX_LENGTH](#hal_device_name_max_l)
 
 **Typedefs**
 
-- [camera_dev_callback_t)](#_page20_x70.87_y647.27)
+- [camera_dev_callback_t)](#camera_dev_callback_t)
 - [vision_algo_private_data_t]
-- [mpp_callback_t)](#_page21_x70.87_y205.33)
-- [img_decoder_setup_func_t)](#_page21_x70.87_y292.36)
-- [graphic_setup_func_t)](#_page21_x70.87_y379.38)
-- [display_setup_func_t)](#_page21_x70.87_y466.41)
-- [camera_setup_func_t)](#_page21_x70.87_y553.43)
+- [mpp_callback_t)](#mpp_callback_t)
+- [img_decoder_setup_func_t)](#img_decoder_setup_func_t)
+- [graphic_setup_func_t)](#graphic_setup_func_t)
+- [display_setup_func_t)](#display_setup_func_t)
+- [camera_setup_func_t)](#camera_setup_func_t)
 
 ## Enumerations
 
-- enum [hal_camera_status_t](#_page21_x70.87_y680.23) {
+- enum [hal_camera_status_t](#hal_camera_status_t) {
 
-  [kStatus_HAL_CameraSuccess](#_page22_x93.51_y86.20),
+  [kStatus_HAL_CameraSuccess](#kstatus_hal_camerasuccess),
 
-  [kStatus_HAL_CameraBusy](#_page22_x107.46_y99.94),
+  [kStatus_HAL_CameraBusy](#kstatus_hal_camerabusy),
 
-  [kStatus_HAL_CameraNoData](#_page22_x97.00_y114.49),
+  [kStatus_HAL_CameraNoData](#kstatus_hal_cameranodata),
 
-  [kStatus_HAL_CameraNonBlocking](#_page22_x77.24_y128.22),
+  [kStatus_HAL_CameraNonBlocking](#kstatus_hal_cameranonblocking),
 
-  [kStatus_HAL_CameraError](#_page22_x107.47_y142.88)
-
-}
-
-- enum [camera_event_t](#_page22_x70.87_y189.94) {
-
-  [kCameraEvent_SendFrame](#_page22_x101.78_y327.92),
-
-  [kCameraEvent_CameraDeviceInit](#_page22_x77.24_y341.66)
+  [kStatus_HAL_CameraError](#kstatus_hal_cameraerror)
 
 }
 
-- enum [hal_image_status_t](#_page22_x70.87_y389.53) {
+- enum [camera_event_t](#camera_event_t) {
 
-  [MPP_kStatus_HAL_ImageSuccess](#_page22_x77.24_y527.50),
+  [kCameraEvent_SendFrame](#kcameraevent_sendframe),
 
-  [MPP_kStatus_HAL_ImageError](#_page22_x91.20_y542.16)
+  [kCameraEvent_CameraDeviceInit](#kcameraevent_cameradeviceinit)
 
 }
 
-- enum [gfx_rotate_target_t](#_page22_x70.87_y580.00) {
+- enum [hal_image_status_t](#hal_image_status_t) {
+
+  [MPP_kStatus_HAL_ImageSuccess](#mpp_kstatus_hal_imagesuccess),
+
+  [MPP_kStatus_HAL_ImageError](#mpp_kstatus_hal_imageerror)
+
+}
+
+- enum [gfx_rotate_target_t](#gfx_rotate_target_t) {
 
   **kGFXRotateTarget_None**,
 
@@ -191,64 +194,64 @@ Enabling/Disabling Hal components and devices:
 
 }
 
-- enum [hal_valgo_status_t](#_page22_x70.87_y673.12) {
+- enum [hal_valgo_status_t](#hal_valgo_status_t) {
 
-  [kStatus_HAL_ValgoSuccess](#_page23_x89.19_y86.20),
+  [kStatus_HAL_ValgoSuccess](#kstatus_hal_valgosuccess),
 
-  [kStatus_HAL_ValgoMallocError](#_page23_x77.24_y100.86),
+  [kStatus_HAL_ValgoMallocError](#kstatus_hal_valgomallocerror),
 
-  [kStatus_HAL_ValgoInitError](#_page23_x91.19_y115.51),
+  [kStatus_HAL_ValgoInitError](#kstatus_hal_valgoiniterror),
 
-  [kStatus_HAL_ValgoError](#_page23_x103.15_y130.17),
+  [kStatus_HAL_ValgoError](#kstatus_hal_valgoerror),
 
-  [kStatus_HAL_ValgoStop](#_page23_x104.63_y144.83)
-
-}
-
-- enum [display_event_t](#_page23_x70.87_y192.81) {
-
-  [kDisplayEvent_RequestFrame](#_page23_x77.24_y330.78)
+  [kStatus_HAL_ValgoStop](#kstatus_hal_valgostop)
 
 }
 
-- enum [hal_display_status_t](#_page23_x70.87_y378.76) {
+- enum [display_event_t](#display_event_t) {
 
-  [kStatus_HAL_DisplaySuccess](#_page23_x93.51_y516.63),
-
-  [kStatus_HAL_DisplayTxBusy](#_page23_x97.50_y531.18),
-
-  [kStatus_HAL_DisplayNonBlocking](#_page23_x77.24_y545.73),
-
-  [kStatus_HAL_DisplayError](#_page23_x107.47_y560.38)
+  [kDisplayEvent_RequestFrame](#kdisplayevent_requestframe)
 
 }
 
-- enum [mpp_memory_policy_t](#_page23_x70.87_y606.20) {
+- enum [hal_display_status_t](#hal_display_status_t) {
 
-  [HAL_MEM_ALLOC_NONE](#_page24_x88.20_y86.20),
+  [kStatus_HAL_DisplaySuccess](#kstatus_hal_displaysuccess),
 
-  [HAL_MEM_ALLOC_INPUT](#_page24_x87.20_y100.75),
+  [kStatus_HAL_DisplayTxBusy](#kstatus_hal_displaytxbusy),
 
-  [HAL_MEM_ALLOC_OUTPUT](#_page24_x77.24_y127.25),
+  [kStatus_HAL_DisplayNonBlocking](#kstatus_hal_displaynonblocking),
 
-  [HAL_MEM_ALLOC_BOTH](#_page24_x89.55_y153.76)
+  [kStatus_HAL_DisplayError](#kstatus_hal_displayerror)
 
 }
 
-- enum [checksum_type_t](#_page24_x70.87_y201.63) {
+- enum [mpp_memory_policy_t](#mpp_memory_policy_t) {
 
-  [CHECKSUM_TYPE_PISANO](#_page24_x99.65_y337.71),
+  [HAL_MEM_ALLOC_NONE](#hal_mem_alloc_none),
 
-  [CHECKSUM_TYPE_CRC_ELCDIF](#_page24_x77.24_y352.37)
+  [HAL_MEM_ALLOC_INPUT](#hal_mem_alloc_input),
+
+  [HAL_MEM_ALLOC_OUTPUT](#hal_mem_alloc_output),
+
+  [HAL_MEM_ALLOC_BOTH](#hal_mem_alloc_both)
+
+}
+
+- enum [checksum_type_t](#checksum_type_t) {
+
+  [CHECKSUM_TYPE_PISANO](#checksum_type_pisano),
+
+  [CHECKSUM_TYPE_CRC_ELCDIF](#checksum_type_crc_elcdif)
 
 }
 
 **Functions**
 
-- int[ HAL_GfxDev_CPU_Register ](#_page24_x70.87_y449.33)(gfx\_dev\_t ∗dev)
-- int[ HAL_GfxDev_GPU_Register ](#_page24_x70.87_y686.24)(gfx\_dev\_t ∗dev)
-- int[ HAL_JPEG_CPU_Register ](#_page26_x70.87_y192.15)(vdec\_dev\_t ∗dev)
-- int[ HAL_JPEG_HW_Register ](#_page26_x70.87_y448.04)(vdec\_dev\_t ∗dev)
+- int[ HAL_GfxDev_CPU_Register ](#hal_gfxdev_cpu_register)(gfx\_dev\_t ∗dev)
+- int[ HAL_GfxDev_GPU_Register ](#hal_gfxdev_gpu_register)(gfx\_dev\_t ∗dev)
+- int[ HAL_JPEG_CPU_Register ](#hal_jpeg_cpu_register)(vdec\_dev\_t ∗dev)
+- int[ HAL_JPEG_HW_Register ](#hal_jpeg_hw_register)(vdec\_dev\_t ∗dev)
 - int **setup\_static\_image\_elt** (static\_image\_t ∗elt)
 - uint32\_t **calc\_checksum** (int size\_b, void ∗pbuf)
 
@@ -258,7 +261,9 @@ This section provides the detailed documentation for the MPP HAL types.
 
 ##### 2.1.1.1 Data Structure Documentation  
 
-1. **struct<a name="_page12_x70.87_y161.91"></a> camera\_dev\_static\_config\_t**  
+##### camera_dev_static_config_t
+
+**struct camera\_dev\_static\_config\_t**
 
 Structure that characterizes the camera device.  
 
@@ -288,7 +293,9 @@ Structure that characterizes the camera device.
 |bool|stream\_requested[NUM\_STREAMS]|flag to track if a stream is required for enqueue|  
 |bool|in\_advance\_enqueue|flag to indicate advance enqueue mode|  
 
-2. **struct<a name="_page12_x70.87_y618.37"></a> camera\_dev\_private\_capability\_t**  
+##### camera_dev_private_capability_t
+
+**struct camera\_dev\_private\_capability\_t**
 
 Camera device private capability.  
 
@@ -296,24 +303,28 @@ Camera device private capability.
 
 |type|name|description|  
 |-|-|-|
-|[camera_dev_callback_t](#_page20_x70.87_y647.27)|callback|callback|
+|[camera_dev_callback_t](#camera_dev_callback_t)|callback|callback|
 |void ∗|param|parameter for the callback|  
 
-3. **struct<a name="_page13_x70.87_y70.87"></a> \_camera\_dev**  
+##### camera_dev
 
-Camera devices can enqueue and dequeue frames as well as react to events from input devices via the "input← Notify" function. Camera devices can use any number of interfaces, including MIPI and CSI as long as the HAL driver implements the necessary functions found in[ camera_dev_operator_t.](#_page27_x70.87_y515.04) Examples of camera devices include the Orbbec U1S 3D SLM camera module and the OnSemi MT9M114 camera module.
+**struct \_camera\_dev**
+
+Camera devices can enqueue and dequeue frames as well as react to events from input devices via the "input← Notify" function. Camera devices can use any number of interfaces, including MIPI and CSI as long as the HAL driver implements the necessary functions found in[ camera_dev_operator_t.](#camera_dev_operator_t) Examples of camera devices include the Orbbec U1S 3D SLM camera module and the OnSemi MT9M114 camera module.
  
 **Data Fields**  
 
 |int|id|unique id which is assigned by camera manager during registration|
 | - | - | :- |
-|char|name[[HAL_DEVICE_NAME_MAX_L](#_page20_x247.59_y492.45)|[ENGTHname of\]](#_page20_x247.59_y492.45) the device|
-|const[ camera_dev_operator_t ](#_page27_x70.87_y515.04)∗|ops|operations|
-|[camera_dev_static_config_t](#_page12_x70.87_y161.91)|config|static configurations|
-|[camera_dev_private_capability_t](#_page12_x70.87_y603.13)|cap|private capability|
+|char|name[[HAL_DEVICE_NAME_MAX_L](#hal_device_name_max_l)|[ENGTHname of\]] the device|
+|const[ camera_dev_operator_t ](#camera_dev_operator_t)∗|ops|operations|
+|[camera_dev_static_config_t](#camera_dev_static_config_t)|config|static configurations|
+|[camera_dev_private_capability_t](#camera_dev_private_capability_t)|cap|private capability|
 |void ∗|data|device private data|
 
-4. **struct<a name="_page13_x70.87_y372.02"></a> static\_image\_static\_config\_t**  
+##### static_image_static_config_t
+
+**struct static\_image\_static\_config\_t**
 
 Structure that characterizes the image element.  
 
@@ -330,7 +341,9 @@ Structure that characterizes the image element.
 |bool|stripe|stripe mode|  
 |int|compressed\_size|compressed size in bytes|  
 
-5. **struct<a name="_page13_x70.87_y622.87"></a> \_static\_image** 
+##### static_image
+
+**struct \_static\_image** 
  
 Attributes of an image element. 
  
@@ -339,12 +352,14 @@ Attributes of an image element.
 |type|name|description|  
 |---|---|---|  
 |int|id|unique id which is assigned by image manager|  
-|const[ static_image_operator_t ](#_page29_x70.87_y185.80)∗|ops|operations|
-|[static_image_static_config_t](#_page13_x70.87_y356.78)|config|static configs|
+|const[ static_image_operator_t ](#static_image_operator_t)∗|ops|operations|
+|[static_image_static_config_t](#static_image_static_config_t)|config|static configs|
 |int|stripe\_idx|the current stripe index|
 |uint8\_t ∗|buffer|static image buffer|
 
-6. **struct<a name="_page13_x70.87_y649.13"></a> gfx\_surface\_t**  
+##### gfx_surface_t
+
+**struct gfx\_surface\_t**  
 
 Gfx surface parameters. 
  
@@ -364,7 +379,9 @@ Gfx surface parameters.
 |void ∗|buf|buffer|  
 |void ∗|lock|the structure is determined by hal and set to null if not use in hal|  
 
-7. **struct<a name="_page14_x70.87_y334.92"></a> gfx\_rotate\_config\_t**  
+##### gfx_rotate_config_t
+
+**struct gfx\_rotate\_config\_t**  
 
 gfx rotate configuration. 
  
@@ -375,20 +392,24 @@ gfx rotate configuration.
 |gfx\_rotate\_target\_t|target|| 
 |mpp\_rotate\_degree\_t|degree||  
 
-8. **struct<a name="_page14_x70.87_y485.87"></a> \_gfx\_dev** 
+##### gfx_dev
+
+**struct \_gfx\_dev** 
  
 **Data Fields**  
 
 |type|name|description|  
 |---|---|---|  
 |int|id||  
-|const[ gfx_dev_operator_t ](#_page29_x70.87_y493.39)|ops||
-|[gfx_surface_t](#_page14_x70.87_y70.87)|src||
-|[gfx_surface_t](#_page14_x70.87_y70.87)|dst||
-|[mpp_callback_t](#_page21_x70.87_y205.33)|callback||
+|const[ gfx_dev_operator_t ](#gfx_dev_operator_t)|ops||
+|[gfx_surface_t](#gfx_surface_t)|src||
+|[gfx_surface_t](#gfx_surface_t)|dst||
+|[mpp_callback_t](#mpp_callback_t)|callback||
 |void ∗|user\_data||  
 
-9. **struct<a name="_page14_x70.87_y652.72"></a> hal\_rect\_t**  
+##### hal_rect_t
+
+**struct hal\_rect\_t**
 
 rectangle positions.  
 
@@ -401,81 +422,89 @@ rectangle positions.
 |int|bottom||  
 |int|right||  
 
-10. **struct<a name="_page15_x70.87_y149.75"></a><a name="_page15_x70.87_y134.51"></a> \_vdec\_dev**
+##### vdec_dev_t
+
+**struct \_vdec\_dev**
 
 **Data Fields**  
 
 |type|name|description|  
 |---|---|---|
 |int|id||
-|const[ vdec_dev_operator_t ](#_page29_x70.87_y771.02)∗|ops||
-|[mpp_callback_t](#_page21_x70.87_y205.33)|callback||
+|const[ vdec_dev_operator_t ](#vdec_dev_operator_t)∗|ops||
+|[mpp_callback_t](#mpp_callback_t)|callback||
 |void ∗|user\_data||
 
-11. **struct<a name="_page15_x70.87_y149.75"></a> model\_param\_t**  
+##### model_param_t
+
+**struct model\_param\_t**  
 
 Structure passed to HAL as description of the binary model provided by user.  
 
 **Data Fields** 
  
-- const void ∗[model_data](#_page15_x217.36_y578.17)
-- int[ model_size](#_page15_x70.87_y667.87)
-- float[ model_input_mean](#_page15_x70.87_y757.58)
-- float[ model_input_std](#_page16_x70.87_y102.56)
-- mpp\_inference\_params\_t[ inference_params](#_page16_x70.87_y167.46)
-- int[ height](#_page16_x70.87_y232.36)
-- int[ width](#_page16_x70.87_y297.26)
-- mpp\_pixel\_format\_t[ format](#_page16_x70.87_y374.12)
-- mpp\_tensor\_type\_t[ inputType](#_page16_x70.87_y439.02)
-- mpp\_tensor\_order\_t[ tensor_order](#_page16_x70.87_y503.92)
-- int(∗[evt_callback_f ](#_page16_x70.87_y568.82))(mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
-- void ∗[cb_userdata](#_page16_x70.87_y645.68)
+- const void ∗[model_data](#model_data)
+- int[ model_size](#model_size)
+- float[ model_input_mean](#model_input_mean)
+- float[ model_input_std](#model_input_std)
+- mpp\_inference\_params\_t[ inference_params](#inference_params)
+- int[ height](#height)
+- int[ width](#width)
+- mpp\_pixel\_format\_t[ format](#format)
+- mpp\_tensor\_type\_t[ inputType](#inputtype)
+- mpp\_tensor\_order\_t[ tensor_order](#tensor_order)
+- int(∗[evt_callback_f ](#evt_callback_f))(mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
+- void ∗[cb_userdata](#cb_userdata)
 
 **Field Documentation** 
 
-<a name="_page15_x217.36_y578.17"></a>**model\_data**
+##### model_data
 
 const void∗ model\_param\_t::model\_data pointer to model binary
 
-<a name="_page15_x70.87_y667.87"></a>**model\_size**
+##### model_size
 
 int model\_param\_t::model\_size model binary size
 
-<a name="_page15_x70.87_y757.58"></a>**model\_input\_mean**
+##### model_input_mean
 
 float model\_param\_t::model\_input\_mean
 
 model 'mean' of input values, used for normalization
 
-<a name="_page16_x70.87_y102.56"></a>**model\_input\_std**
+##### model_input_std
 
 float model\_param\_t::model\_input\_std
 
-model<a name="_page16_x70.87_y102.56"></a> 'standard deviation' of input values, used for normalization
+##### model_input_std
+
+model 'standard deviation' of input values, used for normalization
 
 **inference\_params**
 
 mpp\_inference\_params\_t model\_param\_t::inference\_params inference parameters
 
-<a name="_page16_x70.87_y232.36"></a>**height**
+##### height
 
 int model\_param\_t::height frame height
 
-<a name="_page16_x70.87_y297.26"></a>**width**
+##### width
 
 int model\_param\_t::width frame width
 
-<a name="_page16_x70.87_y374.12"></a>**format**
+##### format
 
 mpp\_pixel\_format\_t model\_param\_t::format pixel format
 
-<a name="_page16_x70.87_y439.02"></a>**inputType**
+##### inputtype
 
 mpp\_tensor\_type\_t model\_param\_t::inputType input type
 
-<a name="_page16_x70.87_y503.92"></a>**tensor\_order**
+##### tensor_order
 
-mpp\_tensor\_order\_t model\_param\_t::tensor\_order <a name="_page16_x70.87_y503.92"></a>tensor order
+##### tensor_order
+
+mpp\_tensor\_order\_t model\_param\_t::tensor\_order tensor order
 
 **evt\_callback\_f**
 
@@ -483,13 +512,15 @@ int(∗ model\_param\_t::evt\_callback\_f) (mpp\_t mpp, mpp\_evt\_t evt, void �
 
 the callback to be called when model output is ready
 
-<a name="_page16_x70.87_y568.82"></a>**cb\_userdata**
+##### evt_callback_f
 
 void∗ model\_param\_t::cb\_userdata
 
 pointer to user data, should be passed by callback
 
-12. **struct<a name="_page16_x70.87_y721.95"></a><a name="_page16_x70.87_y702.04"></a> valgo\_dev\_private\_capability\_t** 
+##### valgo_dev_private_capability_t
+
+**struct valgo\_dev\_private\_capability\_t** 
 
 Valgo devices private capability.
 
@@ -499,7 +530,9 @@ Valgo devices private capability.
 |-|-|-|
 |void ∗|param|param for the callback|
 
-13. **struct<a name="_page17_x70.87_y136.64"></a><a name="_page17_x70.87_y121.40"></a> vision\_frame\_t**
+##### vision_frame_t
+
+**struct vision\_frame\_t**
 
 Characteristics that need to be defined by a vision algo.
 
@@ -513,7 +546,9 @@ Characteristics that need to be defined by a vision algo.
 |mpp\_pixel\_format\_t|format|pixel format|
 |void ∗|input\_buf|pixel input buffer|
 
-14. **struct<a name="_page17_x70.87_y330.21"></a><a name="_page17_x70.87_y314.97"></a> \_vision\_algo\_dev**
+##### vision_algo_dev_t
+
+**struct \_vision\_algo\_dev**
 
 Attributes of a vision algo device.
 
@@ -522,12 +557,14 @@ Attributes of a vision algo device.
 |type|name|description|
 |-|-|-|
 |int|id|unique id which is assigned by algorithm manager during the registration|
-|char|name[[HAL_DEVICE_NAME_MAX_L](#_page20_x247.59_y492.45)|[ENGTHname to\]](#_page20_x247.59_y492.45) identify|
-|[valgo_dev_private_capability_t](#_page16_x70.87_y707.58)|cap|private capability|
-|<p>const[ vision_algo_dev_operator_t](#_page30_x70.87_y240.33)</p><p>∗</p>|ops|operations|
+|char|name[[HAL_DEVICE_NAME_MAX_L](#hal_device_name_max_l)|[ENGTHname to\]] identify|
+|[valgo_dev_private_capability_t](#valgo_dev_private_capability_t)|cap|private capability|
+|<p>const[ vision_algo_dev_operator_t](#vision_algo_dev_operator_t)</p><p>∗</p>|ops|operations|
 |vision\_algo\_private\_data\_t|priv\_data|private data|
 
-15. **struct<a name="_page17_x70.87_y558.28"></a><a name="_page17_x70.87_y543.04"></a> \_display\_dev\_private\_capability**
+##### display_dev_private_capability_t
+
+**struct \_display\_dev\_private\_capability**
 
 Structure that characterizes the display device.
 
@@ -548,11 +585,12 @@ Structure that characterizes the display device.
 |mpp\_pixel\_format\_t|format|pixel format|
 |int|nbFrameBuffer|number of input buffers|
 |void ∗∗|frameBuffers|array of pointers to frame buffer|
-|[mpp_callback_t](#_page20_x70.87_y569.51)|callback|callback|
+|[mpp_callback_t](#mpp_callback_t)|callback|callback|
 |void ∗|user\_data|parameter for the callback|
 |void ∗|handle|Handle to the LVGL widget 'image'.|
+|void ∗∗|p\_in\_buf\_addr|Pointer to current input buffer address.|
 
-16. **struct<a name="_page18_x70.87_y223.74"></a><a name="_page18_x70.87_y208.50"></a> \_display\_dev**
+##### display_dev_t
 
 Attributes of a display device. hal display device declaration.
 
@@ -563,11 +601,13 @@ Display devices can be used to display images, GUI overlays, etc. Examples of di
 |type|name|description|
 |-|-|-|
 |int|id|unique id which is assigned by the display manager during the registration|
-|char|name[[HAL_DEVICE_NAME_MAX_L](#_page20_x247.59_y492.45)|[ENGTHname of\]](#_page20_x247.59_y492.45) the device|
-|const[ display_dev_operator_t ](#_page31_x70.87_y119.49)∗|ops|operations|
+|char|name[[HAL_DEVICE_NAME_MAX_L](#hal_device_name_max_l)|[ENGTHname of\]] the device|
+|const[ display_dev_operator_t ](#display_dev_operator_t)∗|ops|operations|
 |display\_dev\_private\_capability\_t|cap|private capability|
 
-17. **struct<a name="_page18_x70.87_y488.55"></a><a name="_page18_x70.87_y473.31"></a> hw\_buf\_desc\_t**
+##### hw_buf_desc_t
+
+**struct hw\_buf\_desc\_t**
 
 the hardware specific buffer requirements
 
@@ -583,43 +623,53 @@ the hardware specific buffer requirements
 |unsigned char ∗|addr|the aligned buffer address|
 |unsigned char ∗|heap\_p|pointer to the heap that should be freed|
 
-18. **struct<a name="_page18_x70.87_y724.42"></a><a name="_page18_x70.87_y709.18"></a> hal\_img\_decoder\_setup\_t!**
+##### hal_img_decoder_setup_t
+
+**struct hal\_img\_decoder\_setup\_t!**
 
 **Data Fields**
 
 |type|name|description|
 |-|-|-|
 |const char ∗|vdec\_dev\_name||
-|[img_decoder_setup_func_t](#_page21_x70.87_y292.36)|decoder\_setup\_func||
+|[img_decoder_setup_func_t](#img_decoder_setup_func_t)|decoder\_setup\_func||
 
-19. **struct<a name="_page19_x70.87_y135.04"></a> hal\_graphics\_setup\_t**
+##### hal_graphics_setup_t
+
+**struct hal\_graphics\_setup\_t**
 
 **Data Fields**
 
 |type|name|description|
 |-|-|-|
 |const char ∗|gfx\_dev\_name||
-|[graphic_setup_func_t](#_page21_x70.87_y379.38)|gfx\_setup\_func||
+|[graphic_setup_func_t](#graphic_setup_func_t)|gfx\_setup\_func||
 
-20. **struct<a name="_page19_x70.87_y246.14"></a> hal\_display\_setup\_t**
+##### hal_display_setup_t
+
+**struct hal\_display\_setup\_t**
 
 **Data Fields**
 
 |type|name|description|
 |-|-|-|
 |const char ∗|display\_name||
-|[display_setup_func_t](#_page21_x70.87_y466.41)|display\_setup\_func||
+|[display_setup_func_t](#display_setup_func_t)|display\_setup\_func||
 
-21. **struct<a name="_page19_x70.87_y356.68"></a> hal\_camera\_setup\_t**
+##### hal_camera_setup_t
+
+**struct hal\_camera\_setup\_t**
 
 **Data Fields**
 
 |type|name|description|
 |-|-|-|
 |const char ∗|camera\_name||
-|[camera_setup_func_t](#_page21_x70.87_y553.43)|camera\_setup\_func||
+|[camera_setup_func_t](#camera_setup_func_t)|camera\_setup\_func||
 
-22. **struct<a name="_page19_x70.87_y466.41"></a> checksum\_data\_t**
+##### checksum_data_t
+
+**struct checksum\_data\_t**
 
 computed checksum
 
@@ -627,50 +677,53 @@ computed checksum
 
 |type|name|description|
 |-|-|-|
-|[checksum_type_t](#_page24_x70.87_y201.63)|type|checksum calculation method|
+|[checksum_type_t](#checksum_type_t)|type|checksum calculation method|
 |uint32\_t|value|checksum value|
 
 ##### 2.1.1.2 Macro Definition Documentation
 
-1. **HAL\_GFX\_DEV\_CPU\_NAME**
+**HAL\_GFX\_DEV\_CPU\_NAME**
 
-<a name="_page19_x70.87_y670.21"></a>#define HAL\_GFX\_DEV\_CPU\_NAME hal graphics (gfx) device declaration.
+#define HAL\_GFX\_DEV\_CPU\_NAME hal graphics (gfx) device declaration.
 
-Graphics processing devices can be used to perform conversion from one image format to another, resize images and compose images on top of one another. Examples of graphics devices include<a name="_page19_x397.39_y759.07"></a> the PXP (pixel pipeline) found on many i.MXRT series MCUs. Name of the graphic device using CPU operations
+##### gui_printf_buf_size
 
-2. **GUI\_PRINTF\_BUF\_SIZE<a name="_page20_x70.87_y70.87"></a> [1/2]**
+Graphics processing devices can be used to perform conversion from one image format to another, resize images and compose images on top of one another. Examples of graphics devices include the PXP (pixel pipeline) found on many i.MXRT series MCUs. Name of the graphic device using CPU operations
 
-#define GUI\_PRINTF\_BUF\_SIZE Local text buffer size.
-
-3. **GUI\_PRINTF\_BUF\_SIZE<a name="_page20_x70.87_y168.13"></a> [2/2]**
+**GUI\_PRINTF\_BUF\_SIZE**
 
 #define GUI\_PRINTF\_BUF\_SIZE Local text buffer size.
 
-4. **HAL\_VDEC\_DEV\_NAME**
+##### hal_vdec_dev_name
 
-<a name="_page20_x70.87_y277.23"></a><a name="_page20_x70.87_y250.36"></a>#define HAL\_VDEC\_DEV\_NAME
+#define HAL\_VDEC\_DEV\_NAME
 
 hal video decoder (vdec) device declaration.
 
-Video decoder devices can be used to perform decompression of image. Examples of decoder devices include the PNG/JPEG<a name="_page20_x115.13_y383.36"></a> HW or SW found on many i.MXRT series MCUs. Name of the jpeg decoder device using CPU operations
+##### max_input_ports
 
-5. **MAX\_INPUT\_PORTS**
+Video decoder devices can be used to perform decompression of image. Examples of decoder devices include the PNG/JPEG HW or SW found on many i.MXRT series MCUs. Name of the jpeg decoder device using CPU operations
 
-<a name="_page20_x70.87_y412.11"></a>#define MAX\_INPUT\_PORTS
+**MAX\_INPUT\_PORTS**
+
+#define MAX\_INPUT\_PORTS
 
 HAL public types header.
 
 maximum number of element inputs/outputs
 
-6. <a name="_page20_x247.59_y492.45"></a>**HAL\_DEVICE\_NAME\_MAX\_LENGTH**
+##### hal_device_name_max_l
 
-<a name="_page20_x70.87_y521.21"></a>#define HAL\_DEVICE\_NAME\_MAX\_LENGTH maximum length of device name
+**HAL\_DEVICE\_NAME\_MAX\_LENGTH**
+
+#define HAL\_DEVICE\_NAME\_MAX\_LENGTH maximum length of device name
 
 ##### 2.1.1.3 Typedef Documentation
 
-1. **camera\_dev\_callback\_t**
 
-<a name="_page20_x70.87_y674.13"></a><a name="_page20_x70.87_y647.27"></a>typedef int(∗ camera\_dev\_callback\_t) (const camera\_dev\_t ∗dev, [camera_event_t](#_page22_x70.87_y189.94) event, void ∗param, uint8\_t fromISR)
+##### camera_dev_callback_t
+
+typedef int(∗ camera\_dev\_callback\_t) (const camera\_dev\_t ∗dev, [camera_event_t](#camera_event_t) event, void ∗param, uint8\_t fromISR)
 
 Callback function to notify camera manager that one frame is dequeued.
 
@@ -687,45 +740,52 @@ Callback function to notify camera manager that one frame is dequeued.
 
 0 if the operation was successfully
 
-2. **mpp\_callback\_t**
 
-<a name="_page21_x70.87_y231.61"></a><a name="_page21_x70.87_y205.33"></a>typedef int(∗ mpp\_callback\_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data) The mpp callback function prototype.
+##### mpp_callback_t
 
-3. **img\_decoder\_setup\_func\_t**
+typedef int(∗ mpp\_callback\_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data) The mpp callback function prototype.
 
-<a name="_page21_x70.87_y318.63"></a><a name="_page21_x70.87_y292.36"></a>typedef int(∗ img\_decoder\_setup\_func\_t) (vdec\_dev\_t ∗) video decoder setup
 
-4. **graphic\_setup\_func\_t**
+##### img_decoder_setup_func_t
 
-<a name="_page21_x70.87_y405.66"></a><a name="_page21_x70.87_y379.38"></a>typedef int(∗ graphic\_setup\_func\_t) (gfx\_dev\_t ∗) graphics setup
+typedef int(∗ img\_decoder\_setup\_func\_t) (vdec\_dev\_t ∗) video decoder setup
 
-5. **display\_setup\_func\_t**
 
-<a name="_page21_x70.87_y492.69"></a><a name="_page21_x70.87_y466.41"></a>typedef int(∗ display\_setup\_func\_t) (display\_dev\_t ∗) display setup
+##### graphic_setup_func_t
 
-6. **camera\_setup\_func\_t**
+typedef int(∗ graphic\_setup\_func\_t) (gfx\_dev\_t ∗) graphics setup
 
-<a name="_page21_x70.87_y579.71"></a><a name="_page21_x70.87_y553.43"></a>typedef int(∗ camera\_setup\_func\_t) (const char ∗, camera\_dev\_t ∗) camera setup
+
+##### display_setup_func_t
+
+typedef int(∗ display\_setup\_func\_t) (display\_dev\_t ∗) display setup
+
+
+##### camera_setup_func_t
+
+typedef int(∗ camera\_setup\_func\_t) (const char ∗, camera\_dev\_t ∗) camera setup
 
 ##### 2.1.1.4 Enumeration Type Documentation
 
-1. **hal\_camera\_status\_t**
 
-<a name="_page21_x70.87_y706.50"></a><a name="_page21_x70.87_y680.23"></a>enum [hal_camera_status_t ](#_page21_x70.87_y680.23)Camera return status.
+##### hal_camera_status_t
+
+enum [hal_camera_status_t ](#hal_camera_status_t)Camera return status.
 
 **Enumerator**
 
 |label|description|
 |-|-|
-|<a name="_page22_x93.51_y86.20"></a>kStatus\_HAL\_CameraSuccess|HAL camera successful.|
-|<a name="_page22_x107.46_y99.94"></a>kStatus\_HAL\_CameraBusy|Camera is busy.|
-|<a name="_page22_x97.00_y114.49"></a>kStatus\_HAL\_CameraNoData|No data available from camera.|
-|<a name="_page22_x77.24_y128.22"></a>kStatus\_HAL\_CameraNonBlocking|Camera will return immediately.|
-|<a name="_page22_x107.47_y142.88"></a>kStatus\_HAL\_CameraError|Error occurs on HAL Camera.|
+|<a name="kstatus_hal_camerasuccess"></a>kStatus\_HAL\_CameraSuccess|HAL camera successful.|
+|<a name="kstatus_hal_camerabusy"></a>kStatus\_HAL\_CameraBusy|Camera is busy.|
+|<a name="kstatus_hal_cameranodata"></a>kStatus\_HAL\_CameraNoData|No data available from camera.|
+|<a name="kstatus_hal_cameranonblocking"></a>kStatus\_HAL\_CameraNonBlocking|Camera will return immediately.|
+|<a name="kstatus_hal_cameraerror"></a>kStatus\_HAL\_CameraError|Error occurs on HAL Camera.|
 
-2. **camera\_event\_t**
 
-<a name="_page22_x70.87_y217.14"></a><a name="_page22_x70.87_y189.94"></a>enum [camera_event_t](#_page22_x70.87_y189.94)
+##### camera_event_t
+
+enum [camera_event_t](#camera_event_t)
 
 Type of events that are supported by calling the callback function.
 
@@ -733,27 +793,30 @@ Type of events that are supported by calling the callback function.
 
 |label|description|
 |-|-|
-|<a name="_page22_x101.78_y327.92"></a>kCameraEvent\_SendFrame|Camera new frame is available.|
-|<a name="_page22_x77.24_y341.66"></a>kCameraEvent\_CameraDeviceInit|Camera device finished the initialization process.|
+|<a name="kcameraevent_sendframe"></a>kCameraEvent\_SendFrame|Camera new frame is available.|
+|<a name="kcameraevent_cameradeviceinit"></a>kCameraEvent\_CameraDeviceInit|Camera device finished the initialization process.|
 
-3. **hal\_image\_status\_t**
 
-<a name="_page22_x70.87_y416.72"></a><a name="_page22_x70.87_y389.53"></a>enum [hal_image_status_t ](#_page22_x70.87_y389.53)static image return status
+##### hal_image_status_t
+
+enum [hal_image_status_t ](#hal_image_status_t)static image return status
 
 **Enumerator**
 
 |label|description|
 |-|-|
-|<a name="_page22_x77.24_y527.50"></a>MPP\_kStatus\_HAL\_ImageSuccess|Successfully.|
-|<a name="_page22_x91.20_y542.16"></a>MPP\_kStatus\_HAL\_ImageError|Error occurs on HAL Image.|
+|<a name="mpp_kstatus_hal_imagesuccess"></a>MPP\_kStatus\_HAL\_ImageSuccess|Successfully.|
+|<a name="mpp_kstatus_hal_imageerror"></a>MPP\_kStatus\_HAL\_ImageError|Error occurs on HAL Image.|
 
-4. **gfx\_rotate\_target\_t**
 
-<a name="_page22_x70.87_y606.44"></a><a name="_page22_x70.87_y580.00"></a>enum [gfx_rotate_target_t ](#_page22_x70.87_y580.00)gfx rotate target
+##### gfx_rotate_target_t
 
-5. **hal\_valgo\_status\_t**
+enum [gfx_rotate_target_t ](#gfx_rotate_target_t)gfx rotate target
 
-<a name="_page22_x70.87_y699.56"></a><a name="_page22_x70.87_y673.12"></a>enum [hal_valgo_status_t](#_page22_x70.87_y673.12)
+
+##### hal_valgo_status_t
+
+enum [hal_valgo_status_t](#hal_valgo_status_t)
 
 Valgo Error codes for hal operations.
 
@@ -761,15 +824,16 @@ Valgo Error codes for hal operations.
 
 |label|description|
 |-|-|
-|<a name="_page23_x89.19_y86.20"></a>kStatus\_HAL\_ValgoSuccess|Successfully.|
-|<a name="_page23_x77.24_y100.86"></a>kStatus\_HAL\_ValgoMallocError|memory allocation failed for HAL algorithm|
-|<a name="_page23_x91.19_y115.51"></a>kStatus\_HAL\_ValgoInitError|algorithm initialization error|
-|<a name="_page23_x103.15_y130.17"></a>kStatus\_HAL\_ValgoError|Error occurs in HAL algorithm.|
-|<a name="_page23_x104.63_y144.83"></a>kStatus\_HAL\_ValgoStop|HAL algorithm stop.|
+|<a name="kstatus_hal_valgosuccess"></a>kStatus\_HAL\_ValgoSuccess|Successfully.|
+|<a name="kstatus_hal_valgomallocerror"></a>kStatus\_HAL\_ValgoMallocError|memory allocation failed for HAL algorithm|
+|<a name="kstatus_hal_valgoiniterror"></a>kStatus\_HAL\_ValgoInitError|algorithm initialization error|
+|<a name="kstatus_hal_valgoerror"></a>kStatus\_HAL\_ValgoError|Error occurs in HAL algorithm.|
+|<a name="kstatus_hal_valgostop"></a>kStatus\_HAL\_ValgoStop|HAL algorithm stop.|
 
-6. **display\_event\_t**
 
-<a name="_page23_x70.87_y220.00"></a><a name="_page23_x70.87_y192.81"></a>enum [display_event_t](#_page23_x70.87_y192.81)
+##### display_event_t
+
+enum [display_event_t](#display_event_t)
 
 Type of events that are supported by calling the callback function.
 
@@ -777,24 +841,26 @@ Type of events that are supported by calling the callback function.
 
 |label|description|
 |-|-|
-|<a name="_page23_x77.24_y330.78"></a>kDisplayEvent\_RequestFrame|Display finished sending the frame asynchronously, provide another frame.|
+|<a name="kdisplayevent_requestframe"></a>kDisplayEvent\_RequestFrame|Display finished sending the frame asynchronously, provide another frame.|
 
-7. **hal\_display\_status\_t**
 
-<a name="_page23_x70.87_y405.96"></a><a name="_page23_x70.87_y378.76"></a>enum [hal_display_status_t ](#_page23_x70.87_y378.76)Error codes for display hal devices.
+##### hal_display_status_t
+
+enum [hal_display_status_t ](#hal_display_status_t)Error codes for display hal devices.
 
 **Enumerator**
 
 |label|description|
 |-|-|
-|<a name="_page23_x93.51_y516.63"></a>kStatus\_HAL\_DisplaySuccess|HAL display successful.|
-|<a name="_page23_x97.50_y531.18"></a>kStatus\_HAL\_DisplayTxBusy|Display tx is busy.|
-|<a name="_page23_x77.24_y545.73"></a>kStatus\_HAL\_DisplayNonBlocking|Display will return immediately.|
-|<a name="_page23_x107.47_y560.38"></a>kStatus\_HAL\_DisplayError|Error occurs on HAL Display.|
+|<a name="kstatus_hal_displaysuccess"></a>kStatus\_HAL\_DisplaySuccess|HAL display successful.|
+|<a name="kstatus_hal_displaytxbusy"></a>kStatus\_HAL\_DisplayTxBusy|Display tx is busy.|
+|<a name="kstatus_hal_displaynonblocking"></a>kStatus\_HAL\_DisplayNonBlocking|Display will return immediately.|
+|<a name="kstatus_hal_displayerror"></a>kStatus\_HAL\_DisplayError|Error occurs on HAL Display.|
 
-8. **mpp\_memory\_policy\_t**
 
-<a name="_page23_x70.87_y633.24"></a><a name="_page23_x70.87_y606.20"></a>enum [mpp_memory_policy_t](#_page23_x70.87_y606.20)
+##### mpp_memory_policy_t
+
+enum [mpp_memory_policy_t](#mpp_memory_policy_t)
 
 The memory allocation policy of an element's hal.
 
@@ -804,27 +870,28 @@ During the pipeline construction, the HAL uses this enum to tell the pipeline if
 
 |label|description|
 |-|-|
-|<a name="_page24_x88.20_y86.20"></a>HAL\_MEM\_ALLOC\_NONE|element requires buffers to be provided by other elements, or by the pipeline|
-|<a name="_page24_x87.20_y100.75"></a>HAL\_MEM\_ALLOC\_INPUT|element allocates its input buffer, it may require output buffers to be provided by other elements, or by the pipeline|
-|<a name="_page24_x77.24_y127.25"></a>HAL\_MEM\_ALLOC\_OUTPUT|element allocates its output buffer, it may require input buffers to be provided by other elements, or by the pipeline|
-|<a name="_page24_x89.55_y153.76"></a>HAL\_MEM\_ALLOC\_BOTH|element allocates both its input and output buffers|
+|<a name="hal_mem_alloc_none"></a>HAL\_MEM\_ALLOC\_NONE|element requires buffers to be provided by other elements, or by the pipeline|
+|<a name="hal_mem_alloc_input"></a>HAL\_MEM\_ALLOC\_INPUT|element allocates its input buffer, it may require output buffers to be provided by other elements, or by the pipeline|
+|<a name="hal_mem_alloc_output"></a>HAL\_MEM\_ALLOC\_OUTPUT|element allocates its output buffer, it may require input buffers to be provided by other elements, or by the pipeline|
+|<a name="hal_mem_alloc_both"></a>HAL\_MEM\_ALLOC\_BOTH|element allocates both its input and output buffers|
 
-9. **checksum\_type\_t**
 
-<a name="_page24_x70.87_y228.83"></a><a name="_page24_x70.87_y201.63"></a>enum [checksum_type_t ](#_page24_x70.87_y201.63)checksum calculation method
+##### checksum_type_t
+
+enum [checksum_type_t ](#checksum_type_t)checksum calculation method
 
 **Enumerator**
 
 |label|description|
 |-|-|
-|<a name="_page24_x99.65_y337.71"></a>CHECKSUM\_TYPE\_PISANO|checksum computed using Pisano|
-|<a name="_page24_x77.24_y352.37"></a>CHECKSUM\_TYPE\_CRC\_ELCDIF|checksum computed CRC from ELCDIF|
+|<a name="checksum_type_pisano"></a>CHECKSUM\_TYPE\_PISANO|checksum computed using Pisano|
+|<a name="checksum_type_crc_elcdif"></a>CHECKSUM\_TYPE\_CRC\_ELCDIF|checksum computed CRC from ELCDIF|
 
 ##### 2.1.1.5 Function Documentation
 
-1. **HAL\_GfxDev\_CPU\_Register()**
+**HAL\_GfxDev\_CPU\_Register()**
 
-<a name="_page24_x70.87_y476.53"></a>int HAL\_GfxDev\_CPU\_Register ( gfx\_dev\_t ∗ dev )
+int HAL\_GfxDev\_CPU\_Register ( gfx\_dev\_t ∗ dev )
 
 Register the graphic device with the CPU operations.
 
@@ -838,9 +905,9 @@ Register the graphic device with the CPU operations.
 
 error code (0: success, otherwise: failure)
 
-2. **HAL\_GfxDev\_GPU\_Register()**
+**HAL\_GfxDev\_GPU\_Register()**
 
-<a name="_page24_x70.87_y712.86"></a>int HAL\_GfxDev\_GPU\_Register ( gfx\_dev\_t ∗ dev )
+int HAL\_GfxDev\_GPU\_Register ( gfx\_dev\_t ∗ dev )
 
 Register the graphic device with the GPU operations.
 
@@ -854,9 +921,10 @@ Register the graphic device with the GPU operations.
 
 error code (0: success, otherwise: failure)
 
-3. **HAL\_JPEG\_CPU\_Register()**
 
-<a name="_page26_x70.87_y219.35"></a><a name="_page26_x70.87_y192.15"></a>int HAL\_JPEG\_CPU\_Register (
+##### hal_jpeg_cpu_register
+
+int HAL\_JPEG\_CPU\_Register (
 
 vdec\_dev\_t ∗ dev ) Register the jpeg SW decoder device. 
 
@@ -871,9 +939,10 @@ vdec\_dev\_t ∗ dev ) Register the jpeg SW decoder device.
 
 error code (0: success, otherwise: failure)
 
-4. **HAL\_JPEG\_HW\_Register()**
 
-<a name="_page26_x70.87_y475.23"></a><a name="_page26_x70.87_y448.04"></a>int HAL\_JPEG\_HW\_Register (
+##### hal_jpeg_hw_register
+
+int HAL\_JPEG\_HW\_Register (
 
 vdec\_dev\_t ∗ dev ) Register the jpeg HW decoder device. 
 
@@ -892,26 +961,26 @@ error code (0: success, otherwise: failure)
 
 **Data Structures**
 
-- struct[ camera_dev_operator_t](#_page27_x70.87_y515.04)
-- struct[ static_image_operator_t](#_page29_x70.87_y185.80)
-- struct[ gfx_dev_operator_t](#_page29_x70.87_y493.39)
-- struct[ vdec_dev_operator_t](#_page29_x70.87_y771.02)
-- struct[ vision_algo_dev_operator_t](#_page30_x70.87_y240.33)
-- struct[ display_dev_operator_t](#_page31_x70.87_y119.49)
+- struct[ camera_dev_operator_t](#camera_dev_operator_t)
+- struct[ static_image_operator_t](#static_image_operator_t)
+- struct[ gfx_dev_operator_t](#gfx_dev_operator_t)
+- struct[ vdec_dev_operator_t](#vdec_dev_operator_t)
+- struct[ vision_algo_dev_operator_t](#vision_algo_dev_operator_t)
+- struct[ display_dev_operator_t](#display_dev_operator_t)
 
 **Typedefs**
 
-- typedef int(∗[mpp_callback_t)](#_page32_x70.87_y270.88) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
-- typedef int(∗[mpp_callback_t)](#_page32_x70.87_y270.88) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
+- typedef int(∗[mpp_callback_t)](#mpp_callback_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
+- typedef int(∗[mpp_callback_t)](#mpp_callback_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
 
 **Functions**
 
-- void[ GUI_DrawText ](#_page32_x70.87_y547.58)(uint16\_t ∗lcd\_buf, uint16\_t fcolor, uint16\_t bcolor, uint32\_t width, int x, int y, const char ∗label)
-- static void[ hal_draw_pixel565 ](#_page33_x70.87_y278.65)(uint16\_t ∗pDst, uint32\_t x, uint32\_t y, uint16\_t color, uint32\_t lcd\_w)
-- static void[ hal_draw_text565 ](#_page33_x70.87_y592.07)(uint16\_t ∗lcd\_buf, uint16\_t fcolor, uint16\_t bcolor, uint32\_t width, int x, int y, const char ∗label, int stripe\_top, int stripe\_bottom)
-- static void[ hal_draw_rect565 ](#_page34_x70.87_y364.05)(uint16\_t ∗lcd\_buf,[ hal_rect_t ](#_page14_x70.87_y652.72)rect, mpp\_color\_t rgb, uint32\_t width, int stripe← \_top, int stripe\_bottom)
-- static int[ get_bitpp ](#_page35_x70.87_y118.09)(mpp\_pixel\_format\_t type)
-- void[ swap_2_bytes ](#_page35_x70.87_y251.60)(uint8\_t ∗data, int size)
+- void[ GUI_DrawText ](#gui_drawtext)(uint16\_t ∗lcd\_buf, uint16\_t fcolor, uint16\_t bcolor, uint32\_t width, int x, int y, const char ∗label)
+- static void[ hal_draw_pixel565 ](#hal_draw_pixel565)(uint16\_t ∗pDst, uint32\_t x, uint32\_t y, uint16\_t color, uint32\_t lcd\_w)
+- static void[ hal_draw_text565 ](#hal_draw_text565)(uint16\_t ∗lcd\_buf, uint16\_t fcolor, uint16\_t bcolor, uint32\_t width, int x, int y, const char ∗label, int stripe\_top, int stripe\_bottom)
+- static void[ hal_draw_rect565 ](#hal_draw_rect565)(uint16\_t ∗lcd\_buf,[ hal_rect_t ](#hal_rect_t)rect, mpp\_color\_t rgb, uint32\_t width, int stripe← \_top, int stripe\_bottom)
+- static int[ get_bitpp ](#get_bitpp)(mpp\_pixel\_format\_t type)
+- void[ swap_2_bytes ](#swap_2_bytes)(uint8\_t ∗data, int size)
 
 #### 2.2.1 Detailed Description
 
@@ -919,98 +988,114 @@ This section provides the detailed documentation for the MPP HAL operations that
 
 ##### 2.2.1.1 Data Structure Documentation
 
-1. **struct<a name="_page27_x70.87_y515.04"></a> camera\_dev\_operator\_t**
+##### camera_dev_operator_t
+
+**struct camera\_dev\_operator\_t**
 
 Operation that needs to be implemented by a camera device.
 
 **Data Fields**
 
-- [hal_camera_status_t(](#_page21_x70.87_y680.23)∗[init ](#_page28_x212.37_y68.87))(camera\_dev\_t ∗dev, mpp\_camera\_params\_t ∗config,[ camera_dev_callback_t ](#_page20_x70.87_y647.27)callback, void ∗param)
-- [hal_camera_status_t(](#_page21_x70.87_y680.23)∗[deinit ](#_page28_x70.87_y170.53))(camera\_dev\_t ∗dev)
-- [hal_camera_status_t(](#_page21_x70.87_y680.23)∗[start ](#_page28_x70.87_y260.23))(const camera\_dev\_t ∗dev)
-- [hal_camera_status_t(](#_page21_x70.87_y680.23)∗[stop ](#_page28_x70.87_y349.93))(const camera\_dev\_t ∗dev)
-- [hal_camera_status_t(](#_page21_x70.87_y680.23)∗[enqueue ](#_page28_x70.87_y439.64))(const camera\_dev\_t ∗dev, void ∗data)
-- [hal_camera_status_t(](#_page21_x70.87_y680.23)∗[dequeue ](#_page28_x70.87_y541.29))(const camera\_dev\_t ∗dev, void ∗∗data, int ∗stripe, int ∗compressed\_size)
-- [hal_camera_status_t(](#_page21_x70.87_y680.23)∗[get_buf_desc ](#_page28_x70.87_y642.95))(const camera\_dev\_t ∗dev,[ hw_buf_desc_t ](#_page18_x70.87_y473.31)∗out\_buf,[ mpp_memory_policy_t ](#_page23_x70.87_y606.20)∗policy)
-- [hal_camera_status_t(](#_page21_x70.87_y680.23)∗[lock ](#_page28_x70.87_y744.61))(const camera\_dev\_t ∗dev)
-- [hal_camera_status_t(](#_page21_x70.87_y680.23)∗[unlock ](#_page29_x70.87_y107.13))(const camera\_dev\_t ∗dev)
+- [hal_camera_status_t(](#hal_camera_status_t)∗[init ](#init))(camera\_dev\_t ∗dev, mpp\_camera\_params\_t ∗config,[ camera_dev_callback_t ](#camera_dev_callback_t)callback, void ∗param)
+- [hal_camera_status_t(](#hal_camera_status_t)∗[deinit ](#deinit))(camera\_dev\_t ∗dev)
+- [hal_camera_status_t(](#hal_camera_status_t)∗[start ](#start))(const camera\_dev\_t ∗dev)
+- [hal_camera_status_t(](#hal_camera_status_t)∗[stop ](#stop))(const camera\_dev\_t ∗dev)
+- [hal_camera_status_t(](#hal_camera_status_t)∗[enqueue ](#enqueue))(const camera\_dev\_t ∗dev, void ∗data)
+- [hal_camera_status_t(](#hal_camera_status_t)∗[dequeue ](#dequeue))(const camera\_dev\_t ∗dev, void ∗∗data, int ∗stripe, int ∗compressed\_size)
+- [hal_camera_status_t(](#hal_camera_status_t)∗[get_buf_desc ](#get_buf_desc))(const camera\_dev\_t ∗dev,[ hw_buf_desc_t ](#hw_buf_desc_t)∗out\_buf,[ mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
+- [hal_camera_status_t(](#hal_camera_status_t)∗[lock ](#lock))(const camera\_dev\_t ∗dev)
+- [hal_camera_status_t(](#hal_camera_status_t)∗[unlock ](#unlock))(const camera\_dev\_t ∗dev)
 
-**Field Documentation <a name=""_page28_x212.37_y68.87"></a>**
+**Field Documentation**
 
 **init**
 
-[hal_camera_status_t](#_page21_x70.87_y680.23)(∗ camera\_dev\_operator\_t::init) (camera\_dev\_t ∗dev, mpp\_camera\_params\_t ∗config, [camera_dev_callback_t](#_page20_x70.87_y647.27) callback, void ∗param)
+[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::init) (camera\_dev\_t ∗dev, mpp\_camera\_params\_t ∗config, [camera_dev_callback_t](#camera_dev_callback_t) callback, void ∗param)
 
-<a name="_page28_x212.37_y68.87"></a>initialize the dev 
+##### init
+
+initialize the dev
 
 **deinit**
 
-[hal_camera_status_t](#_page21_x70.87_y680.23)(∗ camera\_dev\_operator\_t::deinit) (camera\_dev\_t ∗dev)
+[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::deinit) (camera\_dev\_t ∗dev)
 
-<a name="_page28_x70.87_y170.53"></a>deinitialize the dev
+##### deinit
+
+deinitialize the dev
 
 **start**
 
-[hal_camera_status_t](#_page21_x70.87_y680.23)(∗ camera\_dev\_operator\_t::start) (const camera\_dev\_t ∗dev)
+[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::start) (const camera\_dev\_t ∗dev)
 
-<a name="_page28_x70.87_y260.23"></a>start the dev
+##### start
+
+start the dev
 
 **stop**
 
-[hal_camera_status_t](#_page21_x70.87_y680.23)(∗ camera\_dev\_operator\_t::stop) (const camera\_dev\_t ∗dev)
+[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::stop) (const camera\_dev\_t ∗dev)
 
-stop<a name="_page28_x70.87_y349.93"></a> the dev
+##### stop
+
+stop the dev
 
 **enqueue**
 
-[hal_camera_status_t(∗ ](#_page21_x70.87_y680.23)camera\_dev\_operator\_t::enqueue) (const camera\_dev\_t ∗dev, void ∗data) enqueue a buffer to the dev
+[hal_camera_status_t(∗ ](#hal_camera_status_t)camera\_dev\_operator\_t::enqueue) (const camera\_dev\_t ∗dev, void ∗data) enqueue a buffer to the dev
 
 **dequeue**
 
-[hal_camera_status_t(∗ ](#_page21_x70.87_y680.23)camera\_dev\_operator\_t::dequeue) (const camera\_dev\_t ∗dev, void ∗∗data, int ∗stripe)
+[hal_camera_status_t(∗ ](#hal_camera_status_t)camera\_dev\_operator\_t::dequeue) (const camera\_dev\_t ∗dev, void ∗∗data, int ∗stripe)
 
-dequeue a buffer from the dev (blocking) <a name="_page28_x70.87_y541.29"></a>
+##### dequeue
+
+dequeue a buffer from the dev (blocking)
 
 **get\_buf\_desc**
 
-[hal_camera_status_t(∗ ](#_page21_x70.87_y680.23)camera\_dev\_operator\_t::get\_buf\_desc) (const camera\_dev\_t ∗dev, [hw_buf_desc_t ](#_page18_x70.87_y473.31)∗out\_buf, [mpp_memory_policy_t ](#_page23_x70.87_y606.20)∗policy)
+[hal_camera_status_t(∗ ](#hal_camera_status_t)camera\_dev\_operator\_t::get\_buf\_desc) (const camera\_dev\_t ∗dev, [hw_buf_desc_t ](#hw_buf_desc_t)∗out\_buf, [mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
 
 get buffer descriptors and policy
 
 **lock** 
 
-[hal_camera_status_t](#_page21_x70.87_y680.23)(∗ camera\_dev\_operator\_t::lock) (const camera\_dev\_t ∗dev) lock the device for exclusive access and operations
+[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::lock) (const camera\_dev\_t ∗dev) lock the device for exclusive access and operations
 
-**unlock<a name="_page29_x70.87_y107.13"></a>** 
+##### unlock
 
-[hal_camera_status_t](#_page21_x70.87_y680.23)(∗ camera\_dev\_operator\_t::unlock) (const camera\_dev\_← t ∗dev)
+[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::unlock) (const camera\_dev\_← t ∗dev)
 
    unlock the device after exclusive operations
 
-2. **struct<a name="_page29_x70.87_y200.41"></a><a name="_page29_x70.87_y185.80"></a> static\_image\_operator\_t**
+##### static_image_operator_t
+
+**struct static\_image\_operator\_t**
 
 Operation that needs to be implemented by an image element.
 
 **Data Fields**
 
-- [hal_image_status_t(](#_page22_x70.87_y389.53)∗[init ](#_page29_x212.37_y330.77))(static\_image\_t ∗elt, mpp\_img\_params\_t ∗config, void ∗param)
-- [hal_image_status_t(](#_page22_x70.87_y389.53)∗[dequeue ](#_page29_x70.87_y414.72))(static\_image\_t ∗elt,[ hw_buf_desc_t ](#_page18_x70.87_y473.31)∗out\_buf, int ∗stripe\_num)
+- [hal_image_status_t(](#hal_image_status_t)∗[init ](#init))(static\_image\_t ∗elt, mpp\_img\_params\_t ∗config, void ∗param)
+- [hal_image_status_t(](#hal_image_status_t)∗[dequeue ](#dequeue))(static\_image\_t ∗elt,[ hw_buf_desc_t ](#hw_buf_desc_t)∗out\_buf, int ∗stripe\_num)
 
-**Field Documentation <a name="_page29_x212.37_y330.77"></a>**
+##### init
 
 **init** 
 
-[hal_image_status_t](#_page22_x70.87_y389.53)(∗ static\_image\_operator\_t::init) (static\_image\_t ∗elt, mpp← \_img\_params\_t ∗config, void ∗param)
+[hal_image_status_t](#hal_image_status_t)(∗ static\_image\_operator\_t::init) (static\_image\_t ∗elt, mpp← \_img\_params\_t ∗config, void ∗param)
 
    initialize the elt
    
-**dequeue<a name="_page29_x70.87_y414.72"></a>** 
+##### dequeue
 
-[hal_image_status_t](#_page22_x70.87_y389.53)(∗ static\_image\_operator\_t::dequeue) (static\_image\_← t ∗elt, [hw_buf_desc_t](#_page18_x70.87_y473.31) ∗out\_buf, int ∗stripe\_num)
+[hal_image_status_t](#hal_image_status_t)(∗ static\_image\_operator\_t::dequeue) (static\_image\_← t ∗elt, [hw_buf_desc_t](#hw_buf_desc_t) ∗out\_buf, int ∗stripe\_num)
 
    dequeue a buffer from the elt
 
-3. **struct<a name="_page29_x70.87_y508.01"></a><a name="_page29_x70.87_y493.39"></a> gfx\_dev\_operator\_t**
+##### gfx_dev_operator_t
+
+**struct gfx\_dev\_operator\_t**
 
 Operation that needs to be implemented by gfx device.
 
@@ -1018,15 +1103,17 @@ Operation that needs to be implemented by gfx device.
 
 - int(∗**init** )(gfx\_dev\_t ∗dev, void ∗param)
 - int(∗**deinit** )(gfx\_dev\_t ∗dev)
-- int(∗ **get\_buf\_desc** )(const gfx\_dev\_t ∗dev, [hw_buf_desc_t](#_page18_x70.87_y473.31) ∗in\_buf, [hw_buf_desc_t](#_page18_x70.87_y473.31) ∗out\_buf, [mpp_memory_policy_t ](#_page23_x70.87_y606.20)∗policy)
-- int(∗ **blit** )(const gfx\_dev\_t ∗dev, const [gfx_surface_t](#_page14_x70.87_y70.87) ∗pSrc, const [gfx_surface_t](#_page14_x70.87_y70.87) ∗pDst, const [gfx_rotate_config_t ](#_page14_x70.87_y319.68)∗pRotate, mpp\_flip\_mode\_t flip)
-- int(∗**drawRect** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#_page14_x70.87_y70.87)∗pOverlay, int x, int y, int w, int h, int color)
-- int(∗**drawPicture** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#_page14_x70.87_y70.87)∗pOverlay, int x, int y, int w, int h, int alpha, const char ∗pIcon)
-- int(∗**drawText** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#_page14_x70.87_y70.87)∗pOverlay, int x, int y, int textColor, int bgColor, int type, const char ∗pText)
-- int(∗**compose** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#_page14_x70.87_y70.87)∗pSrc,[ gfx_surface_t ](#_page14_x70.87_y70.87)∗pOverlay,[ gfx_surface_t ](#_page14_x70.87_y70.87)∗pDst, [gfx_rotate_config_t ](#_page14_x70.87_y319.68)∗pRotate, mpp\_flip\_mode\_t flip)
-- int(∗**finish<a name="_page29_x70.87_y771.02"></a>** )(gfx\_dev\_t ∗dev)
+- int(∗ **get\_buf\_desc** )(const gfx\_dev\_t ∗dev, [hw_buf_desc_t](#hw_buf_desc_t) ∗in\_buf, [hw_buf_desc_t](#hw_buf_desc_t) ∗out\_buf, [mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
+- int(∗ **blit** )(const gfx\_dev\_t ∗dev, const [gfx_surface_t](#gfx_surface_t) ∗pSrc, const [gfx_surface_t](#gfx_surface_t) ∗pDst, const [gfx_rotate_config_t ](#gfx_rotate_config_t)∗pRotate, mpp\_flip\_mode\_t flip)
+- int(∗**drawRect** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#gfx_surface_t)∗pOverlay, int x, int y, int w, int h, int color)
+- int(∗**drawPicture** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#gfx_surface_t)∗pOverlay, int x, int y, int w, int h, int alpha, const char ∗pIcon)
+- int(∗**drawText** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#gfx_surface_t)∗pOverlay, int x, int y, int textColor, int bgColor, int type, const char ∗pText)
+- int(∗**compose** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#gfx_surface_t)∗pSrc,[ gfx_surface_t ](#gfx_surface_t)∗pOverlay,[ gfx_surface_t ](#gfx_surface_t)∗pDst, [gfx_rotate_config_t ](#gfx_rotate_config_t)∗pRotate, mpp\_flip\_mode\_t flip)
+##### vdec_dev_operator_t
 
-4. **struct<a name="_page30_x70.87_y70.87"></a> vdec\_dev\_operator\_t**
+- int(∗**finish** )(gfx\_dev\_t ∗dev)
+
+**struct vdec\_dev\_operator\_t**
 
 Operation that needs to be implemented by vdec device.
 
@@ -1034,104 +1121,112 @@ Operation that needs to be implemented by vdec device.
 
 - int(∗**init** )(vdec\_dev\_t ∗dev, void ∗param)
 - int(∗**deinit** )(const vdec\_dev\_t ∗dev)
-- int(∗ **get\_buf\_desc** )(const vdec\_dev\_t ∗dev, [hw_buf_desc_t](#_page18_x70.87_y473.31) ∗in\_buf, [hw_buf_desc_t](#_page18_x70.87_y473.31) ∗out\_buf, [mpp_memory_policy_t ](#_page23_x70.87_y606.20)∗policy)
+- int(∗ **get\_buf\_desc** )(const vdec\_dev\_t ∗dev, [hw_buf_desc_t](#hw_buf_desc_t) ∗in\_buf, [hw_buf_desc_t](#hw_buf_desc_t) ∗out\_buf, [mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
 - int(∗**decode** )(const vdec\_dev\_t ∗dev, uint8\_t ∗pSrc, uint8\_t ∗pDst, int32\_t jpg\_size, uint32\_t row\_stride)
 
-5. **struct<a name="_page30_x70.87_y255.57"></a><a name="_page30_x70.87_y240.33"></a> vision\_algo\_dev\_operator\_t**
+##### vision_algo_dev_operator_t
+
+**struct vision\_algo\_dev\_operator\_t**
 
 Operation that needs to be implemented by a vision algorithm device.
 
 **Data Fields**
 
-- [hal_valgo_status_t(](#_page22_x70.87_y673.12)∗[init ](#_page30_x212.37_y454.05))(vision\_algo\_dev\_t ∗dev,[ model_param_t ](#_page15_x70.87_y286.04)∗param)
-- [hal_valgo_status_t(](#_page22_x70.87_y673.12)∗[deinit ](#_page30_x70.87_y555.71))(vision\_algo\_dev\_t ∗dev)
-- [hal_valgo_status_t(](#_page22_x70.87_y673.12)∗[run ](#_page30_x70.87_y657.36))(const vision\_algo\_dev\_t ∗dev, void ∗data)
-- [hal_valgo_status_t(](#_page22_x70.87_y673.12)∗[get_buf_desc ](#_page30_x70.87_y759.02))(const vision\_algo\_dev\_t ∗dev,[ hw_buf_desc_t ](#_page18_x70.87_y473.31)∗in\_buf,[ mpp_memory_policy_t ](#_page23_x70.87_y606.20)∗policy)
+- [hal_valgo_status_t(](#hal_valgo_status_t)∗[init ](#init))(vision\_algo\_dev\_t ∗dev,[ model_param_t ](#model_param_t)∗param)
+- [hal_valgo_status_t(](#hal_valgo_status_t)∗[deinit ](#deinit))(vision\_algo\_dev\_t ∗dev)
+- [hal_valgo_status_t(](#hal_valgo_status_t)∗[run ](#run))(const vision\_algo\_dev\_t ∗dev, void ∗data)
+- [hal_valgo_status_t(](#hal_valgo_status_t)∗[get_buf_desc ](#get_buf_desc))(const vision\_algo\_dev\_t ∗dev,[ hw_buf_desc_t ](#hw_buf_desc_t)∗in\_buf,[ mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
 
-**Field Documentation <a name="_page30_x212.37_y454.05"></a>**
+##### init
 
 **init** 
 
-[hal_valgo_status_t](#_page22_x70.87_y673.12)(∗ vision\_algo\_dev\_operator\_t::init) (vision\_algo\_dev\_t ∗dev, [model_param_t](#_page15_x70.87_y286.04) ∗param)
+[hal_valgo_status_t](#hal_valgo_status_t)(∗ vision\_algo\_dev\_operator\_t::init) (vision\_algo\_dev\_t ∗dev, [model_param_t](#model_param_t) ∗param)
 
    initialize the dev
 
-**deinit<a name="_page30_x70.87_y555.71"></a>** 
+##### deinit
 
-[hal_valgo_status_t](#_page22_x70.87_y673.12)(∗ vision\_algo\_dev\_operator\_t::deinit) (vision\_algo\_dev\_t ∗dev)
+[hal_valgo_status_t](#hal_valgo_status_t)(∗ vision\_algo\_dev\_operator\_t::deinit) (vision\_algo\_dev\_t ∗dev)
 
    deinitialize the dev
 
-**run<a name="_page30_x70.87_y657.36"></a>** 
+##### run
 
-[hal_valgo_status_t](#_page22_x70.87_y673.12)(∗ vision\_algo\_dev\_operator\_t::run) (const vision\_algo\_dev\_t ∗dev, void ∗data)
+[hal_valgo_status_t](#hal_valgo_status_t)(∗ vision\_algo\_dev\_operator\_t::run) (const vision\_algo\_dev\_t ∗dev, void ∗data)
 
-   start<a name="_page30_x70.87_y759.02"></a> the dev
+##### get_buf_desc
 
 **get\_buf\_desc** 
 
-[hal_valgo_status_t](#_page22_x70.87_y673.12)(∗ vision\_algo\_dev\_operator\_t::get\_buf\_desc) (const vision\_algo\_dev\_t ∗dev, [hw_buf_desc_t](#_page18_x70.87_y473.31) ∗in\_buf, [mpp_memory_policy_t](#_page23_x70.87_y606.20) ∗policy)
+[hal_valgo_status_t](#hal_valgo_status_t)(∗ vision\_algo\_dev\_operator\_t::get\_buf\_desc) (const vision\_algo\_dev\_t ∗dev, [hw_buf_desc_t](#hw_buf_desc_t) ∗in\_buf, [mpp_memory_policy_t](#mpp_memory_policy_t) ∗policy)
 
    read input parameters
 
-6. **struct<a name="_page31_x70.87_y134.73"></a><a name="_page31_x70.87_y119.49"></a> display\_dev\_operator\_t**
+##### display_dev_operator_t
+
+**struct display\_dev\_operator\_t**
 
 Operation that needs to be implemented by a display device.
 
 **Data Fields**
 
-- [hal_display_status_t(](#_page23_x70.87_y378.76)∗[init](#_page31_x212.37_y371.17))(display\_dev\_t ∗dev, mpp\_display\_params\_t ∗config, [mpp_callback_t ](#_page21_x70.87_y205.33)callback, void ∗user\_data)
-- [hal_display_status_t(](#_page23_x70.87_y378.76)∗[deinit ](#_page31_x70.87_y472.83))(const display\_dev\_t ∗dev)
-- [hal_display_status_t(](#_page23_x70.87_y378.76)∗[start ](#_page31_x70.87_y574.49))(display\_dev\_t ∗dev)
-- [hal_display_status_t(](#_page23_x70.87_y378.76)∗[stop ](#_page31_x70.87_y664.19))(display\_dev\_t ∗dev)
-- [hal_display_status_t(](#_page23_x70.87_y378.76)∗[blit](#_page31_x70.87_y753.89) )(const display\_dev\_t ∗dev, void ∗frame, int stripe)
-- [hal_display_status_t(](#_page23_x70.87_y378.76)∗[get_buf_desc ](#_page32_x70.87_y127.15))(const display\_dev\_t ∗dev, [hw_buf_desc_t ](#_page18_x70.87_y473.31)∗in\_buf, [mpp_memory_policy_t](#_page23_x70.87_y606.20) ∗policy)
+- [hal_display_status_t(](#hal_display_status_t)∗[init](#init))(display\_dev\_t ∗dev, mpp\_display\_params\_t ∗config, [mpp_callback_t ](#mpp_callback_t)callback, void ∗user\_data)
+- [hal_display_status_t(](#hal_display_status_t)∗[deinit ](#deinit))(const display\_dev\_t ∗dev)
+- [hal_display_status_t(](#hal_display_status_t)∗[start ](#start))(display\_dev\_t ∗dev)
+- [hal_display_status_t(](#hal_display_status_t)∗[stop ](#stop))(display\_dev\_t ∗dev)
+- [hal_display_status_t(](#hal_display_status_t)∗[blit](#blit) )(const display\_dev\_t ∗dev, void ∗frame, int stripe)
+- [hal_display_status_t(](#hal_display_status_t)∗[get_buf_desc ](#get_buf_desc))(const display\_dev\_t ∗dev, [hw_buf_desc_t ](#hw_buf_desc_t)∗in\_buf, [mpp_memory_policy_t](#mpp_memory_policy_t) ∗policy)
 
-**Field Documentation <a name="_page31_x212.37_y371.17"></a>**
+##### init
+
+**Field Documentation **
 
 **init**
 
-[hal_display_status_t](#_page23_x70.87_y378.76)(∗ display\_dev\_operator\_t::init) (display\_dev\_t ∗dev, mpp← \_display\_params\_t ∗config, [mpp_callback_t](#_page21_x70.87_y205.33) callback, void ∗user\_data)
+[hal_display_status_t](#hal_display_status_t)(∗ display\_dev\_operator\_t::init) (display\_dev\_t ∗dev, mpp← \_display\_params\_t ∗config, [mpp_callback_t](#mpp_callback_t) callback, void ∗user\_data)
 
    initialize the dev 
 
 **deinit**
 
-[hal_display_status_t](#_page23_x70.87_y378.76)(∗ display\_dev\_operator\_t::deinit) (const display\_dev\_t ∗dev)
+[hal_display_status_t](#hal_display_status_t)(∗ display\_dev\_operator\_t::deinit) (const display\_dev\_t ∗dev)
 
    deinitialize the dev
 
 **start**
 
-[hal_display_status_t](#_page23_x70.87_y378.76)(∗ display\_dev\_operator\_t::start) (display\_dev\_t ∗dev) start the dev
+[hal_display_status_t](#hal_display_status_t)(∗ display\_dev\_operator\_t::start) (display\_dev\_t ∗dev) start the dev
 
 **stop**
 
-[hal_display_status_t](#_page23_x70.87_y378.76)(∗ display\_dev\_operator\_t::stop) (display\_dev\_t ∗dev) stop<a name="_page31_x70.87_y753.89"></a> the dev
+##### blit
+
+[hal_display_status_t](#hal_display_status_t)(∗ display\_dev\_operator\_t::stop) (display\_dev\_t ∗dev) stop the dev
 
 **blit**
 
-[hal_display_status_t](#_page23_x70.87_y378.76)(∗ display\_dev\_operator\_t::blit) (const display\_dev\_t ∗dev, void ∗frame, int stripe)
+[hal_display_status_t](#hal_display_status_t)(∗ display\_dev\_operator\_t::blit) (const display\_dev\_t ∗dev, void ∗frame, int stripe)
 
    blit a buffer to the dev
 
 **get\_buf\_desc**
 
-[hal_display_status_t](#_page23_x70.87_y378.76)(∗ display\_dev\_operator\_t::get\_buf\_desc) (const display\_dev\_t ∗dev, [hw_buf_desc_t](#_page18_x70.87_y473.31) ∗in\_buf, [mpp_memory_policy_t](#_page23_x70.87_y606.20) ∗policy)
+[hal_display_status_t](#hal_display_status_t)(∗ display\_dev\_operator\_t::get\_buf\_desc) (const display\_dev\_t ∗dev, [hw_buf_desc_t](#hw_buf_desc_t) ∗in\_buf, [mpp_memory_policy_t](#mpp_memory_policy_t) ∗policy)
 
    get buffer descriptors and policy
 
 ##### 2.2.1.2 Typedef Documentation
 
-<a name="_page32_x70.87_y297.90"></a>1. **mpp\_callback\_t**
+**mpp\_callback\_t**
 
 typedef int(∗ mpp\_callback\_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data) The mpp callback function prototype.
 
 ##### 2.2.1.3 Function Documentation
 
-1. **GUI\_DrawText()**
+##### GUI_DrawText
 
-<a name="_page32_x70.87_y574.60"></a>void GUI\_DrawText (
+void GUI\_DrawText (
 uint16\_t ∗ lcd\_buf,
 uint16\_t fcolor,
 uint16\_t bcolor,
@@ -1157,9 +1252,10 @@ This function copy content of data from label text buffer to the LCD.
 
 **Returns**
 
-2. **hal\_draw\_pixel565()**
 
-<a name="_page33_x70.87_y305.84"></a><a name="_page33_x70.87_y278.65"></a>static void hal\_draw\_pixel565 (
+##### hal_draw_pixel565
+
+static void hal\_draw\_pixel565 (
 uint16\_t ∗ pDst,
 uint32\_t x,
 uint32\_t y,
@@ -1178,9 +1274,10 @@ Draws pixel with RGB565 color to defined point.
 |color|RGB565 encoded value|
 |lcd_w|lcd width|
 
-3. **hal\_draw\_text565()**
 
-<a name="_page33_x70.87_y619.27"></a><a name="_page33_x70.87_y592.07"></a>static void hal\_draw\_text565 (
+##### hal_draw_text565
+
+static void hal\_draw\_text565 (
 uint16\_t ∗ lcd\_buf,
 uint16\_t fcolor,
 uint16\_t bcolor,
@@ -1210,11 +1307,12 @@ This function copy content of data from label text buffer to the LCD.
 
 The return number of written chars to the buffer
 
-4. **hal\_draw\_rect565()**
 
-<a name="_page34_x70.87_y391.25"></a><a name="_page34_x70.87_y364.05"></a>static void hal\_draw\_rect565 (
+##### hal_draw_rect565
+
+static void hal\_draw\_rect565 (
 uint16\_t ∗ lcd\_buf,
-[hal_rect_t ](#_page14_x70.87_y568.99)rect,
+[hal_rect_t ](#hal_rect_t)rect,
 mpp\_color\_t rgb,
 uint32\_t width,
 int stripe\_top,
@@ -1241,13 +1339,17 @@ Draws rectangle.
 
 N/A
 
-5. **get\_bitpp()<a name="_page35_x70.87_y145.28"></a><a name="_page35_x70.87_y118.09"></a>**static int get\_bitpp (
+##### get_bitpp
+
+**get\_bitpp()**static int get\_bitpp (
 
 mpp\_pixel\_format\_t type ) [static]
 
 returns the number of bits per pixel per format, unknown format return 0
 
-6. **swap\_2\_bytes()<a name="_page35_x70.87_y278.79"></a><a name="_page35_x70.87_y251.60"></a>**void swap\_2\_bytes (
+##### swap_2_bytes
+
+**swap\_2\_bytes()**void swap\_2\_bytes (
 
 uint8\_t ∗ data,
 
@@ -1262,18 +1364,18 @@ Swaps a buffer's MSB and LSB bytes..
 |data|pointer to the buffer to be converted(from little endian to big endian and vice-versa).|
 |size|buffer size.|
 
-3. **HAL<a name="_page35_x70.87_y473.55"></a> Types**
+**HAL Types**
 
 **Data Structures**
 
-- struct[ virtual_usb_cam_config_msg_t](#_page36_x70.87_y410.10)
-- struct[ virtual_usb_cam_req_msg_t](#_page36_x70.87_y574.99)
-- struct[ virtual_usb_cam_rsp_msg_t](#_page36_x70.87_y764.50)
-- struct[ virtual_usb_cam_msg_t](#_page37_x70.87_y231.18)
+- struct[ virtual_usb_cam_config_msg_t](#virtual_usb_cam_config_msg_t)
+- struct[ virtual_usb_cam_req_msg_t](#virtual_usb_cam_req_msg_t)
+- struct[ virtual_usb_cam_rsp_msg_t](#virtual_usb_cam_rsp_msg_t)
+- struct[ virtual_usb_cam_msg_t](#virtual_usb_cam_msg_t)
 
 **Macros**
 
-- #define[ TARGET_CAMERA0_WIDTH](#_page37_x70.87_y482.54)
+- #define[ TARGET_CAMERA0_WIDTH](#target_camera0_width)
 - #define **TARGET\_CAMERA0\_HEIGHT**
 - #define **TARGET\_CAMERA1\_WIDTH**
 - #define **TARGET\_CAMERA1\_HEIGHT**
@@ -1282,14 +1384,14 @@ Swaps a buffer's MSB and LSB bytes..
 - #define **TARGET\_CAMERA\_MAX\_RESOLUTION**
 - #define **TARGET\_CAMERA\_FPS**
 - #define **CAMERA\_DEV\_BUFFER\_ALIGN**
-- #define[ CORE1_EPT_ADDRESS](#_page37_x70.87_y604.10)
-- #define[ MPP_EPT_ADDRESSS](#_page37_x70.87_y725.66)
-- #define[ RTSP_EPT_ADDRESS](#_page38_x369.67_y150.37)
-- #define[ APP_EP_READY_EVENT_DATA](#_page38_x70.87_y271.93)
+- #define[ CORE1_EPT_ADDRESS](#core1_ept_address)
+- #define[ MPP_EPT_ADDRESSS](#mpp_ept_addresss)
+- #define[ RTSP_EPT_ADDRESS](#rtsp_ept_address)
+- #define[ APP_EP_READY_EVENT_DATA](#app_ep_ready_event_data)
 
 **Enumerations**
 
-- enum[ virtual_usb_cam_msg_type_e ](#_page38_x70.87_y442.57){
+- enum[ virtual_usb_cam_msg_type_e ](#virtual_usb_cam_msg_type_e){
 
   **VIRT\_USB\_CAM\_NOMSG** ,
 
@@ -1317,13 +1419,16 @@ Swaps a buffer's MSB and LSB bytes..
 
   **MPP\_USER\_ID** }
 
-- enum[ virtual_usb_cam_col_format_e ](#_page38_x70.87_y564.13){ **VIRT\_USB\_CAM\_JPEG** }
-1. **Detailed<a name="_page36_x70.87_y303.97"></a> Description**
+- enum[ virtual_usb_cam_col_format_e ](#virtual_usb_cam_col_format_e){ **VIRT\_USB\_CAM\_JPEG** }
+
+**Detailed Description**
 
 This section provides the detailed documentation for the MPP HAL VIRTUAL CAMERA types.
 
-2. **Data<a name="_page36_x70.87_y378.01"></a> Structure Documentation**
-1. **struct<a name="_page36_x70.87_y410.10"></a> virtual\_usb\_cam\_config\_msg\_t**
+**Data Structure Documentation**
+##### virtual_usb_cam_config_msg_t
+
+**struct virtual\_usb\_cam\_config\_msg\_t**
 
 Structure that characterizes the payload of the camera config message sent from core 0 to core 1. **Data Fields**
 
@@ -1332,10 +1437,12 @@ Structure that characterizes the payload of the camera config message sent from 
 |uint32\_t|camera\_width|Width of the camera output in pixels.|
 | - | - | - |
 |uint32\_t|camera\_height|Height of the camera output in pixels.|
-|[virtual_usb_cam_col_format_e](#_page38_x70.87_y564.13)|color\_format|Color format for the camera output (e.g., JPEG)|
+|[virtual_usb_cam_col_format_e](#virtual_usb_cam_col_format_e)|color\_format|Color format for the camera output (e.g., JPEG)|
 |uint32\_t|fps|Frames per second for camera capture rate.|
 
-2. **struct<a name="_page36_x70.87_y590.23"></a><a name="_page36_x70.87_y574.99"></a> virtual\_usb\_cam\_req\_msg\_t**
+##### virtual_usb_cam_req_msg_t
+
+**struct virtual\_usb\_cam\_req\_msg\_t**
 
 Structure that characterizes the payload of the camera request message containing frame buffer addresses for RGB and IR data.
 
@@ -1343,13 +1450,13 @@ Structure that characterizes the payload of the camera request message containin
 
 
 
-|uint32\_t|<a name="_page36_x70.87_y764.50"></a>rgb\_frame\_addr|Physical address of the RGB frame buffer.|
+|uint32\_t|<a name="virtual_usb_cam_rsp_msg_t"></a>rgb\_frame\_addr|Physical address of the RGB frame buffer.|
 | - | - | - |
 |uint32\_t|rgb\_max\_frame\_size|Maximum size allocated for RGB frame buffer.|
 |uint32\_t|ir\_frame\_addr|Physical address of the IR frame buffer.|
 |uint32\_t|ir\_max\_frame\_size|Maximum size allocated for IR frame buffer.|
 
-3. **struct<a name="_page37_x70.87_y70.87"></a> virtual\_usb\_cam\_rsp\_msg\_t**
+**struct virtual\_usb\_cam\_rsp\_msg\_t**
 
 Structure that characterizes the payload of the camera request message containing frame addresses and sizes for RGB and IR data.
 
@@ -1363,58 +1470,69 @@ Structure that characterizes the payload of the camera request message containin
 |uint32\_t|ir\_frame\_addr|Physical address of the IR frame buffer (looped back by the core 1 camera app)|
 |uint32\_t|ir\_frame\_size|Size in bytes of the IR frame data.|
 
-4. **struct<a name="_page37_x70.87_y246.42"></a><a name="_page37_x70.87_y231.18"></a> virtual\_usb\_cam\_msg\_t**
+##### virtual_usb_cam_msg_t
+
+**struct virtual\_usb\_cam\_msg\_t**
 
 Structure that characterizes the messages sent between cores. **Data Fields**
 
 
 
-|[virtual_usb_cam_msg_type_e](#_page38_x70.87_y442.57)|msg\_type|Type of message being sent (config, request, response, etc.)|
+|[virtual_usb_cam_msg_type_e](#virtual_usb_cam_msg_type_e)|msg\_type|Type of message being sent (config, request, response, etc.)|
 | - | - | - |
 |virtual\_usb\_cam\_user\_id\_e|user\_id|Identifier for the user/component sending the message (RTSP or MPP)|
-|union[ msg_payload_u](#_page0_x0.00_y841.89)|msg\_payload|Union containing the actual message data based on msg\_type.|
+|union[ msg_payload_u](#msg_payload_u)|msg\_payload|Union containing the actual message data based on msg\_type.|
 
-3. **Macro<a name="_page37_x70.87_y435.83"></a> Definition Documentation**
-1. **TARGET\_CAMERA0\_WIDTH**
+**Macro Definition Documentation**
 
-<a name="_page37_x70.87_y509.74"></a><a name="_page37_x70.87_y482.54"></a>#define TARGET\_CAMERA0\_WIDTH
+##### target_camera0_width
+
+#define TARGET\_CAMERA0\_WIDTH
 
 Buffer alignment requirement for camera device buffers in bytes.
 
-2. **CORE1\_EPT\_ADDRESS**
 
-<a name="_page37_x70.87_y631.30"></a><a name="_page37_x70.87_y604.10"></a>#define CORE1\_EPT\_ADDRESS
+##### core1_ept_address
 
-Endpoint<a name="_page37_x70.87_y725.66"></a> address for Core 1 inter-core communication channel.
+#define CORE1\_EPT\_ADDRESS
 
-3. **MPP\_EPT\_ADDRESSS**
+##### mpp_ept_addresss
 
-<a name="_page38_x70.87_y70.87"></a>#define MPP\_EPT\_ADDRESSS
+Endpoint address for Core 1 inter-core communication channel.
+
+**MPP\_EPT\_ADDRESSS**
+
+#define MPP\_EPT\_ADDRESSS
 
 Endpoint address for MPP (Media Processing Pipeline) inter-core communication channel. MPP might use a range of endpoints starting with 40 and up to 49 included
 
-4. <a name="_page38_x369.67_y150.37"></a>**RTSP\_EPT\_ADDRESS**
+##### rtsp_ept_address
 
-<a name="_page38_x70.87_y179.56"></a>#define RTSP\_EPT\_ADDRESS
+**RTSP\_EPT\_ADDRESS**
+
+#define RTSP\_EPT\_ADDRESS
 
 Endpoint address for RTSP (Real Time Streaming Protocol) inter-core communication channel.
 
-5. **APP\_EP\_READY\_EVENT\_DATA**
 
-<a name="_page38_x70.87_y299.12"></a><a name="_page38_x70.87_y271.93"></a>#define APP\_EP\_READY\_EVENT\_DATA
+##### app_ep_ready_event_data
+
+#define APP\_EP\_READY\_EVENT\_DATA
 
 Event data value indicating that the application endpoint is ready for communication.
 
-4. **Enumeration<a name="_page38_x70.87_y397.85"></a> Type Documentation**
-1. **virtual\_usb\_cam\_msg\_type\_e**
+**Enumeration Type Documentation**
 
-<a name="_page38_x70.87_y469.76"></a><a name="_page38_x70.87_y442.57"></a>enum [virtual_usb_cam_msg_type_e](#_page38_x70.87_y442.57)
+##### virtual_usb_cam_msg_type_e
+
+enum [virtual_usb_cam_msg_type_e](#virtual_usb_cam_msg_type_e)
 
 Structure that characterizes the exchanged message types between core 0 and core 1.
 
-2. **virtual\_usb\_cam\_col\_format\_e**
 
-<a name="_page38_x70.87_y591.32"></a><a name="_page38_x70.87_y564.13"></a>enum [virtual_usb_cam_col_format_e](#_page38_x70.87_y564.13)
+##### virtual_usb_cam_col_format_e
+
+enum [virtual_usb_cam_col_format_e](#virtual_usb_cam_col_format_e)
 
 Structure that characterizes the color format for the camera output.
 
@@ -1422,13 +1540,13 @@ Structure that characterizes the color format for the camera output.
 
 **Functions**
 
-- int[ hal_label_rectangle ](#_page39_x70.87_y380.73)(uint8\_t ∗frame, int width, int height, mpp\_pixel\_format\_t format, mpp\_labeled\_rect\_t ∗lr, int stripe, int stripe\_max)
-- int[ hal_landmark ](#_page40_x70.87_y68.87)(uint8\_t ∗frame, int width, int height, mpp\_pixel\_format\_t format, mpp\_landmark\_t ∗lk, int stripe, int stripe\_max)
-- int[ hal_inference_tflite_setup ](#_page40_x70.87_y482.45)(vision\_algo\_dev\_t ∗dev)
-- int[ hal_display_setup ](#_page40_x70.87_y738.34)(const char ∗name, display\_dev\_t ∗dev)
-- int[ hal_camera_setup ](#_page41_x70.87_y335.15)(const char ∗name, camera\_dev\_t ∗dev)
-- int[ hal_gfx_setup ](#_page41_x70.87_y617.05)(const char ∗name, gfx\_dev\_t ∗dev)
-- int[ hal_img_decoder_setup ](#_page42_x70.87_y206.81)(const char ∗name, vdec\_dev\_t ∗dev)
+- int[ hal_label_rectangle ](#hal_label_rectangle)(uint8\_t ∗frame, int width, int height, mpp\_pixel\_format\_t format, mpp\_labeled\_rect\_t ∗lr, int stripe, int stripe\_max)
+- int[ hal_landmark ](#hal_landmark)(uint8\_t ∗frame, int width, int height, mpp\_pixel\_format\_t format, mpp\_landmark\_t ∗lk, int stripe, int stripe\_max)
+- int[ hal_inference_tflite_setup ](#hal_inference_tflite_setup)(vision\_algo\_dev\_t ∗dev)
+- int[ hal_display_setup ](#hal_display_setup)(const char ∗name, display\_dev\_t ∗dev)
+- int[ hal_camera_setup ](#hal_camera_setup)(const char ∗name, camera\_dev\_t ∗dev)
+- int[ hal_gfx_setup ](#hal_gfx_setup)(const char ∗name, gfx\_dev\_t ∗dev)
+- int[ hal_img_decoder_setup ](#hal_img_decoder_setup)(const char ∗name, vdec\_dev\_t ∗dev)
 
 #### 2.3.1 Detailed Description
 
@@ -1436,9 +1554,9 @@ This section provides the detailed documentation for the HAL setup functions tha
 
 ##### 2.3.1.1 Function Documentation
 
-1. **hal\_label\_rectangle()**
+**hal\_label\_rectangle()**
 
-<a name="_page39_x70.87_y407.92"></a>int hal\_label\_rectangle (
+int hal\_label\_rectangle (
 uint8\_t ∗ frame,
 int width,
 int height,
@@ -1465,7 +1583,9 @@ Implementation of hal labeled rectangle component that draws a rectangle and a t
 
 0
 
-2. **hal\_landmark()<a name="_page40_x70.87_y96.07"></a><a name="_page40_x70.87_y68.87"></a>**int hal\_landmark (
+##### hal_landmark
+
+**hal\_landmark()**int hal\_landmark (
 
 uint8\_t ∗ frame,
 
@@ -1499,9 +1619,10 @@ Implementation of hal landmark component that draws a landmark on an input image
 
 0
 
-3. **hal\_inference\_tflite\_setup()**
 
-<a name="_page40_x70.87_y509.65"></a><a name="_page40_x70.87_y482.45"></a>int hal\_inference\_tflite\_setup (
+##### hal_inference_tflite_setup
+
+int hal\_inference\_tflite\_setup (
 vision\_algo\_dev\_t ∗ dev )
 
 Hal setup function for inference engine Tensorflow-Lite Micro.
@@ -1516,7 +1637,7 @@ Hal setup function for inference engine Tensorflow-Lite Micro.
 
 error code (0: success, otherwise: failure)
 
-4. **hal\_display\_setup()<a name="_page41_x70.87_y70.87"></a>**
+**hal\_display\_setup()**
 
 int hal\_display\_setup (
 const char ∗ name,
@@ -1535,7 +1656,9 @@ Register with a display device specified by name. If name is NULL, return error.
 
 error code (0: success, otherwise: failure)
 
-5. **hal\_camera\_setup()<a name="_page41_x70.87_y362.34"></a><a name="_page41_x70.87_y335.15"></a>**
+##### hal_camera_setup
+
+**hal\_camera\_setup()**
 
 int hal\_camera\_setup ( const char ∗ name, camera\_dev\_t ∗ dev )
 
@@ -1552,7 +1675,9 @@ Register with a camera device specified by name. If name is NULL, return error.
 
 error code (0: success, otherwise: failure)
 
-6. **hal\_gfx\_setup()<a name="_page41_x70.87_y643.55"></a><a name="_page41_x70.87_y617.05"></a>**
+##### hal_gfx_setup
+
+**hal\_gfx\_setup()**
 
 int hal\_gfx\_setup ( const char ∗ name, gfx\_dev\_t ∗ dev )
 
@@ -1571,9 +1696,10 @@ If name is NULL, the first available graphic processing supported by Hw will be 
 
 error code (0: success, otherwise: failure)
 
-7. **hal\_img\_decoder\_setup()**
 
-<a name="_page42_x70.87_y234.01"></a><a name="_page42_x70.87_y206.81"></a>int hal\_img\_decoder\_setup ( const char ∗ name, vdec\_dev\_t ∗ dev )
+##### hal_img_decoder_setup
+
+int hal\_img\_decoder\_setup ( const char ∗ name, vdec\_dev\_t ∗ dev )
 
 Register with an image decoder device specified by name.
 

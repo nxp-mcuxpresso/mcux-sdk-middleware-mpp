@@ -12,8 +12,7 @@
 /*
  * converted with:
  *  convert couple.jpg -scale 168x208! -depth 8 -colorspace Rec601YCbCr -sampling-factor 4:4:4 couple_COCO_320_320.YCbCrA
- *  python3 image_operation.py -i couple_COCO_320_320.YCbCrA -o couple_COCO_320_320_vuyx.YCbCrA -W 320 -H 320 -C 4 --img_op=swap_ch0_ch2 --pix_fmt=yuvx
- *  xxd -i couple_COCO_320_320_vuyx.YCbCrA couple_COCO_320_320_vuyx.h
+ *  python ../tools/image_operation.py -i couple_COCO_320_320.YCbCrA -W 320 -H 320 -f YUVX --swap-ch0-ch2 -gh couple_COCO
  */
 
 #define SRC_IMAGE_COUPLE_COCO_320_320_VUYX_WIDTH       320

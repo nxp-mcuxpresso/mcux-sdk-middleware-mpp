@@ -16,3 +16,6 @@ build_mcxn9xxbrk/*
 build/*
 boards/linux-pc/FreeRTOS/Demo/Posix_GCC/build/*
 boards/linux-pc/camera_emulator/*
+__pycache__/
+*.pyc
+*.pyo

@@ -25,6 +25,7 @@ static void add_person (char* Name, int position);
  * Variables declaration
  ******************************************************************************/
 static face_t *embeddings_db;
+static const uint32_t embeddings_db_max_size = DATABASE_MAX_SIZE;
 static float new_face_embeddings[SIZE_EMBEDDING];
 static int state = 0;
 /*******************************************************************************
@@ -72,9 +73,14 @@ void set_new_face_embeddings(const float *person_embeddings)
  */
 static int delete_person (char* Name, int size)
 {
-    int i = 0;
-    int j = 0;
+    int i = 0, j = 0, z = 0;
     int position = 0;
+
+    if (size > embeddings_db_max_size)
+    {
+        PRINTF("[ERR] - Database size (%d) exceeds maximum size (%d)\r\n", size, embeddings_db_max_size);
+        return 1;
+    }
 
     for(i = 0; i < size ;i++)
     {
@@ -85,14 +91,16 @@ static int delete_person (char* Name, int size)
             for(j = position; j < size-1;j++)
             {
                 strcpy(embeddings_db[j].name , embeddings_db[j+1].name);
-                for (int z = 0; z <SIZE_EMBEDDING ; z++)
+                for (z = 0; z < SIZE_EMBEDDING ; z++)
                 {
                     embeddings_db[j].embedding[z] = embeddings_db[j+1].embedding[z];
                 }
             }
 
-            /* clear last name */
-            strcpy(embeddings_db[size].name , "\0");
+            /* clear last name and embeddings */
+            strcpy(embeddings_db[size-1].name , "\0");
+            for (z = 0; z < SIZE_EMBEDDING ; z++)
+                embeddings_db[size-1].embedding[z] = 0.0f;
 
             break;
         }
@@ -110,7 +118,7 @@ static int calculate_size(face_t * face)
 {
     int num_faces = 0;
 
-    while (face[num_faces].name[0] != '\0'){
+    while ((num_faces < embeddings_db_max_size) && (face[num_faces].name[0] != '\0')){
         num_faces++;
     }
 
@@ -124,6 +132,12 @@ static int calculate_size(face_t * face)
  */
 static void add_person (char* Name, int position)
 {
+    if (position >= embeddings_db_max_size)
+    {
+        PRINTF("[ERR] - Position in DB (%d) is out of bounds (%d\r\n", position, embeddings_db_max_size);
+        return;
+    }
+
     strcpy(embeddings_db[position].name, Name);
     PRINTF("position:%d\r\n",position);
 
@@ -133,25 +147,34 @@ static void add_person (char* Name, int position)
 }
 
 /*
- * Add new person to database without using shell 
+ * Add new person to database without using shell
  */
 int database_add(char* name)
 {
-    const int new_database_size = calculate_size(embeddings_db) + 1;
-    PRINTF("size %d\r\n", new_database_size);
-    add_person(name,new_database_size - 1);
-    PRINTF("Person added name %s\r\n", embeddings_db[new_database_size-1].name);
+    const int database_size = calculate_size(embeddings_db);
+
+    if (database_size >= embeddings_db_max_size)
+    {
+        PRINTF("[ERR] - Current data base size is %d\r\n", embeddings_db_max_size);
+        PRINTF("[ERR] - Database is full, cannot add more persons. Please increse the size of the db\r\n");
+        return 0;
+    }
+
+    PRINTF("size %d\r\n", database_size + 1);
+    add_person(name,database_size);
+    PRINTF("Person added name %s\r\n", embeddings_db[database_size].name);
 
     return 1;
 }
 
 /*
- * Remove person from database without using shell 
+ * Remove person from database without using shell
  */
 int database_delete(char* name)
 {
-    int new_database_size = calculate_size(embeddings_db);
-    delete_person(name,new_database_size);
+    int database_size = calculate_size(embeddings_db);
+
+    delete_person(name, database_size);
 
     PRINTF("%s deleted from database. \r\n", name);
 
@@ -165,7 +188,8 @@ void database_delete_all(void)
 {
     int crt_face_idx = 0, z = 0;
 
-    while (embeddings_db[crt_face_idx].name[0] != '\0') {
+    while ((crt_face_idx < embeddings_db_max_size) && (embeddings_db[crt_face_idx].name[0] != '\0')) 
+    {
         strcpy(embeddings_db[crt_face_idx].name , "\0");
         for (z = 0; z < SIZE_EMBEDDING ; z++)
             embeddings_db[crt_face_idx].embedding[z] = 0.0f;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP.
+ * Copyright 2022-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <limits.h>
+#include <assert.h>
 #include "atomic.h"
 #include "task.h"
 #include "semphr.h"
@@ -154,12 +156,18 @@ uint32_t hal_get_exec_time()
     {
         if (taskStatus[i].xHandle == NULL) break;
         if (taskStatus[i].xHandle == cur_task) continue;
-        /* accumulate task exec time in ms to avoid overflow */
-        tasks_time += taskStatus[i].ulRunTimeCounter * HAL_EXEC_TIMER_US / 1000;
+        /* INT30-C: Prevent multiplication and addition overflow */
+        uint32_t task_runtime = taskStatus[i].ulRunTimeCounter * HAL_EXEC_TIMER_US / 1000;
+        assert(taskStatus[i].ulRunTimeCounter == 0 || 
+               (HAL_EXEC_TIMER_US / 1000) <= UINT32_MAX / taskStatus[i].ulRunTimeCounter);
+        assert(tasks_time <= UINT32_MAX - task_runtime);
+        tasks_time += task_runtime;
     }
     /* convert to ms */
     runtime_ms = runtime * HAL_EXEC_TIMER_US / 1000;
 
+    /* INT30-C: Prevent unsigned integer underflow */
+    assert(runtime_ms >= tasks_time);
     return runtime_ms - tasks_time;
 }
 
@@ -257,6 +265,8 @@ void hal_atomic_exit()
 
 uint32_t hal_tick_to_ms(uint32_t os_tick)
 {
+    /* INT30-C: Prevent multiplication overflow */
+    assert(os_tick == 0U || TICK_PERIOD_MS <= UINT32_MAX / os_tick);
     return (os_tick * TICK_PERIOD_MS);
 }
 
@@ -312,6 +322,9 @@ hal_eventbits_t hal_eventgrp_wait_bits( hal_event_group_t eventgrp,
                                         const uint32_t bWaitForAllBits,
                                         uint32_t tickstowait )
 {
+    /* INT31-C: Ensure boolean parameters are within valid range */
+    assert(bClearOnExit <= 1U);
+    assert(bWaitForAllBits <= 1U);
     return xEventGroupWaitBits( (EventGroupHandle_t) eventgrp,
                                 bitmask,
                                 bClearOnExit,

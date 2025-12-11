@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 NXP
+ * Copyright 2019-2026 NXP
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -27,6 +27,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <limits.h>
+#include <assert.h>
+
 #include "fsl_common.h"
 #include "font.h"
 #include "hal_draw.h"
@@ -94,8 +97,14 @@ void hal_draw_text565(uint16_t *lcd_buf, uint16_t fcolor, uint16_t bcolor, uint3
                    int x, int y, const char *label, int stripe_top, int stripe_bottom)
 {
     int idx = 0;
+    
+    /* INT32-C: Validate parameters to prevent overflow in position calculation */
+    assert(x >= 0 && x <= (INT_MAX / (int)_gFontTbl[0].x_size));
 
     while ((label[idx] != 0) && (idx < GUI_PRINTF_BUF_SIZE)) {
+        /* INT32-C: Prevent signed integer overflow */
+        assert(idx <= (INT_MAX / (int)_gFontTbl[0].x_size));
+        assert(x <= (INT_MAX - (idx * (int)_gFontTbl[0].x_size)));
         GUI_DispChar(lcd_buf, label[idx],
                      INCREMENT(x, idx * _gFontTbl[0].x_size), y,
                      fcolor, bcolor, width, stripe_top, stripe_bottom);
@@ -123,9 +132,18 @@ static inline void _GUI_DispChar(uint16_t *lcd_buf, char c, int x, int y, const 
     uint8_t temp;
     uint8_t XNum;
     uint32_t base;
-    XNum = (font_xsize / 8) + 1;
+    
+    /* INT31-C & INT32-C: Validate parameters at function entry */
+    assert(x >= 0 && y >= 0);
+    assert(font_xsize > 0 && font_xsize <= 255);
+    assert(font_ysize > 0 && font_ysize <= 255);
+    int xnum_calc = (font_xsize / 8) + 1;
+    assert(xnum_calc >= 0 && xnum_calc <= 255);
+    XNum = (uint8_t)xnum_calc;
     if (font_ysize % 8 == 0)
     {
+        /* INT30-C: Prevent unsigned integer underflow */
+        assert(XNum > 0U);
         XNum--;
     }
     if (c < ' ')
@@ -133,6 +151,9 @@ static inline void _GUI_DispChar(uint16_t *lcd_buf, char c, int x, int y, const 
         return;
     }
     c = c - ' ';
+    /* INT32-C: Prevent signed integer overflow in base calculation */
+    assert(c >= 0 && c <= (INT_MAX / ((int)XNum * font_ysize)));
+    /* INT31-C: Safe conversion to uint32_t */
     base = (c * XNum * font_ysize);
 
     int ystart = MAX(stripe_top, y);
@@ -144,16 +165,26 @@ static inline void _GUI_DispChar(uint16_t *lcd_buf, char c, int x, int y, const 
         {
             for (pos = ystart; pos < yend; pos++)
             {
-                temp = (uint8_t) pdata[base + (pos - y) + j * font_ysize];
+                /* INT30-C: Prevent unsigned integer overflow in array index */
+                uint32_t idx_calc = (uint32_t)(pos - y) + (uint32_t)j * (uint32_t)font_ysize;
+                assert(base <= (UINT32_MAX - idx_calc));
+                temp = (uint8_t) pdata[base + idx_calc];
                 for (t = 0; t < font_xsize; t++)
                 {
+                    /* INT32-C: Prevent signed integer overflow in pixel calculation */
+                    assert(x <= (INT_MAX - font_xsize));
+                    assert((x + font_xsize) >= (int)t);
+                    int pixel_x = (x + font_xsize) - (int)t;
+                    assert(pixel_x >= 0);
                     if ((temp >> t) & 0x01) {
-                        hal_draw_pixel565(lcd_buf, (x + font_xsize - t), (pos - stripe_top), fcolor, width);
+                        hal_draw_pixel565(lcd_buf, (uint32_t)pixel_x, (pos - stripe_top), fcolor, width);
                     } else {
-                        hal_draw_pixel565(lcd_buf, (x + font_xsize - t), (pos - stripe_top), bcolor, width);
+                        hal_draw_pixel565(lcd_buf, (uint32_t)pixel_x, (pos - stripe_top), bcolor, width);
                     }
                 }
             }
+            /* INT32-C: Prevent signed integer overflow */
+            assert(x <= (INT_MAX - 8));
             x = x + 8;
         }
     }
@@ -187,12 +218,17 @@ static inline void hal_draw_rect565(uint16_t *lcd_buf, hal_rect_t rect,
                   mpp_color_t rgb, uint32_t width,
                   int stripe_top, int stripe_bottom)
 {
+    /* INT31-C: Safe conversion through ConvRgb888Rgb565 */
     uint16_t color16 = ConvRgb888Rgb565(rgb);
 
     /* horizontal top bar */
     if ((rect.top >= stripe_top) && (rect.top <= stripe_bottom))
     {
+        /* INT31-C: Validate rect coordinates are non-negative before conversion */
+        assert(rect.left >= 0 && rect.right >= 0);
+        assert(rect.left <= rect.right);
         for (int i = rect.left; i < rect.right; i++) {
+            assert(i >= 0);
             hal_draw_pixel565(lcd_buf, i, rect.top - stripe_top, color16, width);
         }
     }
@@ -220,6 +256,10 @@ static inline void hal_draw_rect565(uint16_t *lcd_buf, hal_rect_t rect,
 
 static inline void hal_draw_pixel565(uint16_t *pDst, uint32_t x, uint32_t y, uint16_t color, uint32_t lcd_w)
 {
+    /* INT30-C: Prevent unsigned integer overflow in array index */
+    assert(y <= (UINT32_MAX / lcd_w) && (y * lcd_w) <= (UINT32_MAX - x));
+    /* INT31-C: Validate width fits in uint16_t for pixel operations (Line 195) */
+    assert(lcd_w <= UINT16_MAX);
     pDst[y * (lcd_w) + x] = color;
 }
 
@@ -232,11 +272,20 @@ int hal_landmark(uint8_t *frame, int width, int height, mpp_pixel_format_t forma
     /* for now only support full frame */    
     if (stripe) return MPP_INVALID_PARAM;
 
+    /* INT32-C: Validate landmark parameters at function entry */
+    assert(lk->width > 0 && lk->width <= (INT_MAX / 2));
+    assert(width > 0 && height > 0);
+
     uint16_t color16 = ConvRgb888Rgb565(lk->color);
 
+    int width_times_2 = lk->width * 2;
+
     /* check landmark size versus image border */
-    if ( (lk->y <= lk->width) || (lk->y >= (height - (lk->width * 2))) 
-        || (lk->x <= lk->width) || (lk->x >= (width - (lk->width * 2))) )
+    /* INT32-C: Prevent signed integer overflow in boundary checks */
+    assert(height >= width_times_2);
+    assert(width >= width_times_2);
+    if ( (lk->y <= lk->width) || (lk->y >= (height - width_times_2))
+        || (lk->x <= lk->width) || (lk->x >= (width - width_times_2)) )
     {
         HAL_LOGE("invalid landmark size versus image border x:%d y:%d thickness:%d width:%d height:%d\n", lk->x, lk->y, lk->width, width, height);
         return MPP_INVALID_PARAM;
@@ -273,6 +322,11 @@ int hal_label_rectangle(uint8_t *frame, int width, int height, mpp_pixel_format_
     /* for now only support RGB565 format */
     if (format != MPP_PIXEL_RGB565) return MPP_INVALID_PARAM;
 
+    /* INT32-C: Validate rectangle parameters at function entry */
+    assert(lr->left >= 0 && lr->top >= 0);
+    assert(lr->right >= lr->left && lr->bottom >= lr->top);
+
+    /* INT31-C: Validate before conversion to uint32_t */
     xsize = lr->right - lr->left;
     ysize = lr->bottom - lr->top;
 
@@ -293,9 +347,14 @@ int hal_label_rectangle(uint8_t *frame, int width, int height, mpp_pixel_format_
 
     if (stripe)
     {
+        /* INT32-C: Prevent signed integer overflow (Line 355) */
         int stripe_h = height / stripe_max;
+        assert(stripe > 0 && stripe_h <= (INT_MAX / stripe));
+        assert((stripe - 1) <= (INT_MAX / stripe_h));
+        int temp_stripe_top = (stripe - 1) * stripe_h;
+        assert(stripe_h > 0 && temp_stripe_top <= (INT_MAX - stripe_h));
         stripe_top = (stripe - 1) * stripe_h;
-        stripe_bottom = stripe_top + stripe_h - 1;
+        stripe_bottom = temp_stripe_top + stripe_h - 1;
     }
     else
     {
@@ -312,7 +371,14 @@ int hal_label_rectangle(uint8_t *frame, int width, int height, mpp_pixel_format_
     }
 
     /* check label fits in frame */
-    int strxsize = strlen((const char *)lr->label) * FONT_XSize;
+    /* INT31-C: Validate string length calculation */
+    size_t label_len = strlen((const char *)lr->label);
+    assert(label_len <= (SIZE_MAX / FONT_XSize));
+    size_t strxsize_calc = label_len * FONT_XSize;
+    assert(strxsize_calc <= INT_MAX);
+    int strxsize = (int)strxsize_calc;
+    /* INT32-C: Prevent signed integer overflow in boundary check */
+    assert(lr->left <= (width - strxsize));
     if (    (lr->left + strxsize > width)
             || (lr->top + FONT_YSize > height)
     )   return MPP_INVALID_PARAM;
