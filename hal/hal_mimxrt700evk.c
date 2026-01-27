@@ -26,6 +26,7 @@
 #include "hal_graphics_dev.h"
 #include "hal_vdec_dev.h"
 #include "hal_utils.h"
+#include "hal_os.h"
 #include "mpp_config.h"
 
 /* Decoder setup */
@@ -95,7 +96,25 @@ int hal_camera_setup(const char *name, camera_dev_t *dev)
 
 void HAL_DCACHE_CleanInvalidateByRange(uint32_t addr, uint32_t size)
 {
+    hal_atomic_enter();
     XCACHE_CleanInvalidateCacheByRange(addr, size);
+    hal_atomic_exit();
+    return;
+}
+
+void HAL_DCACHE_CleanByRange(uint32_t addr, uint32_t size)
+{
+    hal_atomic_enter();
+    XCACHE_CleanCacheByRange(addr, size);
+    hal_atomic_exit();
+    return;
+}
+
+void HAL_DCACHE_InvalidateByRange(uint32_t addr, uint32_t size)
+{
+    hal_atomic_enter();
+    XCACHE_InvalidateCacheByRange(addr, size);
+    hal_atomic_exit();
     return;
 }
 

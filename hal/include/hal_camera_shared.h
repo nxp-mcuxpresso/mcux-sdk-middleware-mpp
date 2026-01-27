@@ -17,7 +17,7 @@
  */
 
  /**
- * @defgroup HAL_VIRTUAL_CAMERA_TYPES HAL Types
+ * @defgroup HAL_TYPES HAL Types
  *
  * This section provides the detailed documentation for the MPP HAL VIRTUAL CAMERA types
  *

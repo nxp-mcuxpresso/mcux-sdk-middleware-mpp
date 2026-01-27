@@ -15,6 +15,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES src/mpp_element_inference.c
         SOURCES src/mpp_element_nullsink.c
         SOURCES src/mpp_element_img_compose.c
+        SOURCES src/mpp_element_img_quality_check.c
         SOURCES src/mpp_heap.c
         SOURCES src/mpp_memory.c
         SOURCES src/mpp_utils.c

@@ -18,6 +18,8 @@ import platform
 import re
 from pathlib import Path
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'internal'))
+
 class MPPBuilder:
     def __init__(self):
         self.w_dir = Path(__file__).resolve().parent
@@ -32,6 +34,26 @@ class MPPBuilder:
         self.armgcc_dir = ""
         self.core_id = ""
         self.is_windows = platform.system() == "Windows"
+        self.flash_after_build = False
+        self.probe_id = None
+        self.use_gdb = False
+        self.jlinkscript = None
+        # Set core ID based on board
+        self.board_core_map = {
+            "frdmmcxn947": {
+                "0": "cm33_core0",
+                "1": "cm33_core1"
+            },
+            "mimxrt700evk": {
+                "0": "cm33_core0",
+                "1": "cm33_core1"
+            },
+            "evkbmimxrt1170": {
+                "0": "cm7",
+                "1": "cm4"
+            }
+        }
+        self.app_core_folder = "core0"
 
     def _find_sdk_dir(self):
         """Find SDK directory based on repository structure"""
@@ -379,18 +401,12 @@ class MPPBuilder:
             print("Please check your ARMGCC_DIR setting")
             sys.exit(1)
 
-        # Set core ID based on board
-        board_core_map = {
-            "frdmmcxn947": "cm33_core0",
-            "mimxrt700evk": "cm33_core0",
-            "evkbmimxrt1170": "cm7"
-        }
-
-        if board not in board_core_map:
+        if board not in self.board_core_map:
             print(f"Fail sdk board name: {board}")
             sys.exit(1)
 
-        self.core_id = board_core_map[board]
+        # Set default core ID
+        self.core_id = self.board_core_map[board]["0"]
 
     def parse_app_config(self, app_type, app_name):
         """Parse application configuration"""
@@ -399,6 +415,9 @@ class MPPBuilder:
 
         config_file = self.w_dir / "boards" / self.board / app_type / app_name / f"{app_name}.conf"
         parse_script = self.w_dir / "tools" / "mpp_parse_configs.sh"
+
+        if not config_file.exists():
+            config_file = self.w_dir / "boards" / self.board / app_type / app_name / self.core_id / f"{app_name}.conf"
 
         if parse_script.exists() and config_file.exists():
             try:
@@ -526,6 +545,11 @@ class MPPBuilder:
         else:  # tests
             source_path = f"middleware/eiq/mpp/tests/{app}"
 
+        source_path_dir = Path(source_path) / self.app_core_folder
+
+        if source_path_dir.exists():
+            source_path = str(source_path_dir)
+
         # Build west command
         west_cmd = [
             "west", "build", "-b", board, source_path, "-p", "always",
@@ -587,6 +611,51 @@ class MPPBuilder:
 
         return True
 
+    def flash_built_image(self, board):
+        try:
+            from auto_test import flash_files, auto_detect_probe # type: ignore
+        except Exception as e:
+            print(f"Could not import auto_test module --> Error: {str(e)}")
+            return False
+
+        """Flash the last built image to the board"""
+        if not self.last_built_elf:
+            print("Error: No ELF file was built to flash")
+            return False
+
+        build_output_dir = self.sdk_dir / f"build_{board}" / self.build_rel_or_dbg
+        elf_path = build_output_dir / self.last_built_elf
+        
+        if not elf_path.exists():
+            print(f"Error: Built ELF file not found: {elf_path}")
+            return False
+
+        print(f"\nFlashing {self.last_built_elf} to board {board}...")
+
+        # Auto-detect probe and probe type
+        current_os = platform.system()
+        flash_log_file = None  # Use console output for flash logs
+
+        probe_id, probe_type = auto_detect_probe(self.probe_id, board, current_os, flash_log_file)
+
+        # Flash the file
+        success = flash_files(
+            str(elf_path),
+            board,
+            probe_id,
+            probe_type,
+            self.use_gdb,
+            flash_log_file,
+            self.jlinkscript
+        )
+
+        if success:
+            print(f"Successfully flashed {self.last_built_elf}")
+        else:
+            print(f"Failed to flash {self.last_built_elf}")
+
+        return success
+
     def build(self, board, panel, build_rel_or_dbg, build_type, log_level,
               extra_build_flags, exp, test):
         """Main build function"""
@@ -606,7 +675,14 @@ class MPPBuilder:
         self.setup_toolchain_and_sdk_dir(board)
 
         if self.input_core_id:
-            self.core_id = self.input_core_id
+            try:
+                self.core_id = self.board_core_map[self.board][str(self.input_core_id)]
+            except KeyError:
+                self.core_id = self.board_core_map[self.board["0"]]
+            if str(self.input_core_id) == "1":
+                self.app_core_folder = "core1"
+            else:
+                self.app_core_folder = "core0"
 
         examples, tests = self.get_examples_and_tests(board, exp, test)
         panel_config_define = self.get_panel_config_define(board, panel)
@@ -623,6 +699,12 @@ class MPPBuilder:
                 )
                 if not success:
                     return False
+                
+                # Flash after building if requested
+                if self.flash_after_build:
+                    flash_success = self.flash_built_image(board)
+                    if not flash_success:
+                        print("Warning: Flash failed, continuing with next build...")
 
             # Build tests
             for app in tests:
@@ -632,6 +714,12 @@ class MPPBuilder:
                 )
                 if not success:
                     return False
+
+                # Flash after building if requested
+                if self.flash_after_build:
+                    flash_success = self.flash_built_image(board)
+                    if not flash_success:
+                        print("Warning: Flash failed, continuing with next build...")
         finally:
             os.chdir(original_cwd)
 
@@ -827,11 +915,19 @@ def main():
     parser.add_argument("-g", "--app-config", default=None,
                        help="the index of the app_config to be used")
     parser.add_argument("-C", "--core-id", default=None,
-                       help="specify the core id you want to build app for")
+                       help="specify the core id you want to build app for (values like 0, 1, 2...)")
     parser.add_argument("-S", "--sysbuild", action="store_true",
                        help="add --sysbuild option to the build command")
     parser.add_argument("-v", "--verbose", action="store_true",
                        help="enable verbose for build")
+    parser.add_argument("-F", "--flash", action="store_true",
+                       help="flash the built image to the board after building")
+    parser.add_argument("-P", "--probe-id", default=None,
+                       help="probe ID for flashing (auto-detected if not provided)")
+    parser.add_argument("-G", "--use-gdb", action="store_true",
+                       help="use GDB server for flashing (only supported with jlink)")
+    parser.add_argument("-J", "--jlinkscript", default=None,
+                       help="path to JLink script file for GDB server (valid only when use_gdb is set)")
 
     args = parser.parse_args()
 
@@ -845,12 +941,17 @@ def main():
         sys.exit(1)
 
     print(f"SDK_DIR={builder.sdk_dir}")
-
     # Set builder parameters
     builder.app_config_index = args.app_config or ""
     builder.input_core_id = args.core_id or ""
     builder.sysbuild = "--sysbuild" if args.sysbuild else ""
     builder.gen_doc = args.doc
+
+    # Set flash parameters
+    builder.flash_after_build = args.flash
+    builder.probe_id = args.probe_id
+    builder.use_gdb = args.use_gdb
+    builder.jlinkscript = args.jlinkscript
 
     # Handle board list
     boards = args.board.split() if args.board != "all" else ["frdmmcxn947", "evkbmimxrt1170", "mimxrt700evk"]
@@ -868,7 +969,7 @@ def main():
         # Adjust build type based on board
         build_rel_or_dbg = args.config
         if board in ["frdmmcxn947", "mimxrt700evk"]:
-            if args.core_id == "cm33_core1":
+            if args.core_id == "1":
                 build_type = build_rel_or_dbg
             else:
                 build_type = f"flash_{build_rel_or_dbg}"

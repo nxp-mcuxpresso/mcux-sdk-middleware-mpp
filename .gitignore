@@ -19,3 +19,4 @@ boards/linux-pc/camera_emulator/*
 __pycache__/
 *.pyc
 *.pyo
+.probe_board_mapping.json

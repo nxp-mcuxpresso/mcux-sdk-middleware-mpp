@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 NXP.
+ * Copyright 2024-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -31,6 +31,7 @@
 #include "fsl_common.h"
 #include "display_support.h"
 #include "lvgl.h"
+#include "lvgl_private.h"
 
 #if defined(__cplusplus)
 extern "C" {

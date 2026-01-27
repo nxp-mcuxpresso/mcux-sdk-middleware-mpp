@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022,2024-2025 NXP.
+ * Copyright 2020-2022,2024-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -94,7 +94,12 @@ static inline int camera_dequeue(_mpp_t *mpp)
         {
             MPP_LOGI("Warning: camera may overwrite buffer in use.\n");
         }
-        elem->io.out_buf[i]->status = MPP_BUFFER_WRITTING;
+        /* Set buffer status to writting only when in advance enqueue is disabled 
+         * When it is enabled, the status is already set during enqueue */
+        if (cam->params.in_advance_enqueue == false)
+        {
+            elem->io.out_buf[i]->status = MPP_BUFFER_WRITTING;
+        }
 
         MPP_LOGD("Dequeue camera buffer %d, frame_id %d\r\n", i, elem->io.out_buf[i]->frame_id + 1);
 
@@ -239,7 +244,10 @@ static inline int camera_enqueue(_elem_t *elem, void *buf)
             if (i >= cam->params.n_streams)
                 break;
             if (cam->dev.config.stream_requested[i] == true)
+            {
                 req_cnt++;
+                cam_elem->io.out_buf[i]->status = MPP_BUFFER_WRITTING;
+            }
         }
 
         if (req_cnt > 0)

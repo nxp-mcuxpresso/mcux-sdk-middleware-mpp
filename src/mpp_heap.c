@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 NXP.
+ * Copyright 2020-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -68,6 +68,8 @@ void mpp_heap_move(_mpp_t *mpp, _mpp_t *prio_lst[], unsigned int dst_prio)
 }
 
 void HAL_DCACHE_CleanInvalidateByRange(uint32_t addr, uint32_t size);
+void HAL_DCACHE_CleanByRange(uint32_t addr, uint32_t size);
+void HAL_DCACHE_InvalidateByRange(uint32_t addr, uint32_t size);
 
 /* ask the pipeline source for frame completion:
  * returns true when the source has finished capturing the full frame (all stripes)
@@ -109,13 +111,22 @@ void mpp_execute(_mpp_t *mpp)
     _elem_t *elem = mpp->first_elem;
 
     if (__builtin_expect((mpp->oper_status != MPP_RUNNING), 0))
+    {
+        /* Avoid running on an old frame when restarting the pipeline*/
+        if (elem->type == MPP_TYPE_PROC)
+        {
+            for (i = 0; i < elem->io.nb_in_buf; i++)
+                elem->io.last_frame_id[i] = elem->io.in_buf[i]->frame_id;
+        }
         return;
+    }
 
     /* lock the pipeline status while processing */
     bool released = hal_sema_take(mpp->status_sema, 0);
     if (!released)
     {
         MPP_LOGI("Pipeline status previously locked\r\n");
+        return;
     }
 
     /* source dequeue */
@@ -166,6 +177,21 @@ void mpp_execute(_mpp_t *mpp)
             /* We can't have more streams than output buffers */
             cam->dev.config.min_stream_req_cnt = min_req_cnt;
             cam->dev.config.req_cnt_type = req_cnt_type;
+        }
+
+        /* flush cache for output buffer */
+        for (i = 0; i < elem->io.nb_out_buf; i++)
+        {
+            /* cacheable buffer, written by CPU */
+            if (elem->io.out_buf[i]->hw->cacheable)
+            {
+                int bufsize = 0;
+                if (elem->io.out_buf[i]->compressed_size > 0)
+                    bufsize = elem->io.out_buf[i]->compressed_size;
+                else
+                    bufsize = elem->io.out_buf[i]->hw->stride * elem->io.out_buf[i]->height;
+                HAL_DCACHE_CleanByRange((uint32_t) elem->io.out_buf[i]->hw->addr, bufsize);
+            }
         }
 
         elem = elem->next[0];
@@ -239,7 +265,7 @@ void mpp_execute(_mpp_t *mpp)
                     bufsize = elem->io.in_buf[i]->compressed_size;
                 else
                     bufsize = elem->io.in_buf[i]->hw->stride * elem->io.in_buf[i]->height;
-                HAL_DCACHE_CleanInvalidateByRange((uint32_t) elem->io.in_buf[i]->hw->addr, bufsize);
+                HAL_DCACHE_InvalidateByRange((uint32_t) elem->io.in_buf[i]->hw->addr, bufsize);
             }
         }
 
@@ -261,8 +287,12 @@ void mpp_execute(_mpp_t *mpp)
             /* cacheable buffer, written by CPU */
             if (elem->io.out_buf[i]->hw->cacheable)
             {
-                int bufsize = elem->io.out_buf[i]->hw->stride * elem->io.out_buf[i]->height;
-                HAL_DCACHE_CleanInvalidateByRange((uint32_t) elem->io.out_buf[i]->hw->addr, bufsize);
+                int bufsize = 0;
+                if (elem->io.out_buf[i]->compressed_size > 0)
+                    bufsize = elem->io.out_buf[i]->compressed_size;
+                else
+                    bufsize = elem->io.out_buf[i]->hw->stride * elem->io.out_buf[i]->height;
+                HAL_DCACHE_CleanByRange((uint32_t) elem->io.out_buf[i]->hw->addr, bufsize);
             }
         }
 
@@ -305,6 +335,20 @@ void mpp_execute(_mpp_t *mpp)
     MPP_LOGD_IF(rlmt_log_on, "Enqueue to sink @%p\n", elem);
     if (elem != NULL && elem->type == MPP_TYPE_SINK )
     {
+        /* invalidate cache for input buffer */
+        for (i = 0; i < elem->io.nb_in_buf; i++)
+        {
+            /* cacheable buffer, read by CPU */
+            if (elem->io.in_buf[i]->hw->cacheable)
+            {
+                int bufsize = 0;
+                if (elem->io.in_buf[i]->compressed_size > 0)
+                    bufsize = elem->io.in_buf[i]->compressed_size;
+                else
+                    bufsize = elem->io.in_buf[i]->hw->stride * elem->io.in_buf[i]->height;
+                HAL_DCACHE_InvalidateByRange((uint32_t) elem->io.in_buf[i]->hw->addr, bufsize);
+            }
+        }
         if (elem->sink_enqueue) elem->sink_enqueue(mpp);
         if (elem->io.in_buf[0]->callback != NULL)
             elem->io.in_buf[0]->callback(elem, elem->io.in_buf[0]);
@@ -322,6 +366,7 @@ void mpp_execute_heap(_mpp_t *prio_lst[])
     int i;
     uint32_t start_time, end_time;
     mpp_stats_t *stats;
+    uint64_t time_us;
     bool done = true;
 
     do
@@ -340,6 +385,14 @@ void mpp_execute_heap(_mpp_t *prio_lst[])
                 {
                     stats->mpp.mpp = (mpp_t)mpp;
                     stats->mpp.mpp_exec_time = end_time - start_time;
+                    mpp->fps_params.frame_cnt++;
+                    if (mpp->fps_params.frame_cnt >= MPP_FPS_STATS_WINDOW)
+                    {
+                        time_us = hal_get_crt_time() - mpp->fps_params.start_time_us;
+                        stats->mpp.fps = (mpp->fps_params.frame_cnt * 1000000) / time_us;
+                        mpp->fps_params.frame_cnt = 0;
+                        mpp->fps_params.start_time_us = hal_get_crt_time();
+                    }
                     hal_sema_give(stats_lock[MPP_STATS_GRP_MPP]);
                 }
             }

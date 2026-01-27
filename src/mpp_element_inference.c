@@ -134,6 +134,7 @@ unsigned int elem_inference_setup(_elem_t *elem)
         params.evt_callback_f = mpp->params.evt_callback_f;
         params.cb_userdata = mpp->params.cb_userdata;
         params.tensor_order = elem->params.ml_inference.tensor_order;
+        params.mpp = (mpp_t) mpp; 
         memcpy(&params.inference_params,
                         &elem->params.ml_inference.inference_params,sizeof(mpp_inference_params_t));
 
@@ -283,6 +284,7 @@ uint32_t mpp_inference_update(_elem_t *elem, mpp_element_params_t *params)
         hal_params.evt_callback_f = mpp->params.evt_callback_f;
         hal_params.cb_userdata = mpp->params.cb_userdata;
         hal_params.tensor_order = elem->params.ml_inference.tensor_order;
+        hal_params.mpp = (mpp_t) mpp;
         memcpy(&hal_params.inference_params,
                 &elem->params.ml_inference.inference_params,
                 sizeof(mpp_inference_params_t));

@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include <limits.h>
 #include <assert.h>
-
 #include "fsl_common.h"
 #include "font.h"
 #include "hal_draw.h"
@@ -378,8 +377,7 @@ int hal_label_rectangle(uint8_t *frame, int width, int height, mpp_pixel_format_
     assert(strxsize_calc <= INT_MAX);
     int strxsize = (int)strxsize_calc;
     /* INT32-C: Prevent signed integer overflow in boundary check */
-    assert(lr->left <= (width - strxsize));
-    if (    (lr->left + strxsize > width)
+    if (    (lr->left > width - strxsize)
             || (lr->top + FONT_YSize > height)
     )   return MPP_INVALID_PARAM;
 

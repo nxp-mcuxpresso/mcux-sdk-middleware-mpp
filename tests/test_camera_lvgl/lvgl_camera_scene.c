@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -9,6 +9,8 @@
  * an image view + a start/stop button.
  */
 
+#include "FreeRTOS.h"
+#include "semphr.h"
 #include "lvgl.h"
 #include "mpp_config.h"
 #include "fsl_debug_console.h"

@@ -63,15 +63,18 @@ def get_sdk_root_path(sdk_path: Optional[str] = None) -> str:
 
     # If running from within SDK, find the mcuxsdk root
     current_path = os.path.abspath(__file__)
-    normalized_path = current_path.replace('\\', '/')
-
-    # Find the mcuxsdk part in the path
-    if 'mcuxsdk/middleware/eiq/mpp' in normalized_path:
-        mcuxsdk_index = normalized_path.find('mcuxsdk')
-        sdk_root = normalized_path[:mcuxsdk_index + len('mcuxsdk')]
-        return sdk_root.replace('/', os.sep)
-
-    raise ValueError("Cannot determine SDK root path")
+    
+    # Split the path into parts and find the exact 'mcuxsdk' folder
+    path_parts = Path(current_path).parts
+    
+    try:
+        # Find the index of 'mcuxsdk' in the path parts
+        mcuxsdk_index = path_parts.index('mcuxsdk')
+        # Reconstruct the path up to and including 'mcuxsdk'
+        sdk_root = os.path.join(*path_parts[:mcuxsdk_index + 1])
+        return sdk_root
+    except ValueError:
+        raise ValueError("Cannot determine SDK root path - 'mcuxsdk' folder not found in current path")
 
 def validate_sdk_path(args):
     """
@@ -133,10 +136,10 @@ def is_mpp_folder_symlink(sdk_root_path, boards: list[str]):
 
     # Check if all paths exist
     file_exists = [path.exists() for path in list_to_check]
-
-    if any([not exists for exists in file_exists]):
-        non_existing_paths_str = "\n\t".join([path for path, exists in zip(list_to_check, file_exists) if not exists])
-        logger.error(f"Some paths do not exist: {non_existing_paths_str}")
+    if any(not exists for exists in file_exists):
+        non_existing_paths = [str(path) for path, exists in zip(list_to_check, file_exists) if not exists]
+        non_existing_paths_str = "\n\t".join(non_existing_paths)
+        logger.error(f"Some paths do not exist:\n\t{non_existing_paths_str}")
         return True
 
     # Check if any file is symlink

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 NXP.
+ * Copyright 2020-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -64,6 +64,9 @@
 #define MPP_LBL_RECT_TAG    ((uint16_t)0x4c52)
 /* landmark tag identification */
 #define MPP_LANDMARK_TAG    ((uint16_t)0x4c53)
+
+/* Window size (in frames) for FPS statistics calculation */
+#define MPP_FPS_STATS_WINDOW 60
 
 /* source type id */
 typedef enum
@@ -167,6 +170,12 @@ typedef struct
     unsigned short last_frame_id[MAX_INPUT_PORTS]; /* frame id of the last processed input buffer(s) */
 } io_desc_t;
 
+typedef struct 
+{
+    uint32_t frame_cnt;
+    uint64_t start_time_us;
+} _mpp_fps_params_t;
+
 struct _mpp_s {
 	/*creation params*/
 	mpp_params_t params;
@@ -202,6 +211,8 @@ struct _mpp_s {
     bool force_update;
 
     mpp_stats_t *stats;
+
+    _mpp_fps_params_t fps_params;
 };
 
 /* camera source */
@@ -296,6 +307,7 @@ static inline int can_add(mpp_element_id_t id)
     case MPP_ELEMENT_INFERENCE:
     case MPP_ELEMENT_IMG_DECODE:
     case MPP_ELEMENT_IMG_COMPOSE:
+    case MPP_ELEMENT_IMG_QUALITY_CHECK:
         return 1;
     default:
         return 0;
@@ -319,6 +331,9 @@ uint32_t mpp_inference_update(_elem_t *elem, mpp_element_params_t *params);
 
 /* composition update function */
 uint32_t mpp_compose_update(_elem_t *elem, mpp_element_params_t *params);
+
+/* image quality check update function */
+uint32_t mpp_img_quality_check_update(_elem_t *elem, mpp_element_params_t *params);
 
 /* create element and link it to its mpp */
 int mpp_create_elem(_mpp_t *mpp, _elem_t **p_elem);

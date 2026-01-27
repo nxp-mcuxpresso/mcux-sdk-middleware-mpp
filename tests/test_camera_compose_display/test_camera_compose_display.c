@@ -141,6 +141,7 @@ typedef struct {
  * Prototypes
  ******************************************************************************/
 static void app_task(void *params);
+extern void HAL_DCACHE_CleanByRange(uint32_t addr, uint32_t size);
 
 /*******************************************************************************
  * Code
@@ -155,7 +156,7 @@ static void draw_text_area(void* buf, uint32_t size, text_info_t* text)
 
     /*Clear the buffer. */
     memset(buf,0,size);
-    init_text_buf(&ctx, buf, TEXT_WIDTH, TEXT_HEIGHT, TEXT_WIDTH);
+    init_text_buf(&ctx, buf, size, TEXT_WIDTH, TEXT_HEIGHT, TEXT_WIDTH);
 
     draw_text_line(&ctx, "User name:",row_indentation,start_y_middle);
     start_y_middle += get_font_height();
@@ -187,7 +188,7 @@ static void draw_text_area(void* buf, uint32_t size, text_info_t* text)
 	draw_text_line(&ctx, tmp, row_indentation, start_y_middle );
 
 	//make sure all data are pushed to the memory.
-	XCACHE_CleanCacheByRange((uint32_t)buf,size);
+	HAL_DCACHE_CleanByRange((uint32_t)buf,size);
 }
 
 /*!

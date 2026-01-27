@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP
+ * Copyright 2022-2024, 2026 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -36,6 +36,6 @@
 #endif
 
 /* max number of tasks expected in the system */
-#define HAL_MAX_TASKS 30
+#define HAL_MAX_TASKS 50
 
 #endif /* _HAL_FREERTOS_H */

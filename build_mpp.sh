@@ -14,6 +14,7 @@ GEN_DOC=false
 LAST_BUILT_ELF=""
 APP_CONFIG_INDEX=""
 INPUT_CORE_ID=""
+APP_CORE_FOLDER="core0"
 SYSBUILD=""
 
 setup_toolchain_and_sdk_dir()
@@ -54,8 +55,12 @@ parse_app_config()
     app_type=$1
     app_name=$2
     if [ "$APP_CONFIG_INDEX" != "" ] ; then
-        if [ -f "tools/mpp_parse_configs.sh" ] && [ -f "boards/${BOARD}/${app_type}/${app_name}/${app_name}.conf" ]; then
-            configs=$(/bin/bash tools/mpp_parse_configs.sh boards/${BOARD}/${app_type}/${app_name}/${app_name}.conf ${APP_CONFIG_INDEX})
+        CONF_FILE_PATH="boards/${BOARD}/${app_type}/${app_name}/${app_name}.conf"
+        if [ ! -f "$CONF_FILE_PATH" ]; then
+            CONF_FILE_PATH="boards/${BOARD}/${app_type}/${app_name}/${CORE_ID}/${app_name}.conf"
+        fi
+        if [ -f "tools/mpp_parse_configs.sh" ] && [ -f "${CONF_FILE_PATH}" ]; then
+            configs=$(/bin/bash tools/mpp_parse_configs.sh ${CONF_FILE_PATH} ${APP_CONFIG_INDEX})
             if [[ "${configs}" != "" ]]; then
                 echo "Found app config ${APP_CONFIG_INDEX}: ${configs}"
                 EXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS} ${configs}"
@@ -129,7 +134,12 @@ build()
                 BUILD_PATH="build"
             fi
             rm -fr build
-            west build -b ${BOARD} examples/eiq_examples/mpp/${APP} -p always \
+            if [ -d examples/eiq_examples/mpp/${APP}/${APP_CORE_FOLDER} ]; then
+                SOURCE_PATH="examples/eiq_examples/mpp/${APP}/${APP_CORE_FOLDER}"
+            else
+                SOURCE_PATH="examples/eiq_examples/mpp/${APP}"
+            fi
+            west build -b ${BOARD} ${SOURCE_PATH} -p always \
                        ${SYSBUILD} \
                        --config ${BUILD_TYPE} \
                        --toolchain armgcc \
@@ -159,7 +169,12 @@ build()
             fi
             rm -fr build
             parse_app_config "tests" "${APP}"
-            west build -b ${BOARD} middleware/eiq/mpp/tests/${APP} -p always \
+            if [ -d middleware/eiq/mpp/tests/${APP}/${APP_CORE_FOLDER} ]; then
+                SOURCE_PATH="middleware/eiq/mpp/tests/${APP}/${APP_CORE_FOLDER}"
+            else
+                SOURCE_PATH="middleware/eiq/mpp/tests/${APP}"
+            fi
+            west build -b ${BOARD} ${SOURCE_PATH} -p always \
                        ${SYSBUILD} \
                        --config ${BUILD_TYPE} \
                        --toolchain armgcc \
@@ -282,7 +297,7 @@ usage()
     echo " -s <sdk_path>: specify the path to the mcuxsdk folder from sdk-next repo (DO NOT include mcuxsdk folder)"
     echo " -v: enable verbose for build"
     echo " -g <app_config_index> - the index of the app_config to be used for building the app"
-    echo " -C <core_id> - specify the core id you want to build app for - if not set, default core (0) will be used"
+    echo " -C <core_id> - specify the core id you want to build app for (values like 0, 1, 2...) - if not set, default core (0) will be used"
     echo " -S: add --sysbuild option to the build command - useful for multicore builds"
     exit 0
 }
@@ -359,7 +374,33 @@ if [ "${EXP}" == "" -a "${TEST}" == "" ] ; then
     EXP=camera_view
 fi
 
-for BOARD in ${BOARDS} ; do 
+for BOARD in ${BOARDS} ; do
+    if [[ "${INPUT_CORE_ID}" != "" ]]; then
+        case "${BOARD}" in
+            frdmmcxn947|mimxrt700evk)
+                if [[ "${INPUT_CORE_ID}" == "1" ]]; then
+                    INPUT_CORE_ID="cm33_core1"
+                    APP_CORE_FOLDER="core1"
+                else
+                    INPUT_CORE_ID="cm33_core0"
+                    APP_CORE_FOLDER="core0"
+                fi
+                ;;
+            evkbmimxrt1170)
+                if [[ "${INPUT_CORE_ID}" == "1" ]]; then
+                    INPUT_CORE_ID="cm4"
+                    APP_CORE_FOLDER="core1"
+                else
+                    INPUT_CORE_ID="cm7"
+                    APP_CORE_FOLDER="core0"
+                fi
+                ;;
+            *)
+                echo "Fail sdk board name"
+                exit 1
+        esac
+    fi
+
     #adjust build type
     if [ "${BOARD}" == "frdmmcxn947" -o "${BOARD}" == "mimxrt700evk" ] ; then
         if [[ "${INPUT_CORE_ID}" == "cm33_core1" ]] ; then

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 NXP.
+ * Copyright 2020-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -906,6 +906,14 @@ int mpp_stop(mpp_t mpp)
             break;
         }
 
+        /* wait for pipeline processing to be finished */
+        bool released = hal_sema_take(_mpp->status_sema, HAL_MAX_TIMEOUT);
+        if (!released)
+        {
+            MPP_LOGE("Stop timeout while waiting to finish processing\r\n");
+            break;
+        }
+
         /* execution of mpp should be stopped before peripherals */
         _mpp->oper_status = MPP_STOPPED;
 
@@ -988,15 +996,6 @@ int mpp_stop(mpp_t mpp)
                 break;
             }
         }
-
-        /* wait for pipeline processing to be finished */
-        bool released = hal_sema_take(_mpp->status_sema, HAL_MAX_TIMEOUT);
-        if (!released)
-        {
-            MPP_LOGE("Stop timeout while waiting to finish processing\r\n");
-            break;
-        }
-
     } while (false);
     return ret;
 }
@@ -1085,6 +1084,9 @@ int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t
                 break;
             case MPP_ELEMENT_INFERENCE:
                 ret = mpp_inference_update(elem, params);
+                break;
+            case MPP_ELEMENT_IMG_QUALITY_CHECK:
+                ret = mpp_img_quality_check_update(elem, params);
                 break;
             default:
                 MPP_LOGI("Nothing to update for element %s\n", elem_name(elem));

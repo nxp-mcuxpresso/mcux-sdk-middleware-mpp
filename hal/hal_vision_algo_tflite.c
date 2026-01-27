@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP.
+ * Copyright 2022-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -233,7 +233,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Run(const vision_algo_dev_t *
     tflite_model_param = (tflite_model_param_t *)dev->priv_data;
 
     tflite_model_param->user_params.evt_callback_f(
-    NULL, /* TODO pass mpp_t object here? */
+    tflite_model_param->user_params.mpp,
     MPP_EVENT_INFERENCE_INPUT_READY,
     (void *)tflite_model_param->input_tensor.data,
     tflite_model_param->user_params.cb_userdata);
@@ -254,7 +254,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Run(const vision_algo_dev_t *
     tflite_model_param->out_param.inference_type = MPP_INFERENCE_TYPE_TFLITE;
 
     tflite_model_param->user_params.evt_callback_f(
-            NULL, /* TODO pass mpp_t object here? */
+            tflite_model_param->user_params.mpp,
             MPP_EVENT_INFERENCE_OUTPUT_READY,
             (void *)&tflite_model_param->out_param,
             tflite_model_param->user_params.cb_userdata);
@@ -284,7 +284,11 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_getBufDesc(const vision_algo_
      */
     in_buf->alignment = HAL_TFLITE_BUFFER_ALIGN;
     in_buf->nb_lines = tflite_model_param->input_tensor.dims.data[1]; /* number of lines required is the input height */
+#if (HAL_TENSOR_ARENA_NCACHE == 1)
+    in_buf->cacheable = false;
+#else
     in_buf->cacheable = true;
+#endif
     in_buf->stride = tflite_model_param->input_tensor.dims.data[2] * tflite_model_param->input_tensor.dims.data[3]; /* width * channels */
     in_buf->addr = (unsigned char *)tflite_model_param->input_tensor.data;
     in_buf->max_image_size = in_buf->nb_lines * in_buf->stride;

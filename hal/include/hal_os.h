@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP
+ * Copyright 2022-2026 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -119,6 +119,9 @@ uint32_t hal_tick_to_ms(uint32_t os_tick);
 
 /*! @brief Provides the exec time in ms of current task */
 uint32_t hal_get_exec_time();
+
+/*! @brief Provides the os crt time in us */
+uint64_t hal_get_crt_time();
 
 /*! @brief start suspending task switching */
 void hal_atomic_enter();

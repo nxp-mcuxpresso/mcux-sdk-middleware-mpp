@@ -47,7 +47,7 @@
 
 #if (SOURCE_STATIC_IMAGE == 1)
 #if defined(USE_SCRFD_320_256_MODEL)
-void *image_data = (void *)couple_COCO_256_320_rgb_data;
+void *image_data = (void *)couple_COCO_320_256_rgb_data;
 #elif defined(USE_SCRFD_256_256_MODEL)
 void *image_data = (void *)couple_COCO_256_256_rgb_data;
 #else

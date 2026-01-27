@@ -74,6 +74,7 @@ import argparse
 import subprocess
 import re
 import shutil
+import time
 from pathlib import Path
 from datetime import datetime
 from typing import Tuple, List, Optional
@@ -105,6 +106,9 @@ def get_sdk_root_path(mpp_dir: Path) -> Path:
 
 def run_command(cmd: str | List[str], cwd: Optional[Path] = None, check: bool = True, shell: bool = False, get_output: bool = False) -> Tuple[int, str, str]:
     """Run a command and return the result."""
+    if isinstance(cmd, List):
+        cmd = [c for c in cmd if c != ""]
+
     if isinstance(cmd, str) and not shell:
         cmd = cmd.split()
 
@@ -311,11 +315,18 @@ def check_symlinks_exist(mpp_dir: Path, sdk_install_dir: Path) -> bool:
 
     return examples_link.is_symlink() or mpp_link.is_symlink()
 
-def west_update(components: List[str], sdk_install_dir: Path) -> int:
+def west_update(components: List[str], sdk_install_dir: Path, disable_fast_update: bool = False) -> int:
     """Run west update command with the provided components."""
-    cmd = ["west", "update"] + components
+    if disable_fast_update:
+        cmd = ["west", "update"] + components
+    else:
+        cmd = ["west", "update", "-n", "-o=--depth=1"] + components
+
+    start_time = time.time()
 
     returncode, _, _ = run_command(cmd, cwd=sdk_install_dir, check=False)
+
+    print(f"West update completed in {time.time() - start_time:.2f} seconds")
 
     return returncode
 
@@ -365,6 +376,8 @@ def main() -> None:
                         help="Only create symbolic links without installing/updating SDK")
     parser.add_argument("-x", "--git-clean", action="store_true",
                         help="Enable git clean -fdx after git reset --hard (WARNING: removes all untracked files)")
+    parser.add_argument("--disable-fast-update", action="store_true",
+                        help="Disable fast update mode (west update with depth=1)")
 
     args = parser.parse_args()
 
@@ -415,7 +428,7 @@ def main() -> None:
             )
             print(f"Warning: Stash sdk_update_backup_stash_{stash_timestamp} will not be applied automatically. You can apply it later")
             print("Updating examples and mpp to the current manifest version using west update")
-            west_update(["mcu-sdk-examples", "mcux-sdk-middleware-mpp"], sdk_install_dir)
+            west_update(["mcu-sdk-examples", "mcux-sdk-middleware-mpp"], sdk_install_dir, args.disable_fast_update)
 
         os.chdir(crt_dir)
         sys.exit(0)
@@ -482,7 +495,7 @@ def main() -> None:
 
             # Run west update
             os.chdir(sdk_install_dir)
-            west_status = west_update(components_to_update, sdk_install_dir)
+            west_status = west_update(components_to_update, sdk_install_dir, args.disable_fast_update)
 
             # Apply and drop the stash with the timestamp if it exists
             stash_script = sdk_install_dir / "apply_stash.py"
@@ -527,7 +540,10 @@ for line in result.stdout.splitlines():
     )
 
     os.chdir(sdk_install_dir)
-    run_command("west update bifrost", cwd=sdk_install_dir)
+    if args.disable_fast_update:
+        run_command("west update bifrost", cwd=sdk_install_dir)
+    else:
+        run_command("west update -n -o=--depth=1 bifrost", cwd=sdk_install_dir)
     run_command("west config commands.allow_extensions true", cwd=sdk_install_dir)
     run_command("west sdk_init", cwd=sdk_install_dir)
 
@@ -541,7 +557,7 @@ for line in result.stdout.splitlines():
         components_to_update = [""]
 
     # Run west update
-    west_status = west_update(components_to_update, sdk_install_dir)
+    west_status = west_update(components_to_update, sdk_install_dir, args.disable_fast_update)
 
     os.chdir(mpp_dir)
 

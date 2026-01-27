@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -31,10 +31,11 @@ static void blit_cell_RGB565_clipped(const uint16_t *cell,
    }
 }
 
-void init_text_buf(text_context_t *ctx, void* buf, int width, int height, int fbStridePixels)
+void init_text_buf(text_context_t *ctx, void* buf, int size, int width, int height, int fbStridePixels)
 {
     if (ctx) {
         ctx->fb = buf;
+        ctx->size = size;
         ctx->width = width;
         ctx->height = height;
         ctx->fbStridePixels = fbStridePixels;
@@ -42,9 +43,9 @@ void init_text_buf(text_context_t *ctx, void* buf, int width, int height, int fb
 }
 
 // Draw one line: x is left, y_mid is vertical center of the text row
-void draw_text_line(const text_context_t *ctx, const char *s, int x, int y_mid)
+int draw_text_line(const text_context_t *ctx, const char *s, int x, int y_mid)
 {
-   if (!ctx || !ctx->fb) return;
+   if (!ctx || !ctx->fb) return x;
    int penX = x;
    int y = y_mid - (CELL_H / 2);          // cells are baseline-aligned internally
    for (const char *p = s; *p; ++p) {
@@ -64,6 +65,21 @@ void draw_text_line(const text_context_t *ctx, const char *s, int x, int y_mid)
        }
        if (penX >= ctx->width) break;
    }
+   return penX;
+}
+
+void clear_text_line(text_context_t *ctx, int x, int y_mid, int width)
+{
+    if (!ctx || !ctx->fb) return;
+    if (x >= ctx->width || y_mid < 0) return;
+    int y = y_mid - (CELL_H / 2);
+    uint16_t *dst = ctx->fb + y * ctx->fbStridePixels + x;
+    int clear_width = width <= 0 ? ctx->width - x : width;
+    for (int row = 0; row < CELL_H; ++row) 
+    {
+        memset(dst, 0, (size_t)clear_width * sizeof(uint16_t));
+        dst += ctx->fbStridePixels;
+    }
 }
 
 int get_font_width()

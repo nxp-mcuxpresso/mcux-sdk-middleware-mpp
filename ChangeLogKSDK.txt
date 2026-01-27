@@ -2,7 +2,23 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-  Current version is 3.7.0
+  Current version is 3.8.0
+  - 3.8.0
+    - New features:
+      - New pipeline element for image quality check.
+      - FPS computation for each pipeline created
+    - Bug fixes:
+      - NPU models converted with neutron-converter 3.0.0
+      - Increased maximum number of HAL tasks.
+      - Fixed semaphore usage on mpp_stop to avoid modifications of the pipeline while it's running
+      - Pass mpp handle (previously it was NULL) to user callback function when the inference is completed
+      - Disable interrupts when calling cache management functions to avoid data corruption
+    - Known issues:
+      - static_image_mobilenet_view on mimxrt700evk: accuracy is lower than expected
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170 (CM7 only)
+      - mimxrt700evk (CM33_0 only)
   - 3.7.0
     - New features:
       - New display HAL for FBDEV.

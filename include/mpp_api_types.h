@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 NXP
+ * Copyright 2021-2026 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -49,6 +49,7 @@ typedef enum {
     MPP_EVENT_INVALID,  /*!< invalid event */
     MPP_EVENT_INFERENCE_INPUT_READY,    /*!< RGB image for inference is ready */
     MPP_EVENT_INFERENCE_OUTPUT_READY,   /*!< inference out is ready */
+    MPP_EVENT_QUALITY_CHECK_READY,      /*!< Quality check measurements are ready */
     MPP_EVENT_INTERNAL_TEST_RESERVED,   /*!< INTERNAL: DO NOT USE */
     MPP_EVENT_NUM   /*!< DO NOT USE */
 } mpp_evt_t;
@@ -95,6 +96,7 @@ typedef union {
     struct {
         mpp_t mpp;
         unsigned int mpp_exec_time; /*!< pipeline execution time (ms) */
+        unsigned int fps;           /*!< frames processed per second */
     } mpp; /*!< Pipeline execution performance counters */
     struct {
         mpp_elem_handle_t hnd;
@@ -241,6 +243,7 @@ typedef enum {
     MPP_ELEMENT_CONVERT,    /*!< Image conversion: resolution, orientation, color format */
     MPP_ELEMENT_IMG_DECODE,     /*!< Image decompression: JPEG, PNG */
     MPP_ELEMENT_IMG_COMPOSE,    /*!< compose a simple GUI: logo and text area with the input stream */
+    MPP_ELEMENT_IMG_QUALITY_CHECK,  /*!< Image quality check */
     MPP_ELEMENT_NUM         /*!< DO NOT USE */
 } mpp_element_id_t;
 
@@ -289,6 +292,12 @@ typedef struct {
     int inference_time_ms;  /*!< inference run time measurement - output to user */
     mpp_inference_type_t inference_type; /*!< type of the inference */
 } mpp_inference_cb_param_t;
+
+/* Image quality metrics */
+typedef struct {
+    int brightness;      /*!< brightness metric */
+    int contrast;        /*!< contrast metric */
+} img_quality_metrics_t;
 
 /** mpp color encoding */
 typedef union {
@@ -457,6 +466,10 @@ union {
         mpp_tensor_order_t tensor_order; /*!< model input tensor component order */
         mpp_inference_params_t inference_params; /*!< model specific parameters used by the inference */
     } ml_inference;
+    /** Image quality check element's parameters */
+    struct {
+        _Bool disable;           /*!< disable quality check */
+    } img_quality_check;
 };
     mpp_stats_t *stats;
 } mpp_element_params_t;

@@ -1,6 +1,6 @@
 # eIQ MPP Hardware Abstraction Layer API
 
-MPP-HAL VERSION 3.7
+MPP-HAL VERSION 3.8
 
 ## Chapter 1
 
@@ -113,6 +113,10 @@ Enabling/Disabling Hal components and devices:
 - struct[ camera_dev_static_config_t](#camera_dev_static_config_t)
 - struct[ camera_dev_private_capability_t](#camera_dev_private_capability_t)
 - struct[ camera_dev_t](#camera_dev_t)
+- struct[ virtual_usb_cam_config_msg_t](#virtual_usb_cam_config_msg_t)
+- struct[ virtual_usb_cam_req_msg_t](#virtual_usb_cam_req_msg_t)
+- struct[ virtual_usb_cam_rsp_msg_t](#virtual_usb_cam_rsp_msg_t)
+- struct[ virtual_usb_cam_msg_t](#virtual_usb_cam_msg_t)
 - struct[ static_image_static_config_t](#static_image_static_config_t)
 - struct[ static_image_t](#static_image_t)
 - struct[ gfx_surface_t](#gfx_surface_t)
@@ -135,11 +139,25 @@ Enabling/Disabling Hal components and devices:
 
 **Macros**
 
+- #define[ TARGET_CAMERA0_WIDTH](#target_camera0_width)
+- #define **TARGET\_CAMERA0\_HEIGHT**
+- #define **TARGET\_CAMERA1\_WIDTH**
+- #define **TARGET\_CAMERA1\_HEIGHT**
+- #define **TARGET\_CAMERA0\_RESOLUTION**
+- #define **TARGET\_CAMERA1\_RESOLUTION**
+- #define **TARGET\_CAMERA\_MAX\_RESOLUTION**
+- #define **TARGET\_CAMERA\_FPS**
+- #define **CAMERA\_DEV\_BUFFER\_ALIGN**
+- #define[ CORE1_EPT_ADDRESS](#core1_ept_address)
+- #define[ MPP_EPT_ADDRESSS](#mpp_ept_addresss)
+- #define[ RTSP_EPT_ADDRESS](#rtsp_ept_address)
+- #define[ APP_EP_READY_EVENT_DATA](#app_ep_ready_event_data)
 - #define[ HAL_GFX_DEV_CPU_NAME](#hal_gfx_dev_cpu_name)
 - #define[ GUI_PRINTF_BUF_SIZE](#gui_printf_buf_size)
 - #define[ GUI_PRINTF_BUF_SIZE](#gui_printf_buf_size)
 - #define[ HAL_VDEC_DEV_NAME](#hal_vdec_dev_name)
 - #define[ MAX_INPUT_PORTS](#max_input_ports)
+- #define[ MAX_OUTPUT_PORTS](#max_output_ports)
 - #define[ HAL_DEVICE_NAME_MAX_LENGTH](#hal_device_name_max_l)
 
 **Typedefs**
@@ -152,7 +170,7 @@ Enabling/Disabling Hal components and devices:
 - [display_setup_func_t)](#display_setup_func_t)
 - [camera_setup_func_t)](#camera_setup_func_t)
 
-## Enumerations
+**Enumerations**
 
 - enum [hal_camera_status_t](#hal_camera_status_t) {
 
@@ -176,6 +194,36 @@ Enabling/Disabling Hal components and devices:
 
 }
 
+- enum[ virtual_usb_cam_msg_type_e ](#virtual_usb_cam_msg_type_e){
+
+  **VIRT\_USB\_CAM\_NOMSG** ,
+
+  **VIRT\_USB\_CAM\_CONFIG**,
+
+  **VIRT\_USB\_CAM\_CONFIG\_ACK**, **VIRT\_USB\_CAM\_CONFIG\_ERR** ,
+
+  **VIRT\_USB\_CAM\_REQRGB** ,
+
+  **VIRT\_USB\_CAM\_REQIR**,
+
+  **VIRT\_USB\_CAM\_REQRGBIR** ,
+
+  **VIRT\_USB\_CAM\_RSPRGB** ,
+
+  **VIRT\_USB\_CAM\_RSPIR** ,
+
+  **VIRT\_USB\_CAM\_RSPRGBIR** ,
+
+  **VIRT\_USB\_CAM\_ERROR** }
+
+- enum **virtual\_usb\_cam\_user\_id\_e** {
+
+  **RTSP\_USER\_ID** ,
+
+  **MPP\_USER\_ID** }
+
+- enum[ virtual_usb_cam_col_format_e ](#virtual_usb_cam_col_format_e){ **VIRT\_USB\_CAM\_JPEG** }
+
 - enum [hal_image_status_t](#hal_image_status_t) {
 
   [MPP_kStatus_HAL_ImageSuccess](#mpp_kstatus_hal_imagesuccess),
@@ -186,11 +234,11 @@ Enabling/Disabling Hal components and devices:
 
 - enum [gfx_rotate_target_t](#gfx_rotate_target_t) {
 
-  **kGFXRotateTarget_None**,
+  kGFXRotateTarget_None,
 
-  **kGFXRotate_SRCSurface**,
+  kGFXRotate_SRCSurface,
 
-  **kGFXRotate_DSTSurface**
+  kGFXRotate_DSTSurface
 
 }
 
@@ -321,6 +369,66 @@ Camera devices can enqueue and dequeue frames as well as react to events from in
 |[camera_dev_static_config_t](#camera_dev_static_config_t)|config|static configurations|
 |[camera_dev_private_capability_t](#camera_dev_private_capability_t)|cap|private capability|
 |void ∗|data|device private data|
+
+##### virtual_usb_cam_config_msg_t
+
+**struct virtual\_usb\_cam\_config\_msg\_t**
+
+Structure that characterizes the payload of the camera config message sent from core 0 to core 1. 
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|uint32\_t|camera\_width|Width of the camera output in pixels.|
+|uint32\_t|camera\_height|Height of the camera output in pixels.|
+|[virtual_usb_cam_col_format_e](#virtual_usb_cam_col_format_e)|color\_format|Color format for the camera output (e.g., JPEG)|
+|uint32\_t|fps|Frames per second for camera capture rate.|
+
+##### virtual_usb_cam_req_msg_t
+
+**struct virtual\_usb\_cam\_req\_msg\_t**
+
+Structure that characterizes the payload of the camera request message containing frame buffer addresses for RGB and IR data.
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|uint32\_t|rgb\_frame\_addr|Physical address of the RGB frame buffer.|
+|uint32\_t|rgb\_max\_frame\_size|Maximum size allocated for RGB frame buffer.|
+|uint32\_t|ir\_frame\_addr|Physical address of the IR frame buffer.|
+|uint32\_t|ir\_max\_frame\_size|Maximum size allocated for IR frame buffer.|
+
+##### virtual_usb_cam_rsp_msg_t
+
+**struct virtual\_usb\_cam\_rsp\_msg\_t**
+
+Structure that characterizes the payload of the camera request message containing frame addresses and sizes for RGB and IR data.
+
+**Data Fields**
+
+
+|type|name|description|
+| - | - | - |
+|uint32\_t|rgb\_frame\_addr|Physical address of the RGB frame buffer (looped back by the core 1 camera app)|
+|uint32\_t|rgb\_frame\_size|Size in bytes of the RGB frame data.|
+|uint32\_t|ir\_frame\_addr|Physical address of the IR frame buffer (looped back by the core 1 camera app)|
+|uint32\_t|ir\_frame\_size|Size in bytes of the IR frame data.|
+
+##### virtual_usb_cam_msg_t
+
+**struct virtual\_usb\_cam\_msg\_t**
+
+Structure that characterizes the messages sent between cores. 
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|[virtual_usb_cam_msg_type_e](#virtual_usb_cam_msg_type_e)|msg\_type|Type of message being sent (config, request, response, etc.)|
+|virtual\_usb\_cam\_user\_id\_e|user\_id|Identifier for the user/component sending the message (RTSP or MPP)|
+|union[ msg_payload_u](#msg_payload_u)|msg\_payload|Union containing the actual message data based on msg\_type.|
 
 ##### static_image_static_config_t
 
@@ -453,6 +561,7 @@ Structure passed to HAL as description of the binary model provided by user.
 - mpp\_pixel\_format\_t[ format](#format)
 - mpp\_tensor\_type\_t[ inputType](#inputtype)
 - mpp\_tensor\_order\_t[ tensor_order](#tensor_order)
+- mpp\_t[ mpp](#mpp)
 - int(∗[evt_callback_f ](#evt_callback_f))(mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
 - void ∗[cb_userdata](#cb_userdata)
 
@@ -476,11 +585,9 @@ model 'mean' of input values, used for normalization
 
 float model\_param\_t::model\_input\_std
 
-##### model_input_std
-
 model 'standard deviation' of input values, used for normalization
 
-**inference\_params**
+##### inference_params
 
 mpp\_inference\_params\_t model\_param\_t::inference\_params inference parameters
 
@@ -502,17 +609,19 @@ mpp\_tensor\_type\_t model\_param\_t::inputType input type
 
 ##### tensor_order
 
-##### tensor_order
-
 mpp\_tensor\_order\_t model\_param\_t::tensor\_order tensor order
 
-**evt\_callback\_f**
+##### mpp
+
+ mpp\_t model\_param\_t::mpp mpp handle
+
+##### evt_callback_f
 
 int(∗ model\_param\_t::evt\_callback\_f) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
 
 the callback to be called when model output is ready
 
-##### evt_callback_f
+##### cb_userdata
 
 void∗ model\_param\_t::cb\_userdata
 
@@ -520,7 +629,7 @@ pointer to user data, should be passed by callback
 
 ##### valgo_dev_private_capability_t
 
-**struct valgo\_dev\_private\_capability\_t** 
+**struct valgo\_dev\_private\_capability\_t**
 
 Valgo devices private capability.
 
@@ -564,7 +673,7 @@ Attributes of a vision algo device.
 
 ##### display_dev_private_capability_t
 
-**struct \_display\_dev\_private\_capability**
+**struct display\_dev\_private\_capability**
 
 Structure that characterizes the display device.
 
@@ -591,6 +700,8 @@ Structure that characterizes the display device.
 |void ∗∗|p\_in\_buf\_addr|Pointer to current input buffer address.|
 
 ##### display_dev_t
+
+**struct display\_dev\_t**
 
 Attributes of a display device. hal display device declaration.
 
@@ -625,7 +736,7 @@ the hardware specific buffer requirements
 
 ##### hal_img_decoder_setup_t
 
-**struct hal\_img\_decoder\_setup\_t!**
+**struct hal\_img\_decoder\_setup\_t**
 
 **Data Fields**
 
@@ -682,44 +793,90 @@ computed checksum
 
 ##### 2.1.1.2 Macro Definition Documentation
 
+##### target_camera0_width
+
+#define TARGET\_CAMERA0\_WIDTH
+
+Buffer alignment requirement for camera device buffers in bytes.
+
+##### core1_ept_address
+
+**CORE1\_EPT\_ADDRESS**
+
+#define CORE1\_EPT\_ADDRESS
+
+Endpoint address for Core 1 inter-core communication channel.
+
+##### mpp_ept_addresss
+
+**MPP\_EPT\_ADDRESSS**
+
+#define MPP\_EPT\_ADDRESSS
+
+Endpoint address for MPP (Media Processing Pipeline) inter-core communication channel. MPP might use a range of endpoints starting with 40 and up to 49 included
+
+##### rtsp_ept_address
+
+**RTSP\_EPT\_ADDRESS**
+
+#define RTSP\_EPT\_ADDRESS
+
+Endpoint address for RTSP (Real Time Streaming Protocol) inter-core communication channel.
+
+##### app_ep_ready_event_data
+
+**APP\_EP\_READY\_EVENT\_DATA**
+
+#define APP\_EP\_READY\_EVENT\_DATA
+
+Event data value indicating that the application endpoint is ready for communication.
+
+##### hal_gfx_dev_cpu_name
+
 **HAL\_GFX\_DEV\_CPU\_NAME**
 
-#define HAL\_GFX\_DEV\_CPU\_NAME hal graphics (gfx) device declaration.
+#define HAL\_GFX\_DEV\_CPU\_NAME 
 
-##### gui_printf_buf_size
+hal graphics (gfx) device declaration.
 
 Graphics processing devices can be used to perform conversion from one image format to another, resize images and compose images on top of one another. Examples of graphics devices include the PXP (pixel pipeline) found on many i.MXRT series MCUs. Name of the graphic device using CPU operations
 
+##### gui_printf_buf_size
+
 **GUI\_PRINTF\_BUF\_SIZE**
 
-#define GUI\_PRINTF\_BUF\_SIZE Local text buffer size.
+#define GUI\_PRINTF\_BUF\_SIZE 
+
+Local text buffer size.
 
 ##### hal_vdec_dev_name
+
+**HAL\_VDEC\_DEV\_NAME**
 
 #define HAL\_VDEC\_DEV\_NAME
 
 hal video decoder (vdec) device declaration.
 
-##### max_input_ports
-
 Video decoder devices can be used to perform decompression of image. Examples of decoder devices include the PNG/JPEG HW or SW found on many i.MXRT series MCUs. Name of the jpeg decoder device using CPU operations
+
+##### max_input_ports
 
 **MAX\_INPUT\_PORTS**
 
 #define MAX\_INPUT\_PORTS
 
-HAL public types header.
-
 maximum number of element inputs/outputs
 
-##### hal_device_name_max_l
+##### hal_device_name_max_length
 
 **HAL\_DEVICE\_NAME\_MAX\_LENGTH**
 
-#define HAL\_DEVICE\_NAME\_MAX\_LENGTH maximum length of device name
+#define HAL\_DEVICE\_NAME\_MAX\_LENGTH 
+
+maximum length of device name
+
 
 ##### 2.1.1.3 Typedef Documentation
-
 
 ##### camera_dev_callback_t
 
@@ -796,6 +953,20 @@ Type of events that are supported by calling the callback function.
 |<a name="kcameraevent_sendframe"></a>kCameraEvent\_SendFrame|Camera new frame is available.|
 |<a name="kcameraevent_cameradeviceinit"></a>kCameraEvent\_CameraDeviceInit|Camera device finished the initialization process.|
 
+**Enumeration Type Documentation**
+
+##### virtual_usb_cam_msg_type_e
+
+enum [virtual_usb_cam_msg_type_e](#virtual_usb_cam_msg_type_e)
+
+Structure that characterizes the exchanged message types between core 0 and core 1.
+
+
+##### virtual_usb_cam_col_format_e
+
+enum [virtual_usb_cam_col_format_e](#virtual_usb_cam_col_format_e)
+
+Structure that characterizes the color format for the camera output.
 
 ##### hal_image_status_t
 
@@ -804,7 +975,7 @@ enum [hal_image_status_t ](#hal_image_status_t)static image return status
 **Enumerator**
 
 |label|description|
-|-|-|
+| -| - |
 |<a name="mpp_kstatus_hal_imagesuccess"></a>MPP\_kStatus\_HAL\_ImageSuccess|Successfully.|
 |<a name="mpp_kstatus_hal_imageerror"></a>MPP\_kStatus\_HAL\_ImageError|Error occurs on HAL Image.|
 
@@ -921,37 +1092,34 @@ Register the graphic device with the GPU operations.
 
 error code (0: success, otherwise: failure)
 
+**HAL\_JPEG\_CPU\_Register()**
 
-##### hal_jpeg_cpu_register
+int HAL\_JPEG\_CPU\_Register ( vdec\_dev\_t ∗ dev ) 
 
-int HAL\_JPEG\_CPU\_Register (
-
-vdec\_dev\_t ∗ dev ) Register the jpeg SW decoder device. 
+Register the jpeg SW decoder device. 
 
 **Parameters**
 
 |in/out|name|description|
 |-|-|-|
 |in|dev|decoder device to register|
-| - | - | - |
 
 **Returns**
 
 error code (0: success, otherwise: failure)
 
 
-##### hal_jpeg_hw_register
+**HAL\_JPEG\_HW\_Register()**
 
-int HAL\_JPEG\_HW\_Register (
+int HAL\_JPEG\_HW\_Register ( vdec\_dev\_t ∗ dev ) 
 
-vdec\_dev\_t ∗ dev ) Register the jpeg HW decoder device. 
+Register the jpeg HW decoder device. 
 
 **Parameters**
 
 |in/out|name|description|
 |-|-|-|
 |in|dev|decoder device to register|
-| - | - | - |
 
 **Returns**
 
@@ -970,7 +1138,6 @@ error code (0: success, otherwise: failure)
 
 **Typedefs**
 
-- typedef int(∗[mpp_callback_t)](#mpp_callback_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
 - typedef int(∗[mpp_callback_t)](#mpp_callback_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
 
 **Functions**
@@ -1008,49 +1175,53 @@ Operation that needs to be implemented by a camera device.
 
 **Field Documentation**
 
+##### init
+
 **init**
 
 [hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::init) (camera\_dev\_t ∗dev, mpp\_camera\_params\_t ∗config, [camera_dev_callback_t](#camera_dev_callback_t) callback, void ∗param)
 
-##### init
-
 initialize the dev
+
+##### deinit
 
 **deinit**
 
 [hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::deinit) (camera\_dev\_t ∗dev)
 
-##### deinit
-
 deinitialize the dev
+
+##### start
 
 **start**
 
 [hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::start) (const camera\_dev\_t ∗dev)
 
-##### start
-
 start the dev
+
+##### stop
 
 **stop**
 
 [hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::stop) (const camera\_dev\_t ∗dev)
 
-##### stop
-
 stop the dev
+
+##### enqueue
 
 **enqueue**
 
 [hal_camera_status_t(∗ ](#hal_camera_status_t)camera\_dev\_operator\_t::enqueue) (const camera\_dev\_t ∗dev, void ∗data) enqueue a buffer to the dev
 
+##### dequeue
+
 **dequeue**
 
 [hal_camera_status_t(∗ ](#hal_camera_status_t)camera\_dev\_operator\_t::dequeue) (const camera\_dev\_t ∗dev, void ∗∗data, int ∗stripe)
 
-##### dequeue
-
 dequeue a buffer from the dev (blocking)
+
+##### get_buf_desc
 
 **get\_buf\_desc**
 
@@ -1058,15 +1229,19 @@ dequeue a buffer from the dev (blocking)
 
 get buffer descriptors and policy
 
+##### lock
+
 **lock** 
 
-[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::lock) (const camera\_dev\_t ∗dev) lock the device for exclusive access and operations
+[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::lock) (const camera\_dev\_t ∗dev) 
+
+lock the device for exclusive access and operations
 
 ##### unlock
 
 [hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::unlock) (const camera\_dev\_← t ∗dev)
 
-   unlock the device after exclusive operations
+unlock the device after exclusive operations
 
 ##### static_image_operator_t
 
@@ -1089,6 +1264,8 @@ Operation that needs to be implemented by an image element.
    
 ##### dequeue
 
+**dequeue** 
+
 [hal_image_status_t](#hal_image_status_t)(∗ static\_image\_operator\_t::dequeue) (static\_image\_← t ∗elt, [hw_buf_desc_t](#hw_buf_desc_t) ∗out\_buf, int ∗stripe\_num)
 
    dequeue a buffer from the elt
@@ -1103,15 +1280,15 @@ Operation that needs to be implemented by gfx device.
 
 - int(∗**init** )(gfx\_dev\_t ∗dev, void ∗param)
 - int(∗**deinit** )(gfx\_dev\_t ∗dev)
-- int(∗ **get\_buf\_desc** )(const gfx\_dev\_t ∗dev, [hw_buf_desc_t](#hw_buf_desc_t) ∗in\_buf, [hw_buf_desc_t](#hw_buf_desc_t) ∗out\_buf, [mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
-- int(∗ **blit** )(const gfx\_dev\_t ∗dev, const [gfx_surface_t](#gfx_surface_t) ∗pSrc, const [gfx_surface_t](#gfx_surface_t) ∗pDst, const [gfx_rotate_config_t ](#gfx_rotate_config_t)∗pRotate, mpp\_flip\_mode\_t flip)
+- int(∗**get\_buf\_desc** )(const gfx\_dev\_t ∗dev, [hw_buf_desc_t](#hw_buf_desc_t) ∗in\_buf, [hw_buf_desc_t](#hw_buf_desc_t) ∗out\_buf, [mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
+- int(∗**blit** )(const gfx\_dev\_t ∗dev, const [gfx_surface_t](#gfx_surface_t) ∗pSrc, const [gfx_surface_t](#gfx_surface_t) ∗pDst, const [gfx_rotate_config_t ](#gfx_rotate_config_t)∗pRotate, mpp\_flip\_mode\_t flip)
 - int(∗**drawRect** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#gfx_surface_t)∗pOverlay, int x, int y, int w, int h, int color)
 - int(∗**drawPicture** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#gfx_surface_t)∗pOverlay, int x, int y, int w, int h, int alpha, const char ∗pIcon)
 - int(∗**drawText** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#gfx_surface_t)∗pOverlay, int x, int y, int textColor, int bgColor, int type, const char ∗pText)
 - int(∗**compose** )(const gfx\_dev\_t ∗dev,[ gfx_surface_t ](#gfx_surface_t)∗pSrc,[ gfx_surface_t ](#gfx_surface_t)∗pOverlay,[ gfx_surface_t ](#gfx_surface_t)∗pDst, [gfx_rotate_config_t ](#gfx_rotate_config_t)∗pRotate, mpp\_flip\_mode\_t flip)
-##### vdec_dev_operator_t
-
 - int(∗**finish** )(gfx\_dev\_t ∗dev)
+
+##### vdec_dev_operator_t
 
 **struct vdec\_dev\_operator\_t**
 
@@ -1147,11 +1324,15 @@ Operation that needs to be implemented by a vision algorithm device.
 
 ##### deinit
 
+**deinit**
+
 [hal_valgo_status_t](#hal_valgo_status_t)(∗ vision\_algo\_dev\_operator\_t::deinit) (vision\_algo\_dev\_t ∗dev)
 
    deinitialize the dev
 
 ##### run
+
+**run**
 
 [hal_valgo_status_t](#hal_valgo_status_t)(∗ vision\_algo\_dev\_operator\_t::run) (const vision\_algo\_dev\_t ∗dev, void ∗data)
 
@@ -1178,9 +1359,7 @@ Operation that needs to be implemented by a display device.
 - [hal_display_status_t(](#hal_display_status_t)∗[blit](#blit) )(const display\_dev\_t ∗dev, void ∗frame, int stripe)
 - [hal_display_status_t(](#hal_display_status_t)∗[get_buf_desc ](#get_buf_desc))(const display\_dev\_t ∗dev, [hw_buf_desc_t ](#hw_buf_desc_t)∗in\_buf, [mpp_memory_policy_t](#mpp_memory_policy_t) ∗policy)
 
-##### init
-
-**Field Documentation **
+**Field Documentation**
 
 **init**
 
@@ -1200,8 +1379,6 @@ Operation that needs to be implemented by a display device.
 
 **stop**
 
-##### blit
-
 [hal_display_status_t](#hal_display_status_t)(∗ display\_dev\_operator\_t::stop) (display\_dev\_t ∗dev) stop the dev
 
 **blit**
@@ -1220,7 +1397,9 @@ Operation that needs to be implemented by a display device.
 
 **mpp\_callback\_t**
 
-typedef int(∗ mpp\_callback\_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data) The mpp callback function prototype.
+typedef int(∗ mpp\_callback\_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data) 
+
+The mpp callback function prototype.
 
 ##### 2.2.1.3 Function Documentation
 
@@ -1341,19 +1520,13 @@ N/A
 
 ##### get_bitpp
 
-**get\_bitpp()**static int get\_bitpp (
-
-mpp\_pixel\_format\_t type ) [static]
+**get\_bitpp()**static int get\_bitpp ( mpp\_pixel\_format\_t type ) [static]
 
 returns the number of bits per pixel per format, unknown format return 0
 
 ##### swap_2_bytes
 
-**swap\_2\_bytes()**void swap\_2\_bytes (
-
-uint8\_t ∗ data,
-
-int size )
+**swap\_2\_bytes()**void swap\_2\_bytes ( uint8\_t ∗ data, int size )
 
 Swaps a buffer's MSB and LSB bytes..
 
@@ -1363,178 +1536,6 @@ Swaps a buffer's MSB and LSB bytes..
 | - | - |
 |data|pointer to the buffer to be converted(from little endian to big endian and vice-versa).|
 |size|buffer size.|
-
-**HAL Types**
-
-**Data Structures**
-
-- struct[ virtual_usb_cam_config_msg_t](#virtual_usb_cam_config_msg_t)
-- struct[ virtual_usb_cam_req_msg_t](#virtual_usb_cam_req_msg_t)
-- struct[ virtual_usb_cam_rsp_msg_t](#virtual_usb_cam_rsp_msg_t)
-- struct[ virtual_usb_cam_msg_t](#virtual_usb_cam_msg_t)
-
-**Macros**
-
-- #define[ TARGET_CAMERA0_WIDTH](#target_camera0_width)
-- #define **TARGET\_CAMERA0\_HEIGHT**
-- #define **TARGET\_CAMERA1\_WIDTH**
-- #define **TARGET\_CAMERA1\_HEIGHT**
-- #define **TARGET\_CAMERA0\_RESOLUTION**
-- #define **TARGET\_CAMERA1\_RESOLUTION**
-- #define **TARGET\_CAMERA\_MAX\_RESOLUTION**
-- #define **TARGET\_CAMERA\_FPS**
-- #define **CAMERA\_DEV\_BUFFER\_ALIGN**
-- #define[ CORE1_EPT_ADDRESS](#core1_ept_address)
-- #define[ MPP_EPT_ADDRESSS](#mpp_ept_addresss)
-- #define[ RTSP_EPT_ADDRESS](#rtsp_ept_address)
-- #define[ APP_EP_READY_EVENT_DATA](#app_ep_ready_event_data)
-
-**Enumerations**
-
-- enum[ virtual_usb_cam_msg_type_e ](#virtual_usb_cam_msg_type_e){
-
-  **VIRT\_USB\_CAM\_NOMSG** ,
-
-  **VIRT\_USB\_CAM\_CONFIG**,
-
-  **VIRT\_USB\_CAM\_CONFIG\_ACK**, **VIRT\_USB\_CAM\_CONFIG\_ERR** ,
-
-  **VIRT\_USB\_CAM\_REQRGB** ,
-
-  **VIRT\_USB\_CAM\_REQIR**,
-
-  **VIRT\_USB\_CAM\_REQRGBIR** ,
-
-  **VIRT\_USB\_CAM\_RSPRGB** ,
-
-  **VIRT\_USB\_CAM\_RSPIR** ,
-
-  **VIRT\_USB\_CAM\_RSPRGBIR** ,
-
-  **VIRT\_USB\_CAM\_ERROR** }
-
-- enum **virtual\_usb\_cam\_user\_id\_e** {
-
-  **RTSP\_USER\_ID** ,
-
-  **MPP\_USER\_ID** }
-
-- enum[ virtual_usb_cam_col_format_e ](#virtual_usb_cam_col_format_e){ **VIRT\_USB\_CAM\_JPEG** }
-
-**Detailed Description**
-
-This section provides the detailed documentation for the MPP HAL VIRTUAL CAMERA types.
-
-**Data Structure Documentation**
-##### virtual_usb_cam_config_msg_t
-
-**struct virtual\_usb\_cam\_config\_msg\_t**
-
-Structure that characterizes the payload of the camera config message sent from core 0 to core 1. **Data Fields**
-
-
-
-|uint32\_t|camera\_width|Width of the camera output in pixels.|
-| - | - | - |
-|uint32\_t|camera\_height|Height of the camera output in pixels.|
-|[virtual_usb_cam_col_format_e](#virtual_usb_cam_col_format_e)|color\_format|Color format for the camera output (e.g., JPEG)|
-|uint32\_t|fps|Frames per second for camera capture rate.|
-
-##### virtual_usb_cam_req_msg_t
-
-**struct virtual\_usb\_cam\_req\_msg\_t**
-
-Structure that characterizes the payload of the camera request message containing frame buffer addresses for RGB and IR data.
-
-**Data Fields**
-
-
-
-|uint32\_t|<a name="virtual_usb_cam_rsp_msg_t"></a>rgb\_frame\_addr|Physical address of the RGB frame buffer.|
-| - | - | - |
-|uint32\_t|rgb\_max\_frame\_size|Maximum size allocated for RGB frame buffer.|
-|uint32\_t|ir\_frame\_addr|Physical address of the IR frame buffer.|
-|uint32\_t|ir\_max\_frame\_size|Maximum size allocated for IR frame buffer.|
-
-**struct virtual\_usb\_cam\_rsp\_msg\_t**
-
-Structure that characterizes the payload of the camera request message containing frame addresses and sizes for RGB and IR data.
-
-**Data Fields**
-
-
-
-|uint32\_t|rgb\_frame\_addr|Physical address of the RGB frame buffer (looped back by the core 1 camera app)|
-| - | - | - |
-|uint32\_t|rgb\_frame\_size|Size in bytes of the RGB frame data.|
-|uint32\_t|ir\_frame\_addr|Physical address of the IR frame buffer (looped back by the core 1 camera app)|
-|uint32\_t|ir\_frame\_size|Size in bytes of the IR frame data.|
-
-##### virtual_usb_cam_msg_t
-
-**struct virtual\_usb\_cam\_msg\_t**
-
-Structure that characterizes the messages sent between cores. **Data Fields**
-
-
-
-|[virtual_usb_cam_msg_type_e](#virtual_usb_cam_msg_type_e)|msg\_type|Type of message being sent (config, request, response, etc.)|
-| - | - | - |
-|virtual\_usb\_cam\_user\_id\_e|user\_id|Identifier for the user/component sending the message (RTSP or MPP)|
-|union[ msg_payload_u](#msg_payload_u)|msg\_payload|Union containing the actual message data based on msg\_type.|
-
-**Macro Definition Documentation**
-
-##### target_camera0_width
-
-#define TARGET\_CAMERA0\_WIDTH
-
-Buffer alignment requirement for camera device buffers in bytes.
-
-
-##### core1_ept_address
-
-#define CORE1\_EPT\_ADDRESS
-
-##### mpp_ept_addresss
-
-Endpoint address for Core 1 inter-core communication channel.
-
-**MPP\_EPT\_ADDRESSS**
-
-#define MPP\_EPT\_ADDRESSS
-
-Endpoint address for MPP (Media Processing Pipeline) inter-core communication channel. MPP might use a range of endpoints starting with 40 and up to 49 included
-
-##### rtsp_ept_address
-
-**RTSP\_EPT\_ADDRESS**
-
-#define RTSP\_EPT\_ADDRESS
-
-Endpoint address for RTSP (Real Time Streaming Protocol) inter-core communication channel.
-
-
-##### app_ep_ready_event_data
-
-#define APP\_EP\_READY\_EVENT\_DATA
-
-Event data value indicating that the application endpoint is ready for communication.
-
-**Enumeration Type Documentation**
-
-##### virtual_usb_cam_msg_type_e
-
-enum [virtual_usb_cam_msg_type_e](#virtual_usb_cam_msg_type_e)
-
-Structure that characterizes the exchanged message types between core 0 and core 1.
-
-
-##### virtual_usb_cam_col_format_e
-
-enum [virtual_usb_cam_col_format_e](#virtual_usb_cam_col_format_e)
-
-Structure that characterizes the color format for the camera output.
 
 ### 2.3 HAL Setup Functions
 
@@ -1553,6 +1554,8 @@ Structure that characterizes the color format for the camera output.
 This section provides the detailed documentation for the HAL setup functions that should be defined by each device.
 
 ##### 2.3.1.1 Function Documentation
+
+##### hal_label_rectangle
 
 **hal\_label\_rectangle()**
 
@@ -1585,25 +1588,20 @@ Implementation of hal labeled rectangle component that draws a rectangle and a t
 
 ##### hal_landmark
 
-**hal\_landmark()**int hal\_landmark (
+**hal\_landmark()**
 
+int hal\_landmark (
 uint8\_t ∗ frame,
-
 int width,
-
 int height,
-
 mpp\_pixel\_format\_t format,
-
 mpp\_landmark\_t ∗ lk,
-
 int stripe,
-
 int stripe\_max )
 
-Implementation of hal landmark component that draws a landmark on an input image. **Parameters**
+Implementation of hal landmark component that draws a landmark on an input image. 
 
-
+**Parameters**
 
 |in/out|name|description|
 | - | - | - |
@@ -1619,8 +1617,9 @@ Implementation of hal landmark component that draws a landmark on an input image
 
 0
 
-
 ##### hal_inference_tflite_setup
+
+**hal\_inference\_tflite\_setup()**
 
 int hal\_inference\_tflite\_setup (
 vision\_algo\_dev\_t ∗ dev )
@@ -1636,6 +1635,8 @@ Hal setup function for inference engine Tensorflow-Lite Micro.
 **Returns**
 
 error code (0: success, otherwise: failure)
+
+##### hal_display_setup
 
 **hal\_display\_setup()**
 
@@ -1696,8 +1697,9 @@ If name is NULL, the first available graphic processing supported by Hw will be 
 
 error code (0: success, otherwise: failure)
 
-
 ##### hal_img_decoder_setup
+
+**hal\_img\_decoder\_setup()**
 
 int hal\_img\_decoder\_setup ( const char ∗ name, vdec\_dev\_t ∗ dev )
 

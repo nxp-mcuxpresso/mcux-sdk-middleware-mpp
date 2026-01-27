@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -208,6 +208,8 @@ def save_jpeg(image: np.ndarray, output_path: str, quality: int = 95):
     except Exception as e:
         raise RuntimeError(f"Error saving JPEG file: {e}")
 
+    return output_path
+
 def save_png(image: np.ndarray, output_path: str, compression: int = 9):
     """Save image as PNG file."""
     # Check if input shape matches the RGB format expected by OpenCV
@@ -235,6 +237,8 @@ def save_png(image: np.ndarray, output_path: str, compression: int = 9):
     except Exception as e:
         raise RuntimeError(f"Error saving PNG file: {e}")
 
+    return output_path
+
 def save_bmp(image: np.ndarray, output_path: str):
     """Save image as BMP file."""
     # Check if input shape matches the RGB format expected by OpenCV
@@ -256,6 +260,8 @@ def save_bmp(image: np.ndarray, output_path: str):
         print(f"BMP saved to: {output_path}")
     except Exception as e:
         raise RuntimeError(f"Error saving BMP file: {e}")
+
+    return output_path
 
 def convert_rgb_to_yuv444(rgb_image: np.ndarray) -> bytes:
     """Convert RGB image to YUV444 planar format."""
@@ -1448,6 +1454,7 @@ def main():
     parser.add_argument('-s', '--swap-ch0-ch2', action='store_true',
                         help='Swap channels 0 and 2 of input image and save to output file (no display)')
     parser.add_argument('--crop',  help='Crop region in format: left:top[:width[:height]]. Width and height are optional (uses maximum if not specified)')
+    parser.add_argument('--quality-metrics', action='store_true', help='Calculate and display image quality metrics (brightness and contrast)')
 
     args = parser.parse_args()
 
@@ -1531,11 +1538,11 @@ def main():
 
                     # Save using appropriate format function
                     if input_format == 'JPEG':
-                        save_jpeg(swapped_image, file_name, args.quality)
+                        file_name = save_jpeg(swapped_image, file_name, args.quality)
                     elif input_format == 'PNG':
-                        save_png(swapped_image, file_name, args.compression)
+                        file_name = save_png(swapped_image, file_name, args.compression)
                     elif input_format == 'BMP':
-                        save_bmp(swapped_image, file_name)
+                        file_name = save_bmp(swapped_image, file_name)
                 else:
                     # For binary formats, read raw data
                     print(f"Reading raw binary data for channel swap...")
@@ -1594,11 +1601,11 @@ def main():
 
                 # Save image to file
                 if output_format == 'JPEG':
-                    save_jpeg(converted_image, file_name, args.quality)
+                    file_name = save_jpeg(converted_image, file_name, args.quality)
                 elif output_format == 'PNG':
-                    save_png(converted_image, file_name, args.compression)
+                    file_name = save_png(converted_image, file_name, args.compression)
                 elif output_format == 'BMP':
-                    save_bmp(converted_image, file_name)
+                    file_name = save_bmp(converted_image, file_name)
                 else:
                     save_binary_image(converted_image, file_name, output_format)
 
@@ -1648,6 +1655,17 @@ def main():
                     args.generate_header,
                     args.input
                 )
+
+            # Calculate and print quality metrics if requested
+            if args.quality_metrics:
+                print(f"Calculating quality metrics...")
+                # Brightness and contrast can be calculated from the luma component of YCbCr
+                ycbcra_converted_image = convert_image_format(image, input_format, "YCBCRA")
+                y_channel = ycbcra_converted_image[:, :, 0]  # Y
+                brightness = np.mean(y_channel)
+                contrast = np.std(y_channel)
+                print(f"  Brightness - mean of luma component (Y): {int(brightness)}")
+                print(f"  Contrast - std of luma component (Y): {int(contrast)}")
 
     except Exception as e:
         print(f"Error: {e}")

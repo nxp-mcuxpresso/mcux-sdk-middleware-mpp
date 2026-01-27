@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP.
+ * Copyright 2022-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -27,6 +27,7 @@
 #include "hal_graphics_dev.h"
 #include "hal_vdec_dev.h"
 #include "hal_utils.h"
+#include "hal_os.h"
 
 /* Decoder setup */
 hal_img_decoder_setup_t decoder_setup[] =
@@ -92,6 +93,23 @@ int hal_camera_setup(const char *name, camera_dev_t *dev)
 
 void HAL_DCACHE_CleanInvalidateByRange(uint32_t addr, uint32_t size)
 {
+    hal_atomic_enter();
     DCACHE_CleanInvalidateByRange(addr, size);
+    hal_atomic_exit();
+    return;
+}
+void HAL_DCACHE_CleanByRange(uint32_t addr, uint32_t size)
+{
+    hal_atomic_enter();
+    DCACHE_CleanByRange(addr, size);
+    hal_atomic_exit();
+    return;
+}
+
+void HAL_DCACHE_InvalidateByRange(uint32_t addr, uint32_t size)
+{
+    hal_atomic_enter();
+    DCACHE_InvalidateByRange(addr, size);
+    hal_atomic_exit();
     return;
 }

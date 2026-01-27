@@ -27,6 +27,7 @@
 #include "task.h"
 #include "semphr.h"
 #include "event_groups.h"
+#include "fsl_device_registers.h"
 
 #include "mpp_config.h"
 #include "mpp_api_types.h"
@@ -38,6 +39,9 @@
 #define _impl_PASTE(a,b) a##b
 #define _impl_CASSERT_LINE(predicate, line, file) \
     typedef char _impl_PASTE(assertion_failed_##file##_,line)[2*!!(predicate)-1];
+
+TaskStatus_t taskStatus[HAL_MAX_TASKS];
+UBaseType_t uxSavedInterruptStatus;
 
 void vApplicationStackOverflowHook( TaskHandle_t xTask, char * pcTaskName )
 {
@@ -138,7 +142,7 @@ int hal_mutex_unlock (hal_mutex_t mutex)
 /* Warning: FreeRTOS requires enabling configGENERATE_RUN_TIME_STATS */
 uint32_t hal_get_exec_time()
 {
-    TaskStatus_t taskStatus[HAL_MAX_TASKS] = {0};
+    memset(taskStatus, 0, sizeof(taskStatus));
     configRUN_TIME_COUNTER_TYPE runtime = 0;
     TaskHandle_t cur_task = xTaskGetCurrentTaskHandle();
     uint32_t runtime_ms = 0, tasks_time = 0;
@@ -167,8 +171,21 @@ uint32_t hal_get_exec_time()
     runtime_ms = runtime * HAL_EXEC_TIMER_US / 1000;
 
     /* INT30-C: Prevent unsigned integer underflow */
-    assert(runtime_ms >= tasks_time);
-    return runtime_ms - tasks_time;
+    if (runtime_ms >= tasks_time)
+        return runtime_ms - tasks_time;
+    else
+        return 0;
+}
+
+/* Warning: FreeRTOS requires enabling configGENERATE_RUN_TIME_STATS */
+uint64_t hal_get_crt_time()
+{
+#if (configGENERATE_RUN_TIME_STATS == 1)
+    uint64_t crt_time_us = portGET_RUN_TIME_COUNTER_VALUE();
+    return crt_time_us * HAL_EXEC_TIMER_US;
+#else
+    return 0;
+#endif
 }
 
 void *hal_malloc(uint32_t size)
@@ -252,7 +269,6 @@ uint32_t hal_get_tick_rate_hz()
     return configTICK_RATE_HZ;
 }
 
-UBaseType_t uxSavedInterruptStatus;
 void hal_atomic_enter()
 {
     uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();

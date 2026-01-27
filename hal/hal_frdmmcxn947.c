@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 NXP.
+ * Copyright 2023-2024, 2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -86,6 +86,18 @@ int hal_camera_setup(const char *name, camera_dev_t *dev)
 }
 
 void HAL_DCACHE_CleanInvalidateByRange(uint32_t addr, uint32_t size)
+{
+    /* no cache in NCX-N */
+    return;
+}
+
+void HAL_DCACHE_CleanByRange(uint32_t addr, uint32_t size)
+{
+    /* no cache in NCX-N */
+    return;
+}
+
+void HAL_DCACHE_InvalidateByRange(uint32_t addr, uint32_t size)
 {
     /* no cache in NCX-N */
     return;

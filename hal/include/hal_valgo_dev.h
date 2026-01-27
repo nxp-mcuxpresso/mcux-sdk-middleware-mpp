@@ -44,6 +44,7 @@ typedef struct _model_param_t {
     mpp_pixel_format_t format;               /*!< pixel format */
     mpp_tensor_type_t inputType;             /*!< input type */
     mpp_tensor_order_t tensor_order;         /*!< tensor order */
+    mpp_t mpp;                               /*!< mpp handle */
     int (*evt_callback_f)(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data); /*!< the callback to be called when model output is ready */
     void *cb_userdata;                       /*!< pointer to user data, should be passed by callback */
 } model_param_t;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -14,13 +14,15 @@ extern "C" {
 
 typedef struct {
     uint16_t *fb;          // framebuffer
+    uint32_t size;
     uint16_t width;
     uint16_t height;
     uint16_t fbStridePixels;  // framebuffer stride in pixels
 } text_context_t;
 
-void init_text_buf(text_context_t *ctx, void* buf, int width, int height, int fbStridePixels);
-void draw_text_line(const text_context_t *ctx, const char *s, int x, int y_mid);
+void init_text_buf(text_context_t *ctx, void* buf, int size, int width, int height, int fbStridePixels);
+int draw_text_line(const text_context_t *ctx, const char *s, int x, int y_mid);
+void clear_text_line(text_context_t *ctx, int x, int y_mid, int width);
 int get_font_width();
 int get_font_height();
 

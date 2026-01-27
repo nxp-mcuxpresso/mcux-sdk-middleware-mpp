@@ -1,6 +1,6 @@
 # eIQ MCU Media Processing Pipeline API
 
-MPP VERSION 3.7
+MPP VERSION 3.8
 
 ## 1. MPP API
 
@@ -8,21 +8,21 @@ MPP VERSION 3.7
 
 - int[ mpp_api_init (](#mpp_api_init)[mpp_api_params_t ](#mpp_api_params_t)∗params)
 - [mpp_t ](#mpp_t)[mpp_create (](#mpp_create)[mpp_params_t ](#mpp_params_t)∗params, int ∗ret)
-- int[ mpp_camera_add (](#mpp_camera_add)[mpp_t mpp](#mpp_t), const char ∗name, [mpp_camera_params_t ](#mpp_camera_params_t)∗params, [mpp_elem_handle_t elem_h,](#mpp_elem_handle_t))
-- int[ mpp_static_img_add (](#mpp_static_img_add)[mpp_t mpp](#mpp_t), [mpp_img_params_t ](#mpp_img_params_t)∗params, void ∗addr)
-- int[ mpp_display_add (](#mpp_display_add)[mpp_t mpp](#mpp_t), const char ∗name, [mpp_display_params_t ](#mpp_display_params_t)∗params)
-- int[ mpp_nullsink_add (](#mpp_nullsink_add)[mpp_t mpp)](#mpp_t)
-- int[ mpp_element_add (](#mpp_element_add)[mpp_t mpp](#mpp_t), [mpp_element_id_t id, ](#mpp_element_id_t)[mpp_element_params_t ](#mpp_element_params_t)∗params, [mpp_elem_handle_t ](#mpp_elem_handle_t)∗elem\_h)
+- int[ mpp_camera_add (](#mpp_camera_add)[mpp_t ](#mpp_t) mpp, const char ∗name, [mpp_camera_params_t ](#mpp_camera_params_t)∗params, [mpp_elem_handle_t ](#mpp_elem_handle_t) elem_h)
+- int[ mpp_static_img_add (](#mpp_static_img_add)[mpp_t ](#mpp_t) mpp, [mpp_img_params_t ](#mpp_img_params_t)∗params, void ∗addr)
+- int[ mpp_display_add (](#mpp_display_add)[mpp_t ](#mpp_t) mpp, const char ∗name, [mpp_display_params_t ](#mpp_display_params_t)∗params)
+- int[ mpp_nullsink_add (](#mpp_nullsink_add)[mpp_t ](#mpp_t) mpp)
+- int[ mpp_element_add (](#mpp_element_add)[mpp_t ](#mpp_t) mpp, [mpp_element_id_t id, ](#mpp_element_id_t)[mpp_element_params_t ](#mpp_element_params_t)∗params, [mpp_elem_handle_t ](#mpp_elem_handle_t)∗elem\_h)
 - int[ mpp_split (](#mpp_split)[mpp_t ](#mpp_t)mpp, unsigned int num, [mpp_params_t ](#mpp_params_t)∗params, [mpp_t ](#mpp_t)∗out\_list)
-- int[ mpp_background (](#mpp_background)[mpp_t mpp](#mpp_t), [mpp_params_t ](#mpp_params_t)∗params, [mpp_t ](#mpp_t)∗out\_mpp)
-- int[ mpp_element_update (](#mpp_element_update)[mpp_t mpp](#mpp_t), [mpp_elem_handle_t elem_h,](#mpp_elem_handle_t) [mpp_element_params_t ](#mpp_element_params_t)∗params, , bool force\_update)
-- int[ mpp_start (](#mpp_start)[mpp_t mpp](#mpp_t), int last)
-- int[ mpp_stop (](#mpp_stop)[mpp_t mpp)](#mpp_t)
-- void [mpp_stats_enable (](#mpp_stats_enable)[mpp_stats_grp_t grp)](#mpp_stats_grp_t)
-- void [mpp_stats_disable (](#mpp_stats_disable)[mpp_stats_grp_t grp)](#mpp_stats_grp_t)
+- int[ mpp_background (](#mpp_background)[mpp_t ](#mpp_t)mpp, [mpp_params_t ](#mpp_params_t)∗params, [mpp_t ](#mpp_t)∗out\_mpp)
+- int[ mpp_element_update (](#mpp_element_update)[mpp_t ](#mpp_t)mpp, [mpp_elem_handle_t elem_h,](#mpp_elem_handle_t) [mpp_element_params_t ](#mpp_element_params_t)∗params, bool force\_update)
+- int[ mpp_start (](#mpp_start)[mpp_t ](#mpp_t)mpp, int last)
+- int[ mpp_stop (](#mpp_stop)[mpp_t ](#mpp_t)mpp)
+- void [mpp_stats_enable (](#mpp_stats_enable)[mpp_stats_grp_t ](#mpp_stats_grp_t)grp)
+- void [mpp_stats_disable (](#mpp_stats_disable)[mpp_stats_grp_t ](#mpp_stats_grp_t)grp)
 - char ∗[mpp_get_version (](#mpp_get_version)void)
-- bool[ mpp_is_running (](#mpp_is_running)[mpp_t mpp](#mpp_t))
-- int [mpp_force_update(](#mpp_force_update)[mpp_t mpp](#mpp_t))
+- bool[ mpp_is_running (](#mpp_is_running)[mpp_t ](#mpp_t)mpp)
+- int [mpp_force_update(](#mpp_force_update)[mpp_t ](#mpp_t)mpp)
 
 ### 1.1 Detailed Description
 
@@ -50,8 +50,6 @@ It must be called before any other function of the API is called.
 
 [Return_codes](#return_codes)
 
-**2. mpp\_create()**
-
 ##### mpp_create
 
 [mpp_t ](#mpp_t) mpp\_create ( [mpp_params_t ](#mpp_params_t)∗ params, int ∗ ret )
@@ -69,7 +67,6 @@ This function returns a handle to the pipeline.
 **Returns**
 
 handle to the pipeline if success, NULL if there is an error.
-
 
 ##### mpp_camera_add
 
@@ -93,8 +90,6 @@ This function adds a camera to the pipeline.
 [Return_codes](#return_codes)
 
 ##### mpp_static_img_add
-
-**mpp\_static\_img\_add()**
 
 int mpp\_static\_img\_add ( [mpp_t ](#mpp_t)mpp, [mpp_img_params_t ](#mpp_img_params_t)∗ params, void ∗ addr, [mpp_elem_handle_t ](#mpp_elem_handle_t)∗ elem\_h )
 
@@ -140,8 +135,6 @@ This function adds a display to the pipeline.
 [Return_codes](#return_codes)
 
 ##### mpp_nullsink_add
-
-**mpp\_nullsink\_add()**
 
 int mpp\_nullsink\_add ( [mpp_t ](#mpp_t)mpp )
 
@@ -248,6 +241,22 @@ Update element parameters.
 
 [Return_codes](#return_codes)
 
+##### mpp_is_running
+
+bool mpp\_is\_running ( [mpp_t](#mpp_t)mpp )
+
+Check if the pipeline is currently running
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|mpp|input pipeline|
+
+**Returns**
+
+true if pipeline is in running state, else false
+
 ##### mpp_start
 
 int mpp\_start ( [mpp_t ](#mpp_t)mpp, int last )
@@ -287,6 +296,24 @@ This function stops the data processing and peripherals of a pipeline branch.
 
 [Return_codes](#return_codes)
 
+##### mpp_force_update
+
+int mpp\_force\_update ( [mpp_t](#mpp_t) mpp )
+
+Force the update of a branch of the pipeline.
+
+This function forces and update of the branch of the pipeline even if there is no new input frame.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|mpp|pipeline branch to set the flag force_update to true|
+
+**Returns**
+
+[Return_codes](#return_codes)
+
 ##### mpp_stats_enable
 
 void mpp\_stats\_enable ( [mpp_stats_grp_t ](#mpp_stats_grp_t)grp ) 
@@ -317,49 +344,21 @@ This function disables statistics collection for a given group. Calling this fun
 | - | - | - |
 |in|grp|statistics group|
 
+**Returns**
+
+
 ##### mpp_get_version
 
 char ∗ mpp\_get\_version ( void )
 
 Get MPP version. 
 
+**Parameters**
+
+
 **Returns**
 
 pointer to the MPP version string
-
-##### mpp_is_running
-
-bool mpp\_is\_running ([mpp_t mpp](#mpp_t))
-
-Check if the pipeline is currently running
-
-**Parameters**
-
-|in/out|name|description|
-| - | - | - |
-|in|mpp|input pipeline|
-
-**Returns**
-
-true if pipeline is in running state, else false
-
-##### mpp_force_update
-
-int mpp\_force\_update([mpp_t mpp](#mpp_t))
-
-Force the update of a branch of the pipeline
-
-This function forces an update of the branch of the pipeline even if there is no new input frame
-
-**Parameters**
-
-|in/out|name|description|
-| - | - | - |
-|in|mpp|input pipeline branch to set the flag force_update to true|
-
-**Returns**
-
-[Return_codes](#return_codes)
 
 ## 2. MPP Types
 
@@ -421,6 +420,8 @@ This function forces an update of the branch of the pipeline even if there is no
   [MPP_EVENT_INVALID](#mpp_event_invalid),
   
   [MPP_EVENT_INFERENCE_OUTPUT_READY](#mpp_event_inference_output_ready),
+  
+  [MPP_EVENT_QUALITY_CHECK_READY](#mpp_event_quality_check_ready),
   
   [MPP_EVENT_INTERNAL_TEST_RESERVED](#mpp_event_internal_test_reserved),
   
@@ -536,6 +537,8 @@ This function forces an update of the branch of the pipeline even if there is no
 
   [MPP_ELEMENT_CONVERT](#mpp_element_convert),
 
+  [MPP_ELEMENT_IMG_QUALITY_CHECK](#mpp_element_img_quality_check),
+
   [MPP_ELEMENT_NUM](#mpp_element_num) }
 
 - enum [mpp_tensor_type_t](#mpp_tensor_type_t) {
@@ -607,13 +610,33 @@ Pipeline creation parameters.
 
 **Data Fields**
 
-- int(∗**evt\_callback\_f** )([mpp_t ](#mpp_t)mpp, [mpp_evt_t evt,](#mpp_evt_t) void ∗evt\_data, void ∗user\_data)
-- [mpp_evt_mask_t ](#mpp_evt_mask_t)**mask**
-- [mpp_exec_flag_t ](#mpp_exec_flag_t)**exec\_flag**
-- void ∗**cb\_userdata**
+- int(∗evt\_callback\_f )([mpp_t ](#mpp_t)mpp, [mpp_evt_t evt,](#mpp_evt_t) void ∗evt\_data, void ∗user\_data)
+- [mpp_evt_mask_t ](#mpp_evt_mask_t)mask
+- [mpp_exec_flag_t ](#mpp_exec_flag_t)exec\_flag
+- void ∗cb\_userdata
+
 ##### mpp_stats_t
 
-- [mpp_stats_t ](#mpp_stats_t)∗**stats**
+**struct mpp\_stats\_t**
+
+**Data Fields**
+
+- [mpp_stats_t ](#mpp_stats_t)∗stats
+
+##### mpp_camera_stream_cfg
+
+**struct  mpp\_camera\_stream\_cfg**
+
+Camera stream configuration for multi-stream cameras. 
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|[mpp_camera_stream_type](#mpp_camera_stream_type)|type|Stream type (member of enum mpp_camera_stream_type)|
+|bool|active|Stream is active or not.|
+|int|height||
+|int|width||
 
 ##### mpp_camera_params_t
 
@@ -716,6 +739,17 @@ Inference callback parameters.
 |int|inference\_time\_ms|inference run time measurement - output to user|
 |[mpp_inference_type_t](#mpp_inference_type_t)|inference\_type|type of the inference|
 
+##### img_quality_metrics
+
+**struct img\_quality\_metrics\_t**
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|int|brightness|brightness metric|
+|int|contrast|contrast metric|
+
 ##### mpp_color_t
 
 **union mpp\_color\_t**
@@ -749,6 +783,23 @@ mpp labeled rectangle element structure
 |int16\_t|right|rectangle right position|
 |uint16\_t|tag|labeled rectangle tag|
 |uint16\_t|reserved|pad for 32 bits alignment|
+|bool|stripe|stripe mode|
+
+##### mpp_landmark_t
+
+**struct mpp\_landmark\_t**
+
+mpp landmark structure
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|uint16\_t|clear|clear landmark|
+|[mpp_color_t](#mpp_color_t)|color|landmark color|
+|int16\_t|x|landmark x position|
+|int16\_t|y|landmark y position|
+|uint16\_t|tag|landmark tag|
 |bool|stripe|stripe mode|
 
 ##### mpp_area_t
@@ -809,6 +860,22 @@ Model parameters.
 |uint64\_t|outputs\_offsets[[MPP_INFERENCE_MAX_OUTPUTS](#mpp_inference_max_outputs)]|offset ofeach output|
 |[inference_entry_point_t](#inference_entry_point_t)|model\_entry\_point|function called to perform the inference|
 |[mpp_tensor_type_t](#mpp_tensor_type_t)|model\_input\_tensors\_type|type of input buffer|
+
+##### mpp_img_compose_param_t
+
+**struct mpp\_img\_compose\_param\_t**
+
+Image composition parameters.
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|int|height|original image height|
+|int|width|original image width|
+|[mpp_pixel_format_t](#_page31_x70.87_y743.32)|format|pixel format|
+|void ∗|buffer|image buffer address|
+|[mpp_area_t](#mpp_area_t)|dest\_area|area for image in destination|
 
 ##### mpp_element_params_t
 
@@ -886,7 +953,7 @@ rgb color values
 |[mpp_camera_params_t](#mpp_camera_params_t)|camera|Camera element's parameters|
 |struct [mpp_element_params_t.__unnamed5__.static\_image](#mpp_element_params_t__unnamed5__static_image)|static\_image|Static Image element's parameters.|
 |struct [mpp_element_params_t.__unnamed5__.compose](#mpp_element_params_t__unnamed5__compose)|compose|Compose element's parameters.|
-|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.labels](#mpp_element_params_t__unnamed5__labels)</p>|labels|Labeled Rectangle element's parameters.|
+|<p>struct</p><p>[mpp_element_params_t.__unnamed5__.labels](#mpp_element_params_t__unnamed5__labels)</p>|labels|Labeled Rectangle and Landmarks element parameters.|
 |struct [mpp_element_params_t.__unnamed5__.convert](#mpp_element_params_t__unnamed5__convert)|convert|Convert element's parameters.|
 |<p>struct</p><p>[mpp_element_params_t.__unnamed5__.resize](#mpp_element_params_t__unnamed5__resize)</p>|resize|Resize element's parameters.|
 |struct [mpp_element_params_t.__unnamed5__.color_conv](#mpp_element_params_t__unnamed5__color_conv)|color\_conv|Color convert element's parameters.|
@@ -894,6 +961,7 @@ rgb color values
 |<p>struct</p><p>[mpp_element_params_t.__unnamed5__.test](#mpp_element_params_t__unnamed5__test)</p>|test|Test element's parameters.|
 |<p>struct</p><p>[mpp_element_params_t.__unnamed5__.decode](#mpp_element_params_t__unnamed5__decode)|decode|Decoder element's parameters.|
 |struct [mpp_element_params_t.__unnamed5__.ml_inference](#mpp_element_params_t__unnamed5__ml_inference)|ml\_inference|ML inference element's parameters.|
+|struct [mpp_element_params_t.__unnamed5__.img_quality_check](#mpp_element_params_t__unnamed5__img_quality_check)|img\_quality\_check|Image quality check element's parameters.|
 
 ##### mpp_element_params_t__unnamed5__static_image
 
@@ -918,18 +986,17 @@ Compose element's parameters.
 
 |type|name|description|
 | - | - | - |
+|int|nb\_images|number of images to compose|
 |mpp\_img\_params\_t|logo\_img\_params|logo image parameters|
-|void *|logo\_buffer|logo image buffer address|
-|mpp\_area\_t|logo\_area|logo image area|
-|mpp\_img\_params\_t|txt\_img\_params|text image parameters|
-|void *|txt\_buffer|text image buffer address|
-|mpp\_area\_t|txt\_area|text image area|
-|mpp\_area\_t|input\_area|input image area|
-|mpp\_rotate\_degree\_t|out\_angle|output rotation angle|
-|mpp\_flip\_mode\_t|out\_flip|output flip mode|
-|mpp\_pixel\_format\_t|out\_format|output color format|
+|[mpp_img_compose_param_t ](#mpp_img_compose_param_t)∗|image\_list|pointer to array of images to compose|
+|[mpp_area_t](#mpp_area_t)|input\_area|area of input stream in destination|
+|[mpp_rotate_degree_t](#mpp_rotate_degree_t)|out\_angle|output rotation angle|
+|[mpp_flip_mode_t](#mpp_flip_mode_t)|out\_flip|output flip mode|
+|[mpp_pixel_format_t](#mpp_flip_mode_t)|out\_format|output color format|
 |int|out\_width|output buffer width|
 |int|out\_height|output buffer height|
+
+##### mpp_element_params_t__unnamed5__labels
 
 **struct mpp\_element\_params\_t.\_\_unnamed5\_\_.labels**
 
@@ -993,6 +1060,8 @@ Color convert element's parameters.
 | - | - | - |
 |[mpp_pixel_format_t](#mpp_pixel_format_t)|<a name="mpp_element_params_t__unnamed5__rotate"></a>pixel\_format||
 
+##### mpp_element_params_t__unnamed5__rotate
+
 **struct mpp\_element\_params\_t.\_\_unnamed5\_\_.rotate**
 
 Rotate element's parameters. 
@@ -1051,34 +1120,17 @@ ML inference element's parameters.
 |[mpp_tensor_order_t](#mpp_tensor_order_t)|tensor\_order|model input tensor component order|
 |[mpp_inference_params_t](#mpp_inference_params_t)|inference\_params|model specific parameters used by the inference|
 
-##### mpp_camera_stream_cfg
+##### mpp_element_params_t__unnamed5__img_quality_check
 
-**struct  mpp_camera_stream_cfg**
+**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.img\_quality\_check**
 
-Camera stream configuration for multi-stream cameras.
-
-**Data Fields**
-
-|type|name|description|
-| - | - | - |
-|mpp\_camera\_stream_type|type|Stream type (member of enum mpp\_camera\_stream\_type)|
-|bool|active|Stream is active or not.|
-
-**struct mpp_landmark_t**
-
-mpp landmark structure
+Image quality check element's parameters.
 
 **Data Fields**
 
 |type|name|description|
 | - | - | - |
-|uint16\_t|clear|clear landmark|
-|uint16\_t|width|landmark thickness|
-|mpp\_color\_t|color|landmark color|
-|int16\_t|x|landmark x position|
-|int16\_t|y|landmark y position|
-|uint16\_t|tag|landmark tag|
-|bool|stripe|stripe mode|
+|\_Bool|disable|disable quality check|
 
 #### 2.1.2 Macro Definition Documentation
 
@@ -1091,9 +1143,6 @@ mpp landmark structure
 Maximum number of inference inputs and outputs. Maximum number of outputs supported by the pipeline
 
 ##### mpp_inference_max_inputs
-
-
-##### mpp_element_params_t__unnamed5__decode
 
 #define MPP\_INFERENCE\_MAX\_INPUTS
 
@@ -1109,9 +1158,9 @@ Maximum number of inputs supported by the pipeline.
 
 #define MPP\_EVENT\_ALL
 
-##### max_tensor_dims
-
 Bit mask to receive all Events.
+
+##### max_tensor_dims
 
 #define MAX\_TENSOR\_DIMS
 
@@ -1154,6 +1203,7 @@ Pipeline generated events.
 | - | - |
 |<a name="mpp_event_invalid"></a>MPP\_EVENT\_INVALID|invalid event|
 |<a name="mpp_event_inference_output_ready"></a>MPP\_EVENT\_INFERENCE\_OUTPUT\_READY|inference out is ready|
+|<a name="mpp_event_quality_check_ready"></a>MPP\_EVENT\_QUALITY\_CHECK\_READY|quality check measurements are ready|
 |<a name="mpp_event_internal_test_reserved"></a>MPP\_EVENT\_INTERNAL\_TEST\_RESERVED|INTERNAL: DO NOT USE.|
 |<a name="mpp_event_num"></a>MPP\_EVENT\_NUM|DO NOT USE.|
 
@@ -1279,6 +1329,19 @@ Pixel format.
 |<a name="mpp_pixel_jpeg"></a>MPP\_PIXEL\_JPEG|JPEG.|
 |<a name="mpp_pixel_invalid"></a>MPP\_PIXEL\_INVALID|invalid pixel format|
 
+##### mpp_camera_stream_type
+
+enum [mpp_camera_stream_type](#mpp_camera_stream_type)
+
+Camera stream type for multiple stream camera.
+
+**Enumerator**
+
+|label|description|
+| - | - |
+|<a name="rgb_stream"></a>RGB\_STREAM|Frames received by the virtual camera element ar in rgb format.|
+|<a name="ir_stream"></a>IR\_STREAM|Frames received by the virtual camera element ar in ir format.|
+|<a name="num_stream"></a>NUM\_STREAMS|Total number of frame types suported by virtual camera element.|
 
 ##### mpp_element_id_t
 
@@ -1297,6 +1360,7 @@ Processing element ids.
 |<a name="mpp_element_inference"></a>MPP\_ELEMENT\_INFERENCE|Inference engine.|
 |<a name="mpp_element_convert"></a>MPP\_ELEMENT\_CONVERT|Image conversion: resolution, orientation, color format.|
 |MPP\_ELEMENT\_IMG\_DECODE|Image decompression: JPEG, PNG.|
+|<a name="mpp_element_img_quality_check"></a>MPP\_ELEMENT\_IMG\_QUALITY\_CHECK|Image quality check: brightness, contrast.|
 |<a name="mpp_element_num"></a>MPP\_ELEMENT\_NUM|DO NOT USE.|
 
 
@@ -1314,7 +1378,7 @@ Inference tensor type.
 |<a name="mpp_tensor_type_uint8"></a>MPP\_TENSOR\_TYPE\_UINT8|unsigned integer 8 bits|
 |<a name="mpp_tensor_type_int8"></a>MPP\_TENSOR\_TYPE\_INT8|signed integer 8 bits|
 
-**mpp\_tensor\_order\_t**
+##### mpp_tensor_order_t
 
 enum [mpp_tensor_order_t ](#mpp_tensor_order_t)
 
@@ -1341,18 +1405,6 @@ Inference type.
 | - | - |
 |<a name="mpp_inference_type_tflite"></a>MPP\_INFERENCE\_TYPE\_TFLITE|TensorFlow-Lite.|
 
-
-##### mpp_camera_stream_type
-
-enum [mpp_camera_stream_type ](#mpp_camera_stream_type)
-
-**Enumerator**
-
-|label|description|
-| - | - |
-|<a name="rgb_stream"></a>RGB\_STREAM|Frames received by the virtual camera element ar in rgb format|
-|<a name="ir_stream"></a>IR\_STREAM|Frames received by the virtual camera element ar in ir format|
-|<a name="num_streams"></a>NUM\_STREAMS|Total number of frame types suported by virtual camera element|
 
 ## 3. Return\_codes
 
@@ -1426,12 +1478,14 @@ Invalid mutex provided.
 Mutex timeout occured.
 
 
-##### mpp_malloc_error
+##### mpp_mutex_error
 
 #define MPP\_MUTEX\_ERROR
 
 Mutex error occured.
 
+
+##### mpp_malloc_error
 
 #define MPP\_MALLOC\_ERROR 
 
