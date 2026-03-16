@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP
+ * Copyright 2022-2026 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -22,6 +22,10 @@
 
 #ifndef _HAL_DEBUG_H
 #define _HAL_DEBUG_H
+
+#include "hal_os.h"
+
+#if MPP_OS_FREERTOS
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +52,34 @@ extern void LOGD(const char* module, const char* func, int line, const char* for
     LOGI("HAL", __func__, __LINE__, format, ##__VA_ARGS__)
 #define HAL_LOGD(format, ...) \
     LOGD("HAL", __func__, __LINE__, format, ##__VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif
+
+#elif MPP_OS_ZEPHYR
+
+/* Map MPP logging macros to Zephyr's logging infrastructure */
+#define HAL_LOGE(format, ...) \
+    LOG_ERR("[%s:%d] " format, __func__, __LINE__, ##__VA_ARGS__)
+#define HAL_LOGI(format, ...) \
+    LOG_INF("[%s:%d] " format, __func__, __LINE__, ##__VA_ARGS__)
+#define HAL_LOGD(format, ...) \
+    LOG_DBG("[%s:%d] " format, __func__, __LINE__, ##__VA_ARGS__)
+
+#ifndef PRINTF
+#define PRINTF printk
+#endif
+
+#else
+
+#error "Logging macros need to be defined for the current OS"
+
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // Error handling macros
 #define RETURN_ON_ERROR(condition, error_code, message, ...) \

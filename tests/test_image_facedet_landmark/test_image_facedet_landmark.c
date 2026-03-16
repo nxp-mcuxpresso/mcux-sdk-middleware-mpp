@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -93,6 +93,15 @@ mpp_stats_t scrfd_kps_stats;
    Pipeline_task_max_prio in mpp_api_params_t structure should be adjusted with other application tasks.*/
 #define APP_DEFAULT_PRIO        1
 
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_facedet_landmark_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_facedet_landmark"
+#endif
+
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -151,7 +160,8 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
             ret = SCRFDKPS_ProcessOutput(
                     inf_output,
                     app_priv->boxes,
-                    NUM_BOXES_MAX);
+                    NUM_BOXES_MAX,
+                    false);
             if (ret != kStatus_Success)
                 PRINTF("mpp_event_listener: process output error!");
 
@@ -166,11 +176,10 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
                 else
                     break;
             }
+            app_priv->inference_frame_num++;
            /* end of modification of user data */
             __atomic_store_n(&app_priv->accessing, 0, __ATOMIC_SEQ_CST);
-
         }
-        app_priv->inference_frame_num++;
         break;
     case MPP_EVENT_INVALID:
     default:
@@ -187,7 +196,11 @@ void stat_task(void *param)
 
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
+    bool out_score_fail = false;
+    int last_fail_score = 0;
     xLastWakeTime = xTaskGetTickCount();
+    uint32_t last_inf_frame_num = user_data->inference_frame_num;
+    PRINTF("\r\nStart %s\r\n", TC_NAME);
     for (;;) {
         xTaskDelayUntil( &xLastWakeTime, xFrequency );
         mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
@@ -196,30 +209,59 @@ void stat_task(void *param)
         mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
         if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
         {
-            PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
-            if (user_data->detected_count == 0)
+            if (user_data->inference_frame_num != last_inf_frame_num)
             {
-                PRINTF("No face detected! \r\n");
-            }
-            else
-            {
-                /* ignore rectangle of the Detection zone (user_data->boxes[0]) */
-                for (int i = 0; i < user_data->detected_count; i++) {
-                    PRINTF("     -----------\r\n");
-                    PRINTF("     Box label: %s \r\n", "face");
-                    PRINTF("     Box score: %d%% \r\n", (int)(user_data->boxes[i].score * 100.0f));
-                    PRINTF("     Box coordinates: \r\n");
-                    PRINTF("     Box left: %d \r\n", (int)(user_data->boxes[i].left));
-                    PRINTF("     Box right: %d \r\n", (int)(user_data->boxes[i].right));
-                    PRINTF("     Box top: %d \r\n", (int)(user_data->boxes[i].top));
-                    PRINTF("     Box bottom: %d \r\n", (int)(user_data->boxes[i].bottom));
-                    for (int j = 0; j < MODEL_NUM_LANDMARKS; j++) {
-                        PRINTF("     Landmark %d X %d Y %d \r\n", j, 
-                            user_data->boxes[i].landmarks[j].x,
-                            user_data->boxes[i].landmarks[j].y);
-                    }
-                    PRINTF("     -----------\r\n");
+                PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+                out_score_fail = false;
+                last_fail_score = true;
+                if (user_data->detected_count == 0)
+                {
+                    PRINTF("No face detected! \r\n");
                 }
+                else
+                {
+                    /* ignore rectangle of the Detection zone (user_data->boxes[0]) */
+                    for (int i = 0; i < user_data->detected_count; i++) {
+                        PRINTF("     -----------\r\n");
+                        PRINTF("     Box label: %s \r\n", "face");
+                        PRINTF("     Box score: %d%% \r\n", (int)(user_data->boxes[i].score * 100.0f));
+                        PRINTF("     Box coordinates: \r\n");
+                        PRINTF("     Box left: %d \r\n", (int)(user_data->boxes[i].left));
+                        PRINTF("     Box right: %d \r\n", (int)(user_data->boxes[i].right));
+                        PRINTF("     Box top: %d \r\n", (int)(user_data->boxes[i].top));
+                        PRINTF("     Box bottom: %d \r\n", (int)(user_data->boxes[i].bottom));
+                        for (int j = 0; j < MODEL_NUM_LANDMARKS; j++) {
+                            PRINTF("     Landmark %d X %d Y %d \r\n", j, 
+                                user_data->boxes[i].landmarks[j].x,
+                                user_data->boxes[i].landmarks[j].y);
+                        }
+                        PRINTF("     -----------\r\n");
+                        if ( (int)(user_data->boxes[i].score * 100.0f) < EXPECTED_INF_SCORE)
+                        {
+                            out_score_fail = true;
+                            last_fail_score = (int)(user_data->boxes[i].score * 100.0f);
+                        }
+                    }
+                }
+                if ((user_data->inference_time_ms <= EXPECTED_INF_TIME) && 
+                    (user_data->detected_count == EXPECTED_INF_DETECTION_CNT) &&
+                    (out_score_fail != true))
+                {
+                    PRINTF("%s - PASSED\r\n", TC_NAME);
+                }
+                else
+                {
+                    if (user_data->inference_time_ms > EXPECTED_INF_TIME)
+                        PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+                    if (user_data->detected_count != EXPECTED_INF_DETECTION_CNT)
+                        PRINTF("Bad number of detections %d, expected %d\r\n", user_data->detected_count, EXPECTED_INF_DETECTION_CNT);
+                    if (out_score_fail)
+                        PRINTF("Bad score %d, expected greater than %d\r\n", last_fail_score, EXPECTED_INF_SCORE);
+                    PRINTF("%s - FAILED\r\n", TC_NAME);
+                }
+                PRINTF("%s finished\r\n", TC_NAME);
+                PRINTF("\r\nStart %s\r\n", TC_NAME);
+                last_inf_frame_num = user_data->inference_frame_num;
             }
             __atomic_store_n(&user_data->accessing, 0, __ATOMIC_SEQ_CST);
         }

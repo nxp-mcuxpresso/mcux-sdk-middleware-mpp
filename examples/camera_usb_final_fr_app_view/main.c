@@ -385,9 +385,6 @@ int main(void)
 {
     BaseType_t ret = pdFAIL;
 
-    /* Early init mcmgr - this function must be called at the start of the main function */
-    mpp_mcmgr_early_init();
-
     /* Init board hardware. */
     BOARD_Init();
 

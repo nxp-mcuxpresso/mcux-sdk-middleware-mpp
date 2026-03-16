@@ -21,13 +21,18 @@
 #include <string.h>
 #include <stddef.h>
 
+#if (defined(MIMXRT735S_cm33_core0_SERIES) || defined(MIMXRT758S_cm33_core0_SERIES) || \
+     defined(MIMXRT798S_cm33_core0_SERIES))
 #include "fsl_cache.h"
+#endif
+#include "fsl_common.h"
 
 #include "hal_graphics_dev.h"
 #include "hal_vdec_dev.h"
 #include "hal_utils.h"
 #include "hal_os.h"
 #include "mpp_config.h"
+#include "hal_mc.h"
 
 /* Decoder setup */
 hal_img_decoder_setup_t decoder_setup[] =
@@ -94,28 +99,58 @@ int hal_camera_setup(const char *name, camera_dev_t *dev)
   return setup_camera_dev(camera_setup, ARRAY_SIZE(camera_setup), name, dev);
 }
 
+/* multicore hal setup */
+int hal_mc_dev_setup(const char *name, multicore_dev_t *dev)
+{
+    return HAL_MultiCoreDev_setup(name, dev);
+}
+
 void HAL_DCACHE_CleanInvalidateByRange(uint32_t addr, uint32_t size)
 {
-    hal_atomic_enter();
+#if (defined(MIMXRT735S_cm33_core0_SERIES) || defined(MIMXRT758S_cm33_core0_SERIES) || \
+     defined(MIMXRT798S_cm33_core0_SERIES))
+    hal_ctx_t ctx;
+
+    hal_atomic_enter(&ctx);
     XCACHE_CleanInvalidateCacheByRange(addr, size);
-    hal_atomic_exit();
+    hal_atomic_exit(&ctx);
     return;
+#else
+    /* Cache not supported on cm33_core1 or other cores */
+    return;
+#endif
 }
 
 void HAL_DCACHE_CleanByRange(uint32_t addr, uint32_t size)
 {
-    hal_atomic_enter();
+#if (defined(MIMXRT735S_cm33_core0_SERIES) || defined(MIMXRT758S_cm33_core0_SERIES) || \
+     defined(MIMXRT798S_cm33_core0_SERIES))
+    hal_ctx_t ctx;
+
+    hal_atomic_enter(&ctx);
     XCACHE_CleanCacheByRange(addr, size);
-    hal_atomic_exit();
+    hal_atomic_exit(&ctx);
     return;
+#else
+    /* Cache not supported on cm33_core1 or other cores */
+    return;
+#endif
 }
 
 void HAL_DCACHE_InvalidateByRange(uint32_t addr, uint32_t size)
 {
-    hal_atomic_enter();
+#if (defined(MIMXRT735S_cm33_core0_SERIES) || defined(MIMXRT758S_cm33_core0_SERIES) || \
+     defined(MIMXRT798S_cm33_core0_SERIES))
+    hal_ctx_t ctx;
+
+    hal_atomic_enter(&ctx);
     XCACHE_InvalidateCacheByRange(addr, size);
-    hal_atomic_exit();
+    hal_atomic_exit(&ctx);
     return;
+#else
+    /* Cache not supported on cm33_core1 or other cores */
+    return;
+#endif
 }
 
 /* perform cache maintenance if tensor arena is cacheable */

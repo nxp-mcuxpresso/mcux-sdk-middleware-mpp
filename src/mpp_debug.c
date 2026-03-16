@@ -53,6 +53,9 @@ char * elem_name(_elem_t *elem)
         case MPP_SINK_DISPLAY:
             str = "DISPLAY";
             break;
+        case MPP_SINK_MC:
+            str = "MC SINK";
+            break;
         case MPP_SINK_NULL:
             str = "NULL SINK";
             break;
@@ -72,6 +75,9 @@ char * elem_name(_elem_t *elem)
             break;
         case MPP_SRC_FILE:
             str = "SRC_FILE";
+            break;
+        case MPP_SRC_MC:
+            str = "MC SOURCE";
             break;
         default:
             str = "INVALID SOURCE";

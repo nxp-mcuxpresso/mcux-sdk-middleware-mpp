@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 NXP
+ * Copyright 2024-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -68,6 +68,15 @@ void *image_data = (void *)couple_COCO_220_220_rgb_data;
 #endif
 
 #define STATS_PRINT_PERIOD_MS 1000
+
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_persondetect_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_persondetect"
+#endif
+
 
 typedef struct _user_data_t {
 	int inference_frame_num;
@@ -199,14 +208,17 @@ void stat_task(void *param)
 	const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
 	xLastWakeTime = xTaskGetTickCount();
 	uint32_t last_inf_frame_num = user_data->inference_frame_num;
+	PRINTF("\r\nStart %s\r\n", TC_NAME);
 	for (;;) {
 		xTaskDelayUntil( &xLastWakeTime, xFrequency );
 		if (last_inf_frame_num != user_data->inference_frame_num) 
 		{
 			mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-			PRINTF("\nElement stats --------------------------\r\n");
+			PRINTF("Element stats --------------------------\r\n");
 			PRINTF("Persondetect : exec_time %u ms\r\n", persondetect_stats.elem.elem_exec_time);
 			mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+
+			uint8_t out_score = 0;
 
 			if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
 			{
@@ -231,13 +243,35 @@ void stat_task(void *param)
 										user_data->final_boxes[i].top,
 										user_data->final_boxes[i].right,
 										user_data->final_boxes[i].bottom);
+								out_score = (uint8_t)((user_data->final_boxes[i].score)*100);
 							}
 						}
 					}
 				}
+
+				if ((user_data->inference_time_ms <= EXPECTED_INF_TIME) && 
+					(user_data->detected_count == EXPECTED_INF_DETECTION_CNT) &&
+					(out_score >= EXPECTED_INF_SCORE))
+				{
+					PRINTF("%s - PASSED\r\n", TC_NAME);
+				}
+				else
+				{
+					if (user_data->inference_time_ms > EXPECTED_INF_TIME)
+						PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+					if (user_data->detected_count != EXPECTED_INF_DETECTION_CNT)
+						PRINTF("Bad number of detections %d, expected %d\r\n", user_data->detected_count, EXPECTED_INF_DETECTION_CNT);
+					if (out_score < EXPECTED_INF_SCORE)
+						PRINTF("Bad score %d, expected greater than %d\r\n", out_score, EXPECTED_INF_SCORE);
+					PRINTF("%s - FAILED\r\n", TC_NAME);
+				}
+				PRINTF("%s finished\r\n", TC_NAME);
+				PRINTF("\r\nStart %s\r\n", TC_NAME);
+
+				last_inf_frame_num = user_data->inference_frame_num;
+
 				__atomic_store_n(&user_data->accessing, 0, __ATOMIC_SEQ_CST);
 			}
-			last_inf_frame_num = user_data->inference_frame_num;
 		}
 	}
 	return;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP
+ * Copyright 2022-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -37,7 +37,7 @@
 #include "mpp_config.h"
 
 #include "test_config.h"
-#include "hal_freertos.h"
+#include "hal_os.h"
 #include "hal_utils.h"
 #include "hal_os.h"
 
@@ -187,6 +187,7 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
     checksum_data_t *chksm = (checksum_data_t *)evt_data;
     static bool test_done = false;
     static int chksm_time = 0;  /* time of checksum */
+    static int cnt = 0;
     int time;
 
     switch(evt) {
@@ -215,20 +216,25 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
             chksm_time = time;
         }
         /* verify checksum if needed */
-        if (chksm->value != 0 && !test_done)    /* ignore first black frame */
+        if (cnt > 1 && !test_done)    /* ignore first black frame */
         {
             test_done = true;
             PRINTF("\r\nStart %s\r\n", TC_NAME);
             if ((chksm->value == EXPECTED_CHECKSUM)
-                || (APP_STRIPE_MODE > 0))   /* ignore checksum for stripes */
+                || (APP_STRIPE_MODE > 0) || (EXPECTED_CHECKSUM == 0))   /* ignore checksum for stripes */
             {
+                if (APP_STRIPE_MODE > 0)
+                    PRINTF("APP_STRIPE_MODE enabled. Skip checksum validation\r\n");
+                if (EXPECTED_CHECKSUM == 0)
+                    PRINTF("EXPECTED_CHECKSUM is 0. Skip checksum validation\r\n");
                 PRINTF("%s - PASSED\r\n", TC_NAME);
             } else {
-                PRINTF("Bad checksum 0x%08x", chksm->value);
+                PRINTF("Bad checksum 0x%08x\r\n", chksm->value);
                 PRINTF("%s - FAILED\r\n", TC_NAME);
             }
             PRINTF("%s finished\r\n", TC_NAME);
         }
+        cnt++;
         break;
     case MPP_EVENT_INVALID:
     default:

@@ -105,6 +105,7 @@ struct _display_dev
     char name[HAL_DEVICE_NAME_MAX_LENGTH]; /*!< name of the device */
     const display_dev_operator_t *ops;     /*!< operations */
     display_dev_private_capability_t cap;  /*!< private capability */
+    void *data;                            /*!< device private data */
 };
 
 /** @} */

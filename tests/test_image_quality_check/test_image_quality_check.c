@@ -31,7 +31,6 @@
 #include "mpp_config.h"
 
 #include "test_config.h"
-#include "hal_freertos.h"
 #include "hal_utils.h"
 #include "hal_os.h"
 

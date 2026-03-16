@@ -10,12 +10,14 @@ fi
 # for make -j option, do not use all CPUs
 NTASK=$(($(getconf _NPROCESSORS_ONLN) / 2))
 MPP_COMMIT_ID=$(git describe --dirty --always --exclude='*')
+LOG_LEVEL=0
 GEN_DOC=false
 LAST_BUILT_ELF=""
 APP_CONFIG_INDEX=""
 INPUT_CORE_ID=""
 APP_CORE_FOLDER="core0"
 SYSBUILD=""
+CODE_COVERAGE_ENABLED=false
 
 setup_toolchain_and_sdk_dir()
 {
@@ -82,8 +84,6 @@ build()
     echo "EXAMPLE=${EXP}"
     echo "TEST=${TEST}"
 
-    set -ex
-
     setup_toolchain_and_sdk_dir
 
     if [[ "${INPUT_CORE_ID}" != "" ]]; then
@@ -93,22 +93,54 @@ build()
     #list examples
     if [ "${EXP}" = "all" ] ; then
         if [ -d internal ] && [ -f boards/${BOARD}/examples_internal.conf ]; then
-            EXPS=$( cat boards/${BOARD}/examples.conf boards/${BOARD}/examples_internal.conf )
+            EXPS_RAW=$( cat boards/${BOARD}/examples.conf boards/${BOARD}/examples_internal.conf )
         else
-            EXPS=$( cat boards/${BOARD}/examples.conf )
+            EXPS_RAW=$( cat boards/${BOARD}/examples.conf )
         fi
+        # Parse examples with arguments
+        EXPS=()
+        EXPS_ARGS=()
+        while IFS= read -r line; do
+            # Skip empty lines and comments
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            # Extract app name (first word) and arguments (rest of line)
+            app_name=$(echo "$line" | awk '{print $1}')
+            app_args=$(echo "$line" | cut -d' ' -f2- -s)
+            EXPS+=("${app_name}")
+            EXPS_ARGS+=("${app_args}")
+        done <<< "$EXPS_RAW"
+    elif [ "${EXP}" != "" ] ; then
+        EXPS=("${EXP}")
+        EXPS_ARGS=("")
     else
-        EXPS=${EXP}
+        EXPS=()
+        EXPS_ARGS=()
     fi
     #list tests
     if [ "${TEST}" = "all" ] ; then
         if [ -d internal ] && [ -f boards/${BOARD}/tests_internal.conf ]; then
-            TESTS=$( cat boards/${BOARD}/tests.conf boards/${BOARD}/tests_internal.conf )
+            TESTS_RAW=$( cat boards/${BOARD}/tests.conf boards/${BOARD}/tests_internal.conf )
         else
-            TESTS=$( cat boards/${BOARD}/tests.conf )
+            TESTS_RAW=$( cat boards/${BOARD}/tests.conf )
         fi
+        # Parse tests with arguments
+        TESTS=()
+        TESTS_ARGS=()
+        while IFS= read -r line; do
+            # Skip empty lines and comments
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            # Extract app name (first word) and arguments (rest of line)
+            app_name=$(echo "$line" | awk '{print $1}')
+            app_args=$(echo "$line" | cut -d' ' -f2- -s)
+            TESTS+=("${app_name}")
+            TESTS_ARGS+=("${app_args}")
+        done <<< "$TESTS_RAW"
+    elif [ "${TEST}" != "" ] ; then
+        TESTS=("${TEST}")
+        TESTS_ARGS=("")
     else
-        TESTS=${TEST}
+        TESTS=()
+        TESTS_ARGS=()
     fi
 
     cd ${SDK_DIR}
@@ -126,9 +158,27 @@ build()
     fi
 
     #build examples
-    if [ -n "${EXPS}" ] ; then
-        for APP in ${EXPS} ; do
-            if [[ "${SYSBUILD}" != "" ]]; then
+    if [ ${#EXPS[@]} -gt 0 ] ; then
+        for i in "${!EXPS[@]}" ; do
+            APP="${EXPS[$i]}"
+            APP_ARGS="${EXPS_ARGS[$i]}"
+
+            # Enable code coverage, if requested
+            CODE_COVERAGE_ARG=""
+            CODE_COVERAGE_SYS_ARG=""
+            if [[ "${CODE_COVERAGE_ENABLED}" == "true" ]]; then
+                CODE_COVERAGE_ARG="-DENABLE_COVERAGE=1"
+                CODE_COVERAGE_SYS_ARG="-D${APP}_core1_ENABLE_COVERAGE=1"
+            fi
+
+            # Check if sysbuild is enabled
+            SYSBUILD_EXTRA_ARGS=()
+            if [[ "${SYSBUILD}" != "" ]] || [[ "${APP_ARGS}" == *"--sysbuild"* ]]; then
+                SYSBUILD_EXTRA_ARGS=("-D${APP}_core1_HAL_LOG_LEVEL=${LOG_LEVEL}" \
+                                     "-D${APP}_core1_MPP_COMMIT=${MPP_COMMIT_ID}" \
+                                     "-D${APP}_core1_EXTRA_CFLAGS=${EXTRA_BUILD_FLAGS}" \
+                                     "-D${APP}_core1_EXTRA_CXXFLAGS=${EXTRA_BUILD_FLAGS}" \
+                                     ${CODE_COVERAGE_SYS_ARG})
                 BUILD_PATH="build/${APP}"
             else
                 BUILD_PATH="build"
@@ -139,15 +189,20 @@ build()
             else
                 SOURCE_PATH="examples/eiq_examples/mpp/${APP}"
             fi
+            set -ex
             west build -b ${BOARD} ${SOURCE_PATH} -p always \
-                       ${SYSBUILD} \
-                       --config ${BUILD_TYPE} \
-                       --toolchain armgcc \
-                       -Dcore_id=${CORE_ID} \
-                       ${PANEL_CONFIG_DEFINE} \
-                       -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
-                       -DMPP_COMMIT=${MPP_COMMIT_ID} \
-                       -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}"
+                        --config ${BUILD_TYPE} \
+                        --toolchain armgcc \
+                        -Dcore_id=${CORE_ID} \
+                        -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
+                        -DMPP_COMMIT=${MPP_COMMIT_ID} \
+                        ${CODE_COVERAGE_ARG} \
+                        ${PANEL_CONFIG_DEFINE} \
+                        -DEXTRA_CFLAGS="${EXTRA_BUILD_FLAGS}" \
+                        -DEXTRA_CXXFLAGS="${EXTRA_BUILD_FLAGS}" \
+                        ${APP_ARGS} \
+                        ${SYSBUILD} \
+                        "${SYSBUILD_EXTRA_ARGS[@]}"
             if [ "$APP_CONFIG_INDEX" != "" ] ; then
                 cp ${BUILD_PATH}/${APP}_${CORE_ID}.elf build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf
                 cp ${BUILD_PATH}/${APP}_${CORE_ID}.bin build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.bin
@@ -156,33 +211,58 @@ build()
                 cp ${BUILD_PATH}/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
                 LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
             fi
+            set +ex
         done
     fi
 
     #build tests
-    if [ -n "${TESTS}" ] ; then
-        for APP in ${TESTS} ; do
-            if [[ "${SYSBUILD}" != "" ]]; then
+    if [ ${#TESTS[@]} -gt 0 ] ; then
+        for i in "${!TESTS[@]}" ; do
+            APP="${TESTS[$i]}"
+            echo "Building test: ${APP}"
+            APP_ARGS="${TESTS_ARGS[$i]}"
+
+            # Enable code coverage, if requested
+            CODE_COVERAGE_ARG=""
+            CODE_COVERAGE_SYS_ARG=""
+            if [[ "${CODE_COVERAGE_ENABLED}" == "true" ]]; then
+                CODE_COVERAGE_ARG="-DENABLE_COVERAGE=1"
+                CODE_COVERAGE_SYS_ARG="-D${APP}_core1_ENABLE_COVERAGE=1"
+            fi
+
+            # Check if sysbuild is enabled
+            rm -fr build
+            parse_app_config "tests" "${APP}"
+            SYSBUILD_EXTRA_ARGS=()
+            if [[ "${SYSBUILD}" != "" ]] || [[ "${APP_ARGS}" == *"--sysbuild"* ]]; then
+                SYSBUILD_EXTRA_ARGS=("-D${APP}_core1_HAL_LOG_LEVEL=${LOG_LEVEL}" \
+                                     "-D${APP}_core1_MPP_COMMIT=${MPP_COMMIT_ID}" \
+                                     "-D${APP}_core1_EXTRA_CFLAGS=${EXTRA_BUILD_FLAGS}" \
+                                     "-D${APP}_core1_EXTRA_CXXFLAGS=${EXTRA_BUILD_FLAGS}" \
+                                     ${CODE_COVERAGE_SYS_ARG})
                 BUILD_PATH="build/${APP}"
             else
                 BUILD_PATH="build"
             fi
-            rm -fr build
-            parse_app_config "tests" "${APP}"
             if [ -d middleware/eiq/mpp/tests/${APP}/${APP_CORE_FOLDER} ]; then
                 SOURCE_PATH="middleware/eiq/mpp/tests/${APP}/${APP_CORE_FOLDER}"
             else
                 SOURCE_PATH="middleware/eiq/mpp/tests/${APP}"
             fi
+            set -ex
             west build -b ${BOARD} ${SOURCE_PATH} -p always \
-                       ${SYSBUILD} \
-                       --config ${BUILD_TYPE} \
-                       --toolchain armgcc \
-                       -Dcore_id=${CORE_ID} \
-                       ${PANEL_CONFIG_DEFINE} \
-                       -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
-                       -DMPP_COMMIT=${MPP_COMMIT_ID} \
-                       -DEXTRA_BUILD_FLAGS="${EXTRA_BUILD_FLAGS}"
+                        --config ${BUILD_TYPE} \
+                        --toolchain armgcc \
+                        -Dcore_id=${CORE_ID} \
+                        -DHAL_LOG_LEVEL="${LOG_LEVEL}" \
+                        -DMPP_COMMIT=${MPP_COMMIT_ID} \
+                        ${CODE_COVERAGE_ARG} \
+                        ${PANEL_CONFIG_DEFINE} \
+                        -DEXTRA_CFLAGS="${EXTRA_BUILD_FLAGS}" \
+                        -DEXTRA_CXXFLAGS="${EXTRA_BUILD_FLAGS}" \
+                        ${APP_ARGS} \
+                        ${SYSBUILD} \
+                        "${SYSBUILD_EXTRA_ARGS[@]}"
             if [ "$APP_CONFIG_INDEX" != "" ] ; then
                 cp ${BUILD_PATH}/${APP}_${CORE_ID}.elf build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.elf
                 cp ${BUILD_PATH}/${APP}_${CORE_ID}.bin build_${BOARD}/${BUILD_REL_OR_DBG}/${APP}_${CORE_ID}_config${APP_CONFIG_INDEX}.bin
@@ -191,21 +271,19 @@ build()
                 cp ${BUILD_PATH}/${APP}_${CORE_ID}.* build_${BOARD}/${BUILD_REL_OR_DBG}/
                 LAST_BUILT_ELF="${APP}_${CORE_ID}.elf"
             fi
+            set +ex
         done
     fi
     cd ${W_DIR}
 
     get_version
-
-    set +ex
 }
 
 get_version()
 {
-    set -x
- 
     cd ${SDK_DIR}/build_${BOARD}/${BUILD_REL_OR_DBG}
     mpp_version=$(strings ${LAST_BUILT_ELF} | grep MPP_VERSION)
+    echo "MPP Version: ${mpp_version}"
     echo ${mpp_version} > mpp_version.txt
     cd -
 }
@@ -282,7 +360,7 @@ list_pannels()
 usage()
 {
     echo "usage:"
-    echo "$0 [-ab:e:h?id:Dp:c:f:t:s:g:C:Sv]"
+    echo "$0 [-ab:e:h?id:Dp:c:f:t:s:g:C:SVv]"
     echo " -h|?: help"
     echo " -b <board name>: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk}"
     echo " -D: build mpp and hal APIs documentation"
@@ -299,6 +377,7 @@ usage()
     echo " -g <app_config_index> - the index of the app_config to be used for building the app"
     echo " -C <core_id> - specify the core id you want to build app for (values like 0, 1, 2...) - if not set, default core (0) will be used"
     echo " -S: add --sysbuild option to the build command - useful for multicore builds"
+    echo " -V: enable code coverage for build"
     exit 0
 }
 
@@ -318,7 +397,7 @@ panel_list=""
 
 #parse arguments
 OPTIND=1
-while getopts "ab:e:h?id:Dp:c:f:t:s:g:C:Sv" opt; do
+while getopts "ab:e:h?id:Dp:c:f:t:s:g:C:SVv" opt; do
     case "$opt" in
     a)  TFLM_REBUILD=true
         ;;
@@ -349,6 +428,8 @@ while getopts "ab:e:h?id:Dp:c:f:t:s:g:C:Sv" opt; do
     C)  INPUT_CORE_ID=$OPTARG
         ;;
     S)  SYSBUILD="--sysbuild"
+        ;;
+    V)  CODE_COVERAGE_ENABLED=true
         ;;
     v)  verbose="VERBOSE=1"
         ;;

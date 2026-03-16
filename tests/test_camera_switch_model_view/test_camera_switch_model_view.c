@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 NXP
+ * Copyright 2024-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -230,6 +230,7 @@ static void app_task(void *params);
  */
 
 static e_cur_model g_cur_model = MODEL_PERSONDET;
+static uint32_t g_cur_model_run_cnt = 0;
 static char *g_model_name = PERSONDETECT_NAME;
 static char *g_label = PERSONDETECT_DETECTION_LABEL;
 
@@ -349,14 +350,23 @@ static void check_model_switch_output(user_data_t *app_priv)
         }
     }
 
-    PRINTF("\r\nStart %s\r\n", TC_NAME);
     if (test_fail)
+    {
         PRINTF("%s - FAILED\r\n", TC_NAME);
-    else if (face_pass && person_pass)
-        PRINTF("%s - PASSED\r\n", TC_NAME);
-    else    /* do nothing */
+        PRINTF("%s finished\r\n", TC_NAME);
+        PRINTF("\r\nStart %s\r\n", TC_NAME);
         test_fail = false;
-    PRINTF("%s finished\r\n", TC_NAME);
+        face_pass = false;
+        person_pass = false;
+    }
+    else if (face_pass && person_pass)
+    {
+        face_pass = false;
+        person_pass = false;
+        PRINTF("%s - PASSED\r\n", TC_NAME);
+        PRINTF("%s finished\r\n", TC_NAME);
+        PRINTF("\r\nStart %s\r\n", TC_NAME);
+    }
 #endif // (SOURCE_STATIC_IMAGE == 1)
 }
 
@@ -404,27 +414,31 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
                     app_priv->detected_count++;
                 }
             }
+
+            g_cur_model_run_cnt++;
+            /* check expected behavior */
+            if (g_cur_model_run_cnt >= 2)
+                check_model_switch_output(app_priv);
+
+            /* update labeled rectangle */
+            if ( (app_priv->mp != NULL) && (app_priv->labrect_elem != 0) ) {
+                mpp_element_params_t params;
+                memset(&params, 0, sizeof(params));
+                /* detected_count contains at least the detection zone box */
+                params.labels.detected_rect = app_priv->detected_count + 1;
+                params.labels.max_rect = MAX_LABEL_RECTS;
+                params.labels.rectangles = app_priv->labels;
+                boxes_to_rects(app_priv->final_boxes, NUM_BOXES_MAX, MAX_LABEL_RECTS, params.labels.rectangles);
+
+                mpp_element_update(app_priv->mp, app_priv->labrect_elem, &params, true);
+            }
+
+            app_priv->inference_frame_num++;
+
             /* end of modification of user data */
             __atomic_store_n(&app_priv->accessing, 0, __ATOMIC_SEQ_CST);
         }
 
-        /* check expected behavior */
-        check_model_switch_output(app_priv);
-
-        /* update labeled rectangle */
-        if ( (app_priv->mp != NULL) && (app_priv->labrect_elem != 0) ) {
-            mpp_element_params_t params;
-            memset(&params, 0, sizeof(params));
-            /* detected_count contains at least the detection zone box */
-            params.labels.detected_rect = app_priv->detected_count + 1;
-            params.labels.max_rect = MAX_LABEL_RECTS;
-            params.labels.rectangles = app_priv->labels;
-            boxes_to_rects(app_priv->final_boxes, NUM_BOXES_MAX, MAX_LABEL_RECTS, params.labels.rectangles);
-
-            mpp_element_update(app_priv->mp, app_priv->labrect_elem, &params, true);
-        }
-
-        app_priv->inference_frame_num++;
         break;
     case MPP_EVENT_INVALID:
     default:
@@ -706,14 +720,15 @@ static void app_task(void *params)
     const TickType_t xFrequency = OUTPUT_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
     xLastWakeTime = xTaskGetTickCount();
     uint32_t last_inf_frame_num = user_data.inference_frame_num;
+    PRINTF("\r\nStart %s\r\n", TC_NAME);
     for (;;) {
         xTaskDelayUntil( &xLastWakeTime, xFrequency );
 
         if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0))
         {
-            if (last_inf_frame_num != user_data.inference_frame_num)
+            if (last_inf_frame_num <= (user_data.inference_frame_num - 2))
             {
-                PRINTF("\ninference time %d ms \r\n", user_data.inference_time_ms);
+                PRINTF("inference time %d ms \r\n", user_data.inference_time_ms);
                 if (user_data.detected_count <= 0)
                 {
                     PRINTF("%s : no detection\r\n", g_model_name);
@@ -729,61 +744,65 @@ static void app_task(void *params)
                         }
                     }
                 }
+
+                mpp_stop(mp_bg);
+                mpp_stop(mp_split);
+                if (g_cur_model == MODEL_PERSONDET)
+                {
+                    /* update convert params for ultraface */
+                    infer_conv_params.convert.out_buf.width = ULTRAFACE_WIDTH;
+                    infer_conv_params.convert.out_buf.height = ULTRAFACE_HEIGHT;
+                    infer_conv_params.convert.scale.width = ULTRAFACE_WIDTH;
+                    infer_conv_params.convert.scale.height = ULTRAFACE_HEIGHT;
+                    ret = mpp_element_update(mp_split, infer_conv_h, &infer_conv_params, true);
+                    if (ret) {
+                        PRINTF("Failed to update element convert for ultraface");
+                        goto err;
+                    }
+
+                    /* switch to ULTRAFACE */
+                    ret = mpp_element_update(mp_bg, user_data.infer_elem, &ultraface_params, true);
+                    if (ret) {
+                        PRINTF("Failed to update element inference for ultraface");
+                        goto err;
+                    }
+
+                    g_cur_model = MODEL_ULTRAFACE;
+                    g_cur_model_run_cnt  = 0;
+                    g_model_name = ULTRAFACE_NAME;
+                    g_label = ULTRAFACE_DETECTION_LABEL;
+                } else {
+                    /* update convert params for person detect */
+                    infer_conv_params.convert.out_buf.width = PERSONDETECT_WIDTH;
+                    infer_conv_params.convert.out_buf.height = PERSONDETECT_HEIGHT;
+                    infer_conv_params.convert.scale.width = PERSONDETECT_WIDTH;
+                    infer_conv_params.convert.scale.height = PERSONDETECT_HEIGHT;
+                    ret = mpp_element_update(mp_split, infer_conv_h, &infer_conv_params, true);
+                    if (ret) {
+                        PRINTF("Failed to update element convert for persondetect");
+                        goto err;
+                    }
+
+                    /* switch to PERSONDET */
+                    ret = mpp_element_update(mp_bg, user_data.infer_elem, &persondetect_params, true);
+                    if (ret) {
+                        PRINTF("Failed to update element inference for persondetect");
+                        goto err;
+                    }
+
+                    g_cur_model = MODEL_PERSONDET;
+                    g_cur_model_run_cnt  = 0;
+                    g_model_name = PERSONDETECT_NAME;
+                    g_label = PERSONDETECT_DETECTION_LABEL;
+                }
+                mpp_start(mp_split, 0, false);
+                mpp_start(mp_bg, 0, false);
+
                 last_inf_frame_num = user_data.inference_frame_num;
             }
+
             __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
         }
-
-        mpp_stop(mp_bg);
-        mpp_stop(mp_split);
-        if (g_cur_model == MODEL_PERSONDET)
-        {
-            /* update convert params for ultraface */
-            infer_conv_params.convert.out_buf.width = ULTRAFACE_WIDTH;
-            infer_conv_params.convert.out_buf.height = ULTRAFACE_HEIGHT;
-            infer_conv_params.convert.scale.width = ULTRAFACE_WIDTH;
-            infer_conv_params.convert.scale.height = ULTRAFACE_HEIGHT;
-            ret = mpp_element_update(mp_split, infer_conv_h, &infer_conv_params, true);
-            if (ret) {
-                PRINTF("Failed to update element convert for ultraface");
-                goto err;
-            }
-
-            /* switch to ULTRAFACE */
-            ret = mpp_element_update(mp_bg, user_data.infer_elem, &ultraface_params, true);
-            if (ret) {
-                PRINTF("Failed to update element inference for ultraface");
-                goto err;
-            }
-
-            g_cur_model = MODEL_ULTRAFACE;
-            g_model_name = ULTRAFACE_NAME;
-            g_label = ULTRAFACE_DETECTION_LABEL;
-        } else {
-            /* update convert params for person detect */
-            infer_conv_params.convert.out_buf.width = PERSONDETECT_WIDTH;
-            infer_conv_params.convert.out_buf.height = PERSONDETECT_HEIGHT;
-            infer_conv_params.convert.scale.width = PERSONDETECT_WIDTH;
-            infer_conv_params.convert.scale.height = PERSONDETECT_HEIGHT;
-            ret = mpp_element_update(mp_split, infer_conv_h, &infer_conv_params, true);
-            if (ret) {
-                PRINTF("Failed to update element convert for persondetect");
-                goto err;
-            }
-
-            /* switch to PERSONDET */
-            ret = mpp_element_update(mp_bg, user_data.infer_elem, &persondetect_params, true);
-            if (ret) {
-                PRINTF("Failed to update element inference for persondetect");
-                goto err;
-            }
-
-            g_cur_model = MODEL_PERSONDET;
-            g_model_name = PERSONDETECT_NAME;
-            g_label = PERSONDETECT_DETECTION_LABEL;
-        }
-        mpp_start(mp_split, 0, false);
-        mpp_start(mp_bg, 0, false);
     }
 
     /* pause application task */

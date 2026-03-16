@@ -17,6 +17,10 @@
 #include "math.h"
 #define EOL "\r\n"
 
+#ifndef M_PI
+#define M_PI 3.1415927f // float, double would be 3.14159265358979323846
+#endif
+
 int32_t area(box_data *box) {
     return (box->right - box->left +1) * (box->bottom - box->top +1);
 }

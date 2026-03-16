@@ -59,6 +59,8 @@ typedef unsigned int mpp_evt_mask_t;
 /** Bit mask to receive all Events */
 #define MPP_EVENT_ALL 0xffffffff
 
+#define MPP_MAX_RPMSG_EPT_PER_CORE      5
+
 /**
  * Execution parameters
  *
@@ -188,6 +190,22 @@ typedef enum {
     NUM_STREAMS            /*!< Total number of frame types suported by virtual camera element */
 } mpp_camera_stream_type;
 
+/** Multicore pipeline RPMSG endpoint addresses */
+typedef enum {
+    MPP_RPMSG_EPT_ADDR_INVALID = 0, /*!< invalid endpoint address */
+    MPP_RPMSG_EPT_ADDR_CORE0_START = 10,  /*!< core 0 endpoint start address */
+    MPP_RPMSG_EPT_ADDR_CORE0_STOP = MPP_RPMSG_EPT_ADDR_CORE0_START + (MPP_MAX_RPMSG_EPT_PER_CORE - 1),  /*!< core 0 endpoint stop address */
+    MPP_RPMSG_EPT_ADDR_CORE1_START, /*!< core 1 endpoint start address */
+    MPP_RPMSG_EPT_ADDR_CORE1_STOP = MPP_RPMSG_EPT_ADDR_CORE1_START + (MPP_MAX_RPMSG_EPT_PER_CORE - 1)   /*!< core 1 endpoint stop address */
+} mpp_rpmsg_endpoint_addr_e;
+
+/** Multicore pipeline MCMGR remote event data */
+typedef enum {
+    MPP_MCMGR_EVENT_DATA_INVALID = 0, /*!< invalid mcmgr event data */
+    MPP_MCMGR_EVENT_DATA_START,       /*!< mcmgr event data start */
+    MPP_MCMGR_EVENT_DATA_STOP = MPP_MCMGR_EVENT_DATA_START + (MPP_MAX_RPMSG_EPT_PER_CORE - 1)  /*!< mcmgr event data stop */ 
+} mpp_mcmgr_event_data_e;
+
 /** Camera stream configuration for multi-stream cameras */
 typedef struct {
     mpp_camera_stream_type type; /*!< Stream type (member of enum mpp_camera_stream_type) */
@@ -218,6 +236,14 @@ typedef struct {
     bool stripe; /*!< stripe mode */
     int compressed_size;   /*!< size in bytes for compressed format */
 } mpp_img_params_t;
+
+/** MC element parameters */
+typedef struct {
+    void *rpmsg_inst; /*!< pointer to rpmsg instance */
+    uint16_t remote_event_data; /*!< remote event data for mcmgr */
+    uint32_t local_rpmsg_addr; /*!< local rpmsg endpoint address */
+    uint32_t remote_rpmsg_addr; /*!< remote rpmsg endpoint address */
+} mpp_mc_params_t;
 
 /** Display parameters */
 typedef struct {
@@ -393,6 +419,8 @@ union {
         mpp_img_params_t img_params;        /*!< static image parameters */
         void *img_buffer;                   /*!< static image buffer address */
     } static_image;
+    /** Multicore source element's parameters */
+    mpp_mc_params_t mc_source;              /*!< Multicore source element's parameters */
     /** Compose element's parameters */
     struct {
         int nb_images;                          /*!< number of images to compose */

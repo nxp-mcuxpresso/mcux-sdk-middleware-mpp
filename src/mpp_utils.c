@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP.
+ * Copyright 2025-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -22,16 +22,21 @@
 #include "app.h"
 #include "mpp_debug.h"
 #include "hal_camera_shared.h"
+#include "mpp_config.h"
 
 #ifdef RPMSG_USED
 #include "rpmsg_lite.h"
 #include "rpmsg_queue.h"
 #include "rpmsg_ns.h"
-#endif
+#endif /* RPMSG_USED */
 
 #ifdef MCMGR_USED
 #include "mcmgr.h"
 #endif /* MCMGR_USED */
+
+#if (defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1)
+#include "hal_mc.h"
+#endif /*(defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1)*/
 
 /* Multicore manager (MCMGR) and RPMSG configurations */
 #define RPMSG_READY_EVENT_DATA (1U)
@@ -59,11 +64,6 @@ static void RPMsgRemoteReadyEventHandler(mcmgr_core_t coreNum, uint16_t eventDat
     uint16_t *data = (uint16_t *)context;
 
     *data = eventData;
-}
-
-void mpp_mcmgr_early_init(void)
-{
-    (void) MCMGR_EarlyInit();
 }
 
 #endif /* MCMGR_USED */
@@ -97,6 +97,16 @@ volatile uint16_t *mpp_boot_secondary_core(void)
     (void)MCMGR_RegisterEvent(kMCMGR_RemoteApplicationEvent, RPMsgRemoteReadyEventHandler,
                               (void *)&RPMsgRemoteReadyEventData);
 
+#if (defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1)
+#if defined(MCMGR_REMOTE_APP_EVENT_COUNT) && (MCMGR_REMOTE_APP_EVENT_COUNT >= 2)
+    /* Register the application event for communication between elements on different cores 
+     * We need to register the event before booting the second core to ensure proper synchronization */
+    (void)MCMGR_RegisterEvent(kMCMGR_RemoteApplicationEvent1, hal_mc_rpmsg_remote_ev_handler, NULL);
+#else
+    #error "MCMGR_REMOTE_APP_EVENT_COUNT is less than 2. Cannot initialize multicore resources."
+#endif
+#endif /*(defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1)*/
+
     /* Boot Secondary core application */
     (void)MCMGR_StartCore(kMCMGR_Core1, (void *)(char *)CORE1_BOOT_ADDRESS, (uint32_t)rpmsg_lite_base,
                           kMCMGR_Start_Synchronous);
@@ -110,6 +120,50 @@ volatile uint16_t *mpp_boot_secondary_core(void)
 #else
     return NULL;
 #endif /* MCMGR_USED */
+}
+
+struct rpmsg_lite_instance *mpp_secondary_core_rpmsg_init(void)
+{
+    struct rpmsg_lite_instance *rpmsg_inst = NULL;
+#ifdef MCMGR_USED
+    uint32_t startupData;
+    volatile mcmgr_status_t status;
+
+    /* Get the startup data */
+    do
+    {
+        status = MCMGR_GetStartupData(kMCMGR_Core0, &startupData);
+    } while (status != kStatus_MCMGR_Success);
+
+    rpmsg_inst = rpmsg_lite_remote_init((void *)(char *)(platform_patova(startupData)), RPMSG_LITE_LINK_ID, RL_NO_FLAGS);
+    if (rpmsg_inst == NULL)
+    {
+        (void)MPP_LOGE("Failed to initialize rpmsg...\r\n");
+        return NULL;
+    }
+
+#if (defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1)
+#if defined(MCMGR_REMOTE_APP_EVENT_COUNT) && (MCMGR_REMOTE_APP_EVENT_COUNT >= 2)
+    /* Register the application event for communication between elements on different cores 
+     * We need to register the event before booting the second core to ensure proper synchronization */
+    (void)MCMGR_RegisterEvent(kMCMGR_RemoteApplicationEvent1, hal_mc_rpmsg_remote_ev_handler, NULL);
+#else
+    #error "MCMGR_REMOTE_APP_EVENT_COUNT is less than 2. Cannot initialize multicore resources."
+#endif
+#endif /*(defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1)*/
+
+    /* Signal the other core we are ready by triggering the event and passing the RPMSG_READY_EVENT_DATA */
+    (void)MCMGR_TriggerEvent(kMCMGR_Core0, kMCMGR_RemoteApplicationEvent, RPMSG_READY_EVENT_DATA);
+#else
+    MPP_LOGI("RPMSG Share Base Addr is 0x%x\r\n", RPMSG_LITE_SHMEM_BASE);
+    rpmsg_inst = rpmsg_lite_remote_init((void *)RPMSG_LITE_SHMEM_BASE, RPMSG_LITE_LINK_ID, RL_NO_FLAGS);
+    if (rpmsg_inst == NULL)
+    {
+        MPP_LOGE("Failed to initialize rpmsg...\r\n");
+        return NULL;
+    }
+#endif /* MCMGR_USED */
+    return rpmsg_inst;
 }
 #endif /* BOOT_SECONDARY_CORE */
 

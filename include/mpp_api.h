@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 NXP
+ * Copyright 2021-2026 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -85,6 +85,18 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
 int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr, mpp_elem_handle_t *elem_h);
 
 /**
+ * Multi core source addition
+ *
+ * This function adds a multi core source to the pipeline.
+ *
+ * @param [in] mpp input pipeline
+ * @param [in] params parameters that are configured on the multi core source
+ * @param [out] elem_h element handle in pipeline
+ * @return \ref return_codes
+ */
+int mpp_mc_source_add(mpp_t mpp, mpp_mc_params_t *params, mpp_elem_handle_t *elem_h);
+
+/**
  * Display addition
  *
  * This function adds a display to the pipeline.
@@ -95,6 +107,17 @@ int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr, mpp_elem
  * @return \ref return_codes
  */
 int mpp_display_add(mpp_t mpp, const char *name, mpp_display_params_t *params);
+
+/**
+ * Multi core sink addition
+ *
+ * This function adds a multi core sink to the pipeline.
+ *
+ * @param [in] mpp input pipeline
+ * @param [in] params parameters that are configured on the multi core sink
+ * @return \ref return_codes
+ */
+int mpp_mc_sink_add(mpp_t mpp, mpp_mc_params_t *params);
 
 /**
  * Null sink addition
@@ -245,15 +268,6 @@ void mpp_stats_disable(mpp_stats_grp_t grp);
  */
 char* mpp_get_version(void);
 
-#ifdef MCMGR_USED
-/*
- * Call early init function for multi-core manager 
- * !!!! This function must be called at the begining of main app function
- *
- */
-void mpp_mcmgr_early_init(void);
-#endif /* MCMGR_USED */
-
 #ifdef BOOT_SECONDARY_CORE
 /*
  * Boot secondary core using multi-core manager middleware
@@ -262,6 +276,16 @@ void mpp_mcmgr_early_init(void);
  *
  */
 volatile uint16_t *mpp_boot_secondary_core(void);
+
+#ifdef MCMGR_USED
+/*
+ * Signal secondary core ready and initialize RPMsg
+ *
+ * @return pointer to the created RPMsg instance
+ *
+ */
+struct rpmsg_lite_instance *mpp_secondary_core_rpmsg_init(void);
+#endif /* MCMGR_USED */
 #endif /* BOOT_SECONDARY_CORE */
 
 #ifdef RPMSG_USED

@@ -34,7 +34,7 @@ static inline _elem_t *get_camera_elem(_elem_t *elem)
 
     while (elem != NULL) 
     {
-        if (elem->prev->type == MPP_TYPE_SOURCE && elem->prev->src_typ == MPP_SRC_CAMERA) 
+        if (elem->prev != NULL && elem->prev->type == MPP_TYPE_SOURCE && elem->prev->src_typ == MPP_SRC_CAMERA) 
         {
             cam_elem_p = elem->prev;
             break;
@@ -82,7 +82,7 @@ static inline int camera_dequeue(_mpp_t *mpp)
         /* We only need to check here if the stream is active 
          * The active flag can change only inside camera_enequeue function 
          * Because of that, we cannot have a stream enqueued if active is not set */
-        if ((elem->io.out_buf[i]->callback != NULL) && (cam->params.in_advance_enqueue == false) &&
+        if ((elem->io.out_buf[i]->enqueue_cb != NULL) && (cam->params.in_advance_enqueue == false) &&
             ((cam->params.stream[i].active != true) || (cam->dev.config.stream_requested[i] != true)))
         {
             MPP_LOGD("Buffer %d is inactive or not requested. Skipping dequeue\n", i);
@@ -246,6 +246,11 @@ static inline int camera_enqueue(_elem_t *elem, void *buf)
             if (cam->dev.config.stream_requested[i] == true)
             {
                 req_cnt++;
+                /* check buffer status */
+                if (elem->io.out_buf[i]->status == MPP_BUFFER_READING)
+                {
+                    MPP_LOGI("Warning: camera may overwrite buffer in use.\n");
+                }
                 cam_elem->io.out_buf[i]->status = MPP_BUFFER_WRITTING;
             }
         }
@@ -296,7 +301,7 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
         return ret;
 
     elem->type = MPP_TYPE_SOURCE;
-    elem->sink_typ = MPP_SRC_CAMERA;
+    elem->src_typ = MPP_SRC_CAMERA;
 
     _camera_dev_t *cam = hal_malloc(sizeof(*cam) + CAMERA_MAX_PRIV_SIZE);
     if (!cam)
@@ -359,7 +364,7 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
     memset(cam->name, 0, sizeof(cam->name));
     strncpy(cam->name, name, MAX_DEV_NAME);
     
-    buf_processed_func_t  camera_enqueue_callback;
+    buf_enqueue_func_t  camera_enqueue_callback;
     if (strcmp(name, "Virtual_USB_cam") == 0)
         camera_enqueue_callback = camera_enqueue;
     else
@@ -402,7 +407,7 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
             elem->io.out_buf[i]->stripe_num = 0;
 
         /* This function will be called when an output buffer is processed by the next element */
-        elem->io.out_buf[i]->callback = camera_enqueue_callback;
+        elem->io.out_buf[i]->enqueue_cb = camera_enqueue_callback;
 
         cam->dev.ops->get_buf_desc(&cam->dev, &elem->io.out_buf[i]->hw_req_prod, &elem->io.mem_policy);
     }

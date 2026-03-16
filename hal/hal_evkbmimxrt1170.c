@@ -17,10 +17,10 @@
  *  limitations under the License.
  */
 
-#include <FreeRTOS.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include "hal_os.h"
 
 #include "fsl_cache.h"
 
@@ -28,6 +28,7 @@
 #include "hal_vdec_dev.h"
 #include "hal_utils.h"
 #include "hal_os.h"
+#include "hal_mc.h"
 
 /* Decoder setup */
 hal_img_decoder_setup_t decoder_setup[] =
@@ -60,12 +61,21 @@ int hal_gfx_setup(const char *name, gfx_dev_t *dev)
 }
 
 /* Display setup */
+#if MPP_OS_FREERTOS
 int HAL_DisplayDev_Lcdifv2Rk055_setup(display_dev_t *dev);
+#elif MPP_OS_ZEPHYR
+int HAL_DisplayDev_Zephyr_setup(display_dev_t *dev);
+int HAL_CameraDev_Zephyr_setup(const char *name, camera_dev_t *dev);
+#endif
 int HAL_DisplayDev_LVGLIMG_setup(display_dev_t *dev);
 
 hal_display_setup_t display_setup[] =
 {
+#if MPP_OS_FREERTOS
     {"Lcdifv2Rk055", HAL_DisplayDev_Lcdifv2Rk055_setup},
+#elif MPP_OS_ZEPHYR
+    {"Lcdifv2Rk055", HAL_DisplayDev_Zephyr_setup},
+#endif
     {"Lvgl", HAL_DisplayDev_LVGLIMG_setup},
 };
 
@@ -81,7 +91,11 @@ int HAL_CameraDev_MipiOv5640_setup(const char *name, camera_dev_t *dev);
 
 hal_camera_setup_t camera_setup[] =
 {
+#if MPP_OS_FREERTOS
     {"MipiOv5640", HAL_CameraDev_MipiOv5640_setup},
+#elif MPP_OS_ZEPHYR
+    {"MipiOv5640", HAL_CameraDev_Zephyr_setup},
+#endif
 };
 
 int setup_camera_dev(hal_camera_setup_t camera_setup[], int camera_nb,
@@ -91,25 +105,37 @@ int hal_camera_setup(const char *name, camera_dev_t *dev)
   return setup_camera_dev(camera_setup, ARRAY_SIZE(camera_setup), name, dev);
 }
 
+/* multicore hal setup */
+int hal_mc_dev_setup(const char *name, multicore_dev_t *dev)
+{
+    return HAL_MultiCoreDev_setup(name, dev);
+}
+
 void HAL_DCACHE_CleanInvalidateByRange(uint32_t addr, uint32_t size)
 {
-    hal_atomic_enter();
+    hal_ctx_t ctx;
+
+    hal_atomic_enter(&ctx);
     DCACHE_CleanInvalidateByRange(addr, size);
-    hal_atomic_exit();
+    hal_atomic_exit(&ctx);
     return;
 }
 void HAL_DCACHE_CleanByRange(uint32_t addr, uint32_t size)
 {
-    hal_atomic_enter();
+    hal_ctx_t ctx;
+
+    hal_atomic_enter(&ctx);
     DCACHE_CleanByRange(addr, size);
-    hal_atomic_exit();
+    hal_atomic_exit(&ctx);
     return;
 }
 
 void HAL_DCACHE_InvalidateByRange(uint32_t addr, uint32_t size)
 {
-    hal_atomic_enter();
+    hal_ctx_t ctx;
+
+    hal_atomic_enter(&ctx);
     DCACHE_InvalidateByRange(addr, size);
-    hal_atomic_exit();
+    hal_atomic_exit(&ctx);
     return;
 }

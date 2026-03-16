@@ -112,7 +112,7 @@ int HAL_JPEG_Hw_Deinit(const vdec_dev_t *dev)
     int ret = kStatus_Success;
 
     JPEGDEC_Deinit(HAL_JPEGDEC);
-    hal_mutex_remove(&s_mutex);
+    hal_mutex_remove(s_mutex);
 
     return ret;
 }

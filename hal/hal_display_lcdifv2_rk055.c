@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 NXP.
+ * Copyright 2020-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -359,6 +359,21 @@ hal_display_status_t HAL_DisplayDev_Lcdifv2Rk055_Blit(const display_dev_t *dev, 
     checksum.type = CHECKSUM_TYPE_CRC_ELCDIF;
     checksum.value = DCIC_GetRegionCalculatedCrc(APP_DCIC, 0);
     if (cap->callback != NULL) cap->callback(NULL, MPP_EVENT_INTERNAL_TEST_RESERVED, (void *) &checksum, cap->user_data);
+#endif
+
+#if (ENABLE_PISANO_CHECKSUM == 1)
+    checksum_data_t checksum;
+    checksum.type = CHECKSUM_TYPE_PISANO;
+    if (stripe == 0) {
+        checksum.value = calc_checksum((dev->cap.width * get_bitpp(dev->cap.format)/8) * dev->cap.height, frame);
+        HAL_LOGD("CHECKSUM=0x%X\n", checksum.value);
+    } else {
+        checksum.value = 0;
+        HAL_LOGD("Checksum not supported with stripes\n");
+    }
+    if (dev->cap.callback != NULL)
+        dev->cap.callback(NULL, MPP_EVENT_INTERNAL_TEST_RESERVED,
+                (void *) &checksum, dev->cap.user_data);
 #endif
 
     HAL_LOGD("--HAL_DisplayDev_Lcdifv2Rk055_Blit\n");

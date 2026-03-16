@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023, 2025 NXP
+ * Copyright 2022-2023, 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -313,12 +313,14 @@ static void app_task(void *params)
     /* color convert */
     elem_params.convert.pixel_format = MPP_PIXEL_RGB;
     elem_params.convert.ops = MPP_CONVERT_COLOR;
+#if (!SOURCE_STATIC_IMAGE) // do not crop static image
     /* crop center of image */
     elem_params.convert.crop.top = CROP_TOP;
     elem_params.convert.crop.bottom = CROP_TOP + CROP_SIZE_TOP - 1;
     elem_params.convert.crop.left = CROP_LEFT;
     elem_params.convert.crop.right = CROP_LEFT + CROP_SIZE_LEFT - 1;
     elem_params.convert.ops |= MPP_CONVERT_CROP;
+#endif
     /* resize: scaling parameters */
     elem_params.convert.scale.width = MOBILENET_WIDTH;
     elem_params.convert.scale.height = MOBILENET_HEIGHT;

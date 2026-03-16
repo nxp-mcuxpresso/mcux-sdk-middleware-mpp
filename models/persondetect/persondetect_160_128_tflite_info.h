@@ -22,7 +22,7 @@
 #define PERSONDETECT_WIDTH              160
 #define PERSONDETECT_HEIGHT             128
 #define PERSONDETECT_OUTPUT_ZERO_POINT  -50.0f
-#define PERSONDETECT_OUTPUT_SCALE       0.1308698058128357
+#define PERSONDETECT_OUTPUT_SCALE       0.1308698058128357f // float will reduce this to 0.1308698058f
 #define PERSONDETECT_GRID_HEIGHT        8 // Number of vertical cells in the output grid of Persondetect
 #define PERSONDETECT_GRID_WIDTH         10
 #define PERSONDETECT_CANAL              6 /* box data : Score,x, y, width, height, class  */

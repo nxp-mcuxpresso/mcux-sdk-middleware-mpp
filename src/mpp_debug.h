@@ -19,14 +19,19 @@
 #ifndef _MPP_DEBUG_H
 #define _MPP_DEBUG_H
 
+#include "hal_os.h"
 #include "hal_debug.h"
 #include "mpp_api_types_internal.h"
+#if MPP_OS_ZEPHYR
+#include <zephyr/logging/log.h>
+#endif
 
 int tick_check_rate(uint32_t *last, int *curr, int max);
 
 /* get string from element id */
 char * elem_name(_elem_t *elem);
 
+#if MPP_OS_FREERTOS
 /* non-conditional logs */
 #define MPP_LOGE(format, ...) \
     LOGE("MPP", __func__, __LINE__, format, ##__VA_ARGS__)
@@ -34,6 +39,15 @@ char * elem_name(_elem_t *elem);
     LOGI("MPP", __func__, __LINE__, format, ##__VA_ARGS__)
 #define MPP_LOGD(format, ...) \
     LOGD("MPP", __func__, __LINE__, format, ##__VA_ARGS__)
+#else 
+/* Map MPP logging macros to Zephyr's logging infrastructure */
+#define MPP_LOGE(format, ...) \
+    LOG_ERR("[%s:%d] " format, __func__, __LINE__, ##__VA_ARGS__)
+#define MPP_LOGI(format, ...) \
+    LOG_INF("[%s:%d] " format, __func__, __LINE__, ##__VA_ARGS__)
+#define MPP_LOGD(format, ...) \
+    LOG_DBG("[%s:%d] " format, __func__, __LINE__, ##__VA_ARGS__)
+#endif /* MPP_OS_FREERTOS */
 
 /* conditional logs */
 #define MPP_LOGE_IF(cond, format, ...)  \

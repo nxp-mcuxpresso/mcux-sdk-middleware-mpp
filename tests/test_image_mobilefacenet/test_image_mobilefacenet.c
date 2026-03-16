@@ -67,6 +67,14 @@ void *image_data = (void *)thispersondoesnotexist_4_96_bgr_data;
 
 #define STATS_PRINT_PERIOD_MS 	1000
 
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_mobilefacenet_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_mobilefacenet"
+#endif
+
 typedef struct _user_data_t {
 	int inference_frame_num;
 	mpp_t mp;
@@ -173,6 +181,7 @@ void stat_task(void *param)
 	const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
 	xLastWakeTime = xTaskGetTickCount();
 	uint32_t last_inf_frame_num = user_data->inference_frame_num;
+	PRINTF("\r\nStart %s\r\n", TC_NAME);
 	for (;;) {
 		xTaskDelayUntil( &xLastWakeTime, xFrequency );
 		if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
@@ -193,6 +202,26 @@ void stat_task(void *param)
 				{
 					PRINTF("Recognized face: %s with similarity percentage: %d%%\r\n", user_data->result.recognized_name, user_data->result.similarity_percentage);
 				}
+
+				if ((user_data->inference_time_ms <= EXPECTED_INF_TIME) && 
+					(strcmp(user_data->result.recognized_name, EXPECTED_RECO_PERS) == 0) &&
+					(user_data->result.similarity_percentage >= EXPECTED_INF_SCORE))
+				{
+					PRINTF("%s - PASSED\r\n", TC_NAME);
+				}
+				else
+				{
+					if (user_data->inference_time_ms > EXPECTED_INF_TIME)
+						PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+					if (strcmp(user_data->result.recognized_name, EXPECTED_RECO_PERS))
+						PRINTF("Bad reco result %s, expected %s\r\n", user_data->result.recognized_name, EXPECTED_RECO_PERS);
+					if (user_data->result.similarity_percentage < EXPECTED_INF_SCORE)
+						PRINTF("Bad score %d, expected greater than %d\r\n", user_data->result.similarity_percentage, EXPECTED_INF_SCORE);
+					PRINTF("%s - FAILED\r\n", TC_NAME);
+				}
+				PRINTF("%s finished\r\n", TC_NAME);
+				PRINTF("\r\nStart %s\r\n", TC_NAME);
+
 				last_inf_frame_num = user_data->inference_frame_num;
 			}
 			__atomic_store_n(&user_data->accessing, 0, __ATOMIC_SEQ_CST);

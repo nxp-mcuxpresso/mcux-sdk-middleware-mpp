@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -31,7 +31,7 @@
 #endif
 
 #include "hal_debug.h"
-#include "hal_freertos.h"
+#include "hal_os.h"
 #include "hal_utils.h"
 #include "hal_os.h"
 
@@ -230,10 +230,17 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
         if (chksm == NULL) {
             return 0;
         }
-        if (chksm->type != CHECKSUM_TYPE_CRC_ELCDIF) {
-            PRINTF("ERROR: checksum calculated should be using CRC LCDIF\n");
+#if defined(CHECKSUM_TYPE_EXPECTED_PISANO) && (CHECKSUM_TYPE_EXPECTED_PISANO == 1)
+        if (chksm->type != CHECKSUM_TYPE_PISANO) {
+            PRINTF("ERROR: checksum calculated should be using PISANO for MCXN CPUs\r\n");
             return 0;
         }
+#else
+        if (chksm->type != CHECKSUM_TYPE_CRC_ELCDIF) {
+            PRINTF("ERROR: checksum calculated should be using CRC LCDIF\r\n");
+            return 0;
+        }
+#endif
         /* if check period elapsed, test again */
         int time = hal_tick_to_ms(hal_get_ostick());
         if (time > chksm_time + TEST_CHECK_PERIOD_MS)

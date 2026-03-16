@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023, 2025 NXP
+ * Copyright 2022-2023, 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -52,6 +52,14 @@ void *image_data = (void *)antispoofing_gray_data;
  ******************************************************************************/
 
 #define STATS_PRINT_PERIOD_MS 	1000
+
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_antispoofing_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_antispoofing"
+#endif
 
 typedef struct _user_data_t {
 	int inference_frame_num;
@@ -151,23 +159,53 @@ void stat_task(void *param)
 	const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
 	xLastWakeTime = xTaskGetTickCount();
 	uint32_t last_inf_frame_num = user_data->inference_frame_num;
+	PRINTF("\r\nStart %s\r\n", TC_NAME);
 	for (;;) {
 		xTaskDelayUntil( &xLastWakeTime, xFrequency );
-		if (last_inf_frame_num != user_data->inference_frame_num) {
-			mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-			PRINTF("Element stats --------------------------\r\n");
-			PRINTF("Antispoofing : exec_time %u (ms)\r\n", antispoofing_stats.elem.elem_exec_time);
-			mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
-			PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
-			if(user_data->liveness.result[1] > SPOOFING_THRESHOLD)
+		if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0)) {
+			if (last_inf_frame_num != user_data->inference_frame_num) {
+				mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+				PRINTF("Element stats --------------------------\r\n");
+				PRINTF("Antispoofing : exec_time %u (ms)\r\n", antispoofing_stats.elem.elem_exec_time);
+				mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+				PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+				uint32_t liveness_res = 0; // 0 fake face, 1 real face
+				uint32_t score = 0;
+				if(user_data->liveness.result[1] > SPOOFING_THRESHOLD)
 				{
+					liveness_res = 1;
+					score = user_data->liveness.result[1];
 					PRINTF("%s : Real face, confidence score %d\r\n", ANTISPOOFING_NAME, user_data->liveness.result[1]);
 				}
 				else
 				{
+					liveness_res = 0;
+					score = user_data->liveness.result[0];
 					PRINTF("%s : Fake face, confidence score %d\r\n", ANTISPOOFING_NAME, user_data->liveness.result[0]);
 				}			
-			last_inf_frame_num = user_data->inference_frame_num;
+			
+				if ((user_data->inference_time_ms <= EXPECTED_INF_TIME) && 
+					(liveness_res == EXPECTED_LIVENESS_RES) &&
+					(score >= EXPECTED_INF_SCORE))
+				{
+					PRINTF("%s - PASSED\r\n", TC_NAME);
+				}
+				else
+				{
+					if (user_data->inference_time_ms > EXPECTED_INF_TIME)
+						PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+					if (liveness_res != EXPECTED_LIVENESS_RES)
+						PRINTF("Bad liveness result %d, expected %d\r\n", liveness_res, EXPECTED_LIVENESS_RES);
+					if (score < EXPECTED_INF_SCORE)
+						PRINTF("Bad score %d, expected greater than %d\r\n", score, EXPECTED_INF_SCORE);
+					PRINTF("%s - FAILED\r\n", TC_NAME);
+				}
+				PRINTF("%s finished\r\n", TC_NAME);
+				PRINTF("\r\nStart %s\r\n", TC_NAME);
+			
+				last_inf_frame_num = user_data->inference_frame_num;
+			}
+			__atomic_store_n(&user_data->accessing, 0, __ATOMIC_SEQ_CST);
 		}
 	}
 	return;

@@ -23,23 +23,25 @@ default values:
 - build type: release
 
 `$ python3 ./build_mpp.py`
+
 or:
+
 `$ python3 ./build_mpp.py -b board_name -e example_name`
 
 ### Build script usage
 
 `$ python3 ./build_mpp.py -h`
 ```
-Running script from sdk west repository
-usage: build_mpp.py [-h] [-a] [-b BOARD] [-e EXAMPLE] [-i] [-d LOG_LEVEL] [-D] [-p PANEL] [-c CONFIG] [-f FLAGS] [-t TEST] [-s SDK_PATH] [-g APP_CONFIG] [-C CORE_ID] [-S] [-v]
+usage: build_mpp.py [-h] [-a] [-b {evkbmimxrt1170,frdmmcxn947,mimxrt700evk,all}] [-e EXAMPLE] [-i] [-d LOG_LEVEL] [-D] [-p PANEL] [-c CONFIG] [-f FLAGS] [-t TEST] [-s SDK_PATH] [-g APP_CONFIG] [-C CORE_ID]
+                    [-S] [-v] [-F] [-P PROBE_ID] [-G] [-J JLINKSCRIPT]
 
 MPP Build Script
 
 options:
   -h, --help            show this help message and exit
   -a, --rebuild-tflm    rebuild libtflm.a from source
-  -b BOARD, --board BOARD
-                        board name: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk}
+  -b {evkbmimxrt1170,frdmmcxn947,mimxrt700evk,all}, --board {evkbmimxrt1170,frdmmcxn947,mimxrt700evk,all}
+                        board name: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk, all}
   -e EXAMPLE, --example EXAMPLE
                         build the example app {camera_view, all, ...}
   -i, --host            build for host (x86)
@@ -67,6 +69,7 @@ options:
                         #define DEMO_PANEL_RK055MHD091 2 /* NXP "RK055MHD091A0-CTG MIPI Rectangular Display */
                         #define DEMO_PANEL_RASPI_7INCH 5 /* Raspberry Pi panel 7 inch */
                         #define DEMO_PANEL_CO5300      6 /* NXP ZC143AC72MIPI MIPI Circular Display */
+                        #define DEMO_PANEL_LCD_PAR_S035 8 /* LCD_PAR_S035 panel 8080.*/
   -c CONFIG, --config CONFIG
                         build/config type: {debug, release}
   -f FLAGS, --flags FLAGS
@@ -77,7 +80,35 @@ options:
   -g APP_CONFIG, --app-config APP_CONFIG
                         the index of the app_config to be used
   -C CORE_ID, --core-id CORE_ID
-                        specify the core id you want to build app for
+                        specify the core id you want to build app for (values like 0, 1, 2...)
   -S, --sysbuild        add --sysbuild option to the build command
   -v, --verbose         enable verbose for build
- ```
+  -F, --flash           flash the built image to the board after building
+  -P PROBE_ID, --probe-id PROBE_ID
+                        probe ID for flashing (auto-detected if not provided)
+  -G, --use-gdb         use GDB server for flashing (only supported with jlink)
+  -J JLINKSCRIPT, --jlinkscript JLINKSCRIPT
+                        path to JLink script file for GDB server (valid only when use_gdb is set)
+```
+
+In order to have the argument autocomplete function working (compatible with Linux bash only), you need to install the argcomplete package:
+
+`$ pip install argcomplete`
+
+Then activate it by running:
+
+`$ activate-global-python-argcomplete3 --user`
+
+And add the following line to your shell configuration file (~/.bashrc, ~/.zshrc, etc.):
+
+`$ eval "$(register-python-argcomplete ./build_mpp.py)"`
+
+or
+
+`$ eval "$(register-python-argcomplete ./build_mpp.py)" >> ~/.bashrc`
+
+After this you need to call the script directly without python3:
+```
+$ chmod +x ./build_mpp.py
+$ ./build_mpp.py -h
+```

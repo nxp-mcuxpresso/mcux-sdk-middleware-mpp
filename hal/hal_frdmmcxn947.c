@@ -24,6 +24,7 @@
 
 #include "hal_graphics_dev.h"
 #include "hal_utils.h"
+#include "hal_mc.h"
 
 #include "fsl_common.h"
 
@@ -83,6 +84,12 @@ int setup_camera_dev(hal_camera_setup_t camera_setup[], int camera_nb,
 int hal_camera_setup(const char *name, camera_dev_t *dev)
 {
   return setup_camera_dev(camera_setup, ARRAY_SIZE(camera_setup), name, dev);
+}
+
+/* multicore hal setup */
+int hal_mc_dev_setup(const char *name, multicore_dev_t *dev)
+{
+    return HAL_MultiCoreDev_setup(name, dev);
 }
 
 void HAL_DCACHE_CleanInvalidateByRange(uint32_t addr, uint32_t size)

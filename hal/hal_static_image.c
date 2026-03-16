@@ -50,7 +50,7 @@ hal_image_status_t HAL_Image_Dequeue(static_image_t *elt, hw_buf_desc_t *out_buf
     assert(config.width <= INT_MAX / bitpp);
     int image_stride = (config.width * bitpp) / 8;
     int dest_stride = out_buf->stride;
-    HAL_LOGI("++HAL_IMAGE_Dequeue\n");
+    HAL_LOGD("++HAL_IMAGE_Dequeue\n");
 
     if(config.compressed_size > 0)
     {
@@ -104,7 +104,7 @@ hal_image_status_t HAL_Image_Dequeue(static_image_t *elt, hw_buf_desc_t *out_buf
             }
         }
     }
-    HAL_LOGI("--HAL_IMAGE_Dequeue\n");
+    HAL_LOGD("--HAL_IMAGE_Dequeue\n");
     return ret;
 }
 

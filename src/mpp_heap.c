@@ -20,7 +20,7 @@
 #include "hal_os.h"
 #include "mpp_debug.h"
 
-extern hal_sema_t stats_lock[];
+extern hal_mutex_t stats_lock[];
 
 _mpp_t *rc_prio_lst[MAX_MPP_HEAP_PRIO];         /* array of head elements to execute in RC task */
 _mpp_t *preempt_prio_lst[MAX_MPP_HEAP_PRIO];    /* array of head elements to execute in PR task */
@@ -137,6 +137,13 @@ void mpp_execute(_mpp_t *mpp)
     MPP_LOGD_IF(RLMT_CHECK(1), "Dequeue from src@%p\n", elem);
     if(elem->type == MPP_TYPE_SOURCE && elem->src_dequeue != NULL)
     {
+        /* Check if a dequeue callback is defined on output buffer */
+        for (i = 0; i < elem->io.nb_out_buf; i++)
+        {
+            if (elem->io.out_buf[i]->dequeue_cb != NULL)
+                elem->io.out_buf[i]->dequeue_cb(elem, elem->io.out_buf[i]);
+        }
+
         ret = elem->src_dequeue(mpp);
         /* no buffer has been dequeued */
         if (ret != MPP_SUCCESS)
@@ -145,12 +152,26 @@ void mpp_execute(_mpp_t *mpp)
             return;
         }
 
-        if (elem->src_typ == MPP_SRC_CAMERA)
+        if ((elem->src_typ == MPP_SRC_CAMERA) || (elem->src_typ == MPP_SRC_MC))
         {
             /* Compute the minimum enqueue count for next dequeue call */
-            _camera_dev_t *cam = elem->dev.cam;
+            uint32_t *min_req_cnt_p;
+            mpp_exec_flag_t *req_exec_type_p;
+            if (elem->src_typ == MPP_SRC_CAMERA)
+            {
+                _camera_dev_t *cam = elem->dev.cam;
+                min_req_cnt_p = &cam->dev.config.min_stream_req_cnt;
+                req_exec_type_p = &cam->dev.config.req_cnt_type;
+            }
+            else
+            {
+                _multicore_dev_t *mc = elem->dev.mc;
+                min_req_cnt_p = &mc->dev.config.min_req_cnt;
+                req_exec_type_p = &mc->dev.config.req_exec_type;
+            }
+            
             uint32_t min_req_cnt = 0;
-            mpp_exec_flag_t req_cnt_type = MPP_EXEC_RC;
+            mpp_exec_flag_t req_exec_type = MPP_EXEC_RC;
 
             /* Set the minum number of stream enqueue calls until the enqueue to camera is completed */
             for (int i = 0; i < MPP_MAX_BRANCH_NUM; i++)
@@ -171,12 +192,12 @@ void mpp_execute(_mpp_t *mpp)
                 if (min_req_cnt == 0)
                     MPP_LOGI("No active streams found for camera dequeue\r\n");
                 else
-                    req_cnt_type = MPP_EXEC_PREEMPT;
+                    req_exec_type = MPP_EXEC_PREEMPT;
             }
 
             /* We can't have more streams than output buffers */
-            cam->dev.config.min_stream_req_cnt = min_req_cnt;
-            cam->dev.config.req_cnt_type = req_cnt_type;
+            *min_req_cnt_p = min_req_cnt;
+            *req_exec_type_p = req_exec_type;
         }
 
         /* flush cache for output buffer */
@@ -200,7 +221,7 @@ void mpp_execute(_mpp_t *mpp)
     bool rlmt_log_on = RLMT_CHECK(1);
     uint32_t start_time, end_time;
     mpp_stats_t *stats;
-    
+
     /* if branch has an element that wants to force the update */
     /* store value here, in case mpp gets updated while in processing loop */
     bool force_update = mpp->force_update;
@@ -214,7 +235,10 @@ void mpp_execute(_mpp_t *mpp)
 
         /* check and update buffer status in atomic block */
         {
-            hal_atomic_enter();
+            hal_ctx_t ctx;
+
+            hal_atomic_enter(&ctx);
+
             for (i = 0; i < elem->io.nb_in_buf; i++)
             {
                 if (elem->io.in_buf[i]->status == MPP_BUFFER_WRITTING) busy = true;
@@ -227,14 +251,14 @@ void mpp_execute(_mpp_t *mpp)
             }
             if (busy)
             {
-                hal_atomic_exit();
+                hal_atomic_exit(&ctx);
                 MPP_LOGD("element %s: input or output buffer busy! skip processing.\n", elem_name(elem));
                 elem = elem->next[0];
                 continue;
             }
             else if (!update)
             {
-                hal_atomic_exit();
+                hal_atomic_exit(&ctx);
                 MPP_LOGD("element %s: no input buffer update! skip processing.\n", elem_name(elem));
                 elem = elem->next[0];
                 continue;
@@ -250,8 +274,15 @@ void mpp_execute(_mpp_t *mpp)
                 {
                     elem->io.out_buf[i]->status = MPP_BUFFER_WRITTING;
                 }
-                hal_atomic_exit();
+                hal_atomic_exit(&ctx);
             }
+        }
+
+        /* Check if a dequeue callback is defined on output buffer */
+        for (i = 0; i < elem->io.nb_out_buf; i++)
+        {
+            if ((elem->io.inplace != true) && elem->io.out_buf[i]->dequeue_cb != NULL)
+                elem->io.out_buf[i]->dequeue_cb(elem, elem->io.out_buf[i]);
         }
 
         /* invalidate cache for input buffer */
@@ -276,9 +307,9 @@ void mpp_execute(_mpp_t *mpp)
         elem->entry(elem);
 
         if (stats) end_time = hal_get_exec_time();
-        if (stats && hal_sema_take(stats_lock[MPP_STATS_GRP_ELEMENT], 0)) {
+        if (stats && hal_mutex_lock_no_wait(stats_lock[MPP_STATS_GRP_ELEMENT]) == MPP_SUCCESS) {
             stats->elem.elem_exec_time = end_time - start_time;
-            hal_sema_give(stats_lock[MPP_STATS_GRP_ELEMENT]);
+            (void) hal_mutex_unlock(stats_lock[MPP_STATS_GRP_ELEMENT]);
         }
 
         /* flush cache for output buffer */
@@ -298,33 +329,62 @@ void mpp_execute(_mpp_t *mpp)
 
         /* update status again in atomic block */
         {
-            hal_atomic_enter();
-            unsigned short latest_id = 0; /* records highest id from different inputs */
+            hal_ctx_t ctx;
+
+            /* Maximum number of deferred callbacks - matches typical io.nb_in_buf max */
+            #define MAX_DEFERRED_CALLBACKS 4
+
+            struct {
+                void (*fn)(void*, void*);
+                void *elem;
+                void *buf;
+            } callbacks[MAX_DEFERRED_CALLBACKS];
+            uint32_t cb_count = 0;
+
+            hal_atomic_enter(&ctx);
+
+            unsigned short latest_id = 0;
             for (i = 0; i < elem->io.nb_in_buf; i++)
             {
                 elem->io.in_buf[i]->status = MPP_BUFFER_EMPTY;
-                /* Call callback if it's set and inplace processing is false */
-                if ((elem->io.inplace != true) && elem->io.in_buf[i]->callback != NULL)
-                    elem->io.in_buf[i]->callback(elem, elem->io.in_buf[i]);
-                /* record last input frame id processed */
+
+                /* Defer callback - with bounds check */
+                if ((elem->io.inplace != true) &&
+                    elem->io.in_buf[i]->enqueue_cb != NULL &&
+                    cb_count < MAX_DEFERRED_CALLBACKS)
+                {
+                    callbacks[cb_count].fn = (void (*)(void*, void*))elem->io.in_buf[i]->enqueue_cb;
+                    callbacks[cb_count].elem = (void*)elem;
+                    callbacks[cb_count].buf = (void*)elem->io.in_buf[i];
+                    cb_count++;
+                }
+
                 elem->io.last_frame_id[i] = elem->io.in_buf[i]->frame_id;
-                /* output id will be most recent frame id */
-                if (elem->io.in_buf[i]->frame_id > latest_id) latest_id = elem->io.in_buf[i]->frame_id;
+                if (elem->io.in_buf[i]->frame_id > latest_id)
+                    latest_id = elem->io.in_buf[i]->frame_id;
             }
             for (i = 0; i < elem->io.nb_out_buf; i++)
             {
                 elem->io.out_buf[i]->status = MPP_BUFFER_READY;
-                /* update output frame id */
                 elem->io.out_buf[i]->frame_id = latest_id;
             }
-            hal_atomic_exit();
+
+            hal_atomic_exit(&ctx);
+
+            /* Invoke deferred callbacks safely */
+            for (i = 0; i < cb_count; i++)
+            {
+                callbacks[i].fn(callbacks[i].elem, callbacks[i].buf);
+            }
+
+            #undef MAX_DEFERRED_CALLBACKS
         }
         if (elem == mpp->last_elem)
             break;
         else
             elem = elem->next[0];
     }
-    
+
     if (force_update)
     {
         /* forced update done, reset to false by default */
@@ -350,8 +410,12 @@ void mpp_execute(_mpp_t *mpp)
             }
         }
         if (elem->sink_enqueue) elem->sink_enqueue(mpp);
-        if (elem->io.in_buf[0]->callback != NULL)
-            elem->io.in_buf[0]->callback(elem, elem->io.in_buf[0]);
+        /* Check if an enqueue buffer is defined on input buffer */
+        for (i = 0; i < elem->io.nb_in_buf; i++)
+        {
+            if (elem->io.in_buf[i]->enqueue_cb != NULL)
+                elem->io.in_buf[i]->enqueue_cb(elem, elem->io.in_buf[i]);
+        }
     }
 
     released = hal_sema_give(mpp->status_sema);
@@ -381,7 +445,7 @@ void mpp_execute_heap(_mpp_t *prio_lst[])
                 if (stats) start_time = hal_get_exec_time();
                 mpp_execute(mpp);
                 if (stats) end_time = hal_get_exec_time();
-                if (stats && hal_sema_take(stats_lock[MPP_STATS_GRP_MPP], 0))
+                if (stats && hal_mutex_lock_no_wait(stats_lock[MPP_STATS_GRP_MPP]) == MPP_SUCCESS)
                 {
                     stats->mpp.mpp = (mpp_t)mpp;
                     stats->mpp.mpp_exec_time = end_time - start_time;
@@ -393,7 +457,7 @@ void mpp_execute_heap(_mpp_t *prio_lst[])
                         mpp->fps_params.frame_cnt = 0;
                         mpp->fps_params.start_time_us = hal_get_crt_time();
                     }
-                    hal_sema_give(stats_lock[MPP_STATS_GRP_MPP]);
+                    (void) hal_mutex_unlock(stats_lock[MPP_STATS_GRP_MPP]);
                 }
             }
             /**/
@@ -425,7 +489,7 @@ void mpp_dump_heap(_mpp_t *prio_lst[])
     {
         if (prio_lst[i])
         {
-            MPP_LOGI("prio %d : %lu items\r\n", i, mpp_get_nbelem(prio_lst[i]));
+            MPP_LOGI("prio %d : %d items\r\n", i, mpp_get_nbelem(prio_lst[i]));
             _mpp_t *mpp = prio_lst[i];
             _elem_t *elem = mpp->first_elem;
             /* loop over elements in mpp */

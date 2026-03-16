@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP
+ * Copyright 2022-2026 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -41,6 +41,7 @@
 #include "hal_display_dev.h"
 #include "hal_camera_dev.h"
 #include "hal_vdec_dev.h"
+#include "hal_mc.h"
 
 /*!
  * @brief Implementation of hal labeled rectangle component that draws a rectangle and a text on an input image.
@@ -130,6 +131,17 @@ int hal_gfx_setup(const char *name, gfx_dev_t *dev);
  *
  */
 int hal_img_decoder_setup(const char *name, vdec_dev_t *dev);
+
+
+/*!
+ * @brief Register multicore device.
+ *
+ * @param[in] name multicore device name
+ * @param[in] dev multicore device to register
+ * @return error code (0: success, otherwise: failure)
+ *
+ */
+int hal_mc_dev_setup(const char *name, multicore_dev_t *dev);
 
 /** @} */
 

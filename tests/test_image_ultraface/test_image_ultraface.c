@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 NXP
+ * Copyright 2023-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -49,6 +49,14 @@
  * Definitions
  ******************************************************************************/
 #define STATS_PRINT_PERIOD_MS 1000
+
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_ultraface_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_ultraface"
+#endif
 
 typedef struct _args_t {
     void *image_buffer;
@@ -167,11 +175,10 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
                 else
                     break;
             }
+            app_priv->inference_frame_num++;
            /* end of modification of user data */
             __atomic_store_n(&app_priv->accessing, 0, __ATOMIC_SEQ_CST);
-
         }
-        app_priv->inference_frame_num++;
         break;
     case MPP_EVENT_INVALID:
     default:
@@ -190,17 +197,22 @@ void stat_task(void *param)
     const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
     xLastWakeTime = xTaskGetTickCount();
     uint32_t last_inf_frame_num = user_data->inference_frame_num;
+    bool out_score_fail = false;
+    int last_fail_score = 0;
+    PRINTF("\r\nStart %s\r\n", TC_NAME);
     for (;;) {
         xTaskDelayUntil( &xLastWakeTime, xFrequency );
-        if (last_inf_frame_num != user_data->inference_frame_num) 
+        if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
         {
-            mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-            PRINTF("Element stats --------------------------\r\n");
-            PRINTF("ultraface : exec_time %u (ms)\r\n", ultraface_stats.elem.elem_exec_time);
-            mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
-            if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
+            if (last_inf_frame_num != user_data->inference_frame_num) 
             {
+                mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+                PRINTF("Element stats --------------------------\r\n");
+                PRINTF("ultraface : exec_time %u (ms)\r\n", ultraface_stats.elem.elem_exec_time);
+                mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
                 PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+                out_score_fail = false;
+                last_fail_score = true;
                 if (user_data->detected_count == 0)
                 {
                     PRINTF("No face detected! \r\n");
@@ -219,11 +231,34 @@ void stat_task(void *param)
                         PRINTF("Box top: %d \r\n", (int)(user_data->boxes[i].top));
                         PRINTF("Box bottom: %d \r\n", (int)(user_data->boxes[i].bottom));
                         PRINTF("     -----------\r\n");
+                        if ( (int)(user_data->boxes[i].score * 100.0f) < EXPECTED_INF_SCORE)
+                        {
+                            out_score_fail = true;
+                            last_fail_score = (int)(user_data->boxes[i].score * 100.0f);
+                        }
                     }
                 }
-                __atomic_store_n(&user_data->accessing, 0, __ATOMIC_SEQ_CST);
+                if ((user_data->inference_time_ms <= EXPECTED_INF_TIME) && 
+                    (user_data->detected_count == EXPECTED_INF_DETECTION_CNT) &&
+                    (out_score_fail != true))
+                {
+                    PRINTF("%s - PASSED\r\n", TC_NAME);
+                }
+                else
+                {
+                    if (user_data->inference_time_ms > EXPECTED_INF_TIME)
+                        PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+                    if (user_data->detected_count != EXPECTED_INF_DETECTION_CNT)
+                        PRINTF("Bad number of detections %d, expected %d\r\n", user_data->detected_count, EXPECTED_INF_DETECTION_CNT);
+                    if (out_score_fail)
+                        PRINTF("Bad score %d, expected greater than %d\r\n", last_fail_score, EXPECTED_INF_SCORE);
+                    PRINTF("%s - FAILED\r\n", TC_NAME);
+                }
+                PRINTF("%s finished\r\n", TC_NAME);
+                PRINTF("\r\nStart %s\r\n", TC_NAME);
+                last_inf_frame_num = user_data->inference_frame_num;
             }
-            last_inf_frame_num = user_data->inference_frame_num;
+            __atomic_store_n(&user_data->accessing, 0, __ATOMIC_SEQ_CST);
         }
     }
 

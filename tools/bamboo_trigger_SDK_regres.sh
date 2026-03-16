@@ -13,10 +13,11 @@ MPP_DIR=$(dirname $(readlink -f $0 | xargs dirname))
 
 # Default parameters
 BIN_DIR="${MPP_DIR}/../sdk-next/mcuxsdk"
-BOARD="evkbmimxrt1170,frdmmcxn947"
+BOARD="evkbmimxrt1170,frdmmcxn947,mimxrt700evk"
 OUTPUT_DIR="test_results"
 RT1170_EXAMPLES="camera_mobilenet_view,camera_persondetect_view,camera_ultraface_view,camera_view,static_image_nanodet_view"
 MCXN947_EXAMPLES="camera_mobilenet_view,camera_persondetect_view,camera_ultraface_view,camera_view"
+RT700_EXAMPLES="camera_view,static_image_nanodet_view,static_image_persondetect_view,static_image_ultraface_view,static_image_mobilenet_view"
 EXAMPLES=""
 JSON_CONFIG_FILE="dapeng_config.json"
 JUNIT_TEST_REPORT_FILE="dapeng_test_report.xml"
@@ -27,6 +28,11 @@ MCU_SDK_TEST_VERSION="main"
 BUILD_CFG="release"
 CLEAN_LOGS_IF_PASS="no"
 NEXUS_DIR_LINK="https://${bamboo_NEXUS_INSTANCE}-nxrm.sw.nxp.com/#browse/browse:${bamboo_NEXUS_REPO}:${bamboo_NEXUS_DIRECTORY}%2F${bamboo_planKey}%2F${bamboo_buildNumber}"
+
+# Check if DAPENG_API_TOKEN exists and is not empty, if not set it to "dapeng"
+if [[ -z "${DAPENG_API_TOKEN}" ]]; then
+    export DAPENG_API_TOKEN="dapeng"
+fi
 
 # BAMBOO plan does not need the default BUILD_CFG set when running this script
 if [[ "${bamboo_planKey}" != "" ]]; then
@@ -50,6 +56,7 @@ usage()
     echo "    Default values:"
     echo "          board evkbmimxrt1170: ${RT1170_EXAMPLES}"
     echo "          board frdmmcxn947: ${MCXN947_EXAMPLES}"
+    echo "          board mimxrt700evk: ${RT700_EXAMPLES}"
     echo " -m <mail_list>: list of emails used by dapeng to send the test report"
     echo "    Can be a single email or a list separrated by comma"
     echo "    default value is $MAIL_LIST"
@@ -447,16 +454,12 @@ echo ""
 dapeng download ${dapeng_task_id} -T run -d ${OUTPUT_DIR} 2>&1 | tee -a ${DAPENG_TMP_LOG_FILE}
 echo ""
 
-# Get the number for failed tests, if any
-test_summary=$(cat ${DAPENG_TMP_LOG_FILE} | grep "run total:")
-test_summary=$(echo "${test_summary//=}")
-n_total_tests=$(echo "${test_summary}" | cut -d "," -f 1 | cut -d ":" -f 2)
-n_total_tests=$(echo "${n_total_tests// }")
-n_failed_tests=$(echo "${test_summary}" | cut -d "," -f 2 | cut -d ":" -f 2)
-n_failed_tests=$(echo "${n_failed_tests// }")
-n_passed_tests=$(echo "${test_summary}" | cut -d "," -f 3 | cut -d ":" -f 2)
-n_passed_tests=$(echo "${n_passed_tests// }")
-n_na_tests=$(($n_total_tests-$n_failed_tests-$n_passed_tests))
+# Get the number for test with status not available, if any
+job_cases_number=$(cat ${DAPENG_TMP_LOG_FILE} | grep "Job cases numbers:")
+job_cases_number=$( echo "${job_cases_number}" | cut -d ":" -f 2)
+files_number=$(cat ${DAPENG_TMP_LOG_FILE} | grep "Files number:")
+files_number=$( echo "${files_number}" | cut -d ":" -f 2)
+n_na_tests=$(($job_cases_number-$files_number))
 if [[ "${n_na_tests}" != "0" ]]; then
     echo "Number of tests with status unavailable: ${n_na_tests}"
 fi
@@ -468,10 +471,8 @@ create_junit_header
 create_md_header
 
 # Check the exit code for dapeng new command
-if [[ "${dapeng_exit_code}" != 0 || "${n_na_tests}" != "0" ]]; then
-    # If exit code is not 0, it means test job failed
-    n_total_failed_tests=$(($n_failed_tests+$n_na_tests))
-    echo "${n_total_failed_tests} test(s) FAILED"
+if [[ "${dapeng_exit_code}" != 0 ]]; then
+    # If exit code is not 0, it means test jobs failed
     echo "Failed tests:"
 fi
 

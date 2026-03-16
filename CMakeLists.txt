@@ -5,6 +5,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         BASE_PATH ${CMAKE_CURRENT_LIST_DIR}
         SOURCES src/mpp_api.c
         SOURCES src/mpp_debug.c
+        SOURCES src/mpp_double_buffer.c
         SOURCES src/mpp_elements.c
         SOURCES src/mpp_element_camera.c
         SOURCES src/mpp_element_display.c
@@ -19,15 +20,19 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES src/mpp_heap.c
         SOURCES src/mpp_memory.c
         SOURCES src/mpp_utils.c
+        SOURCES src/mpp_element_mc_source.c
+        SOURCES src/mpp_element_mc_sink.c
         SOURCES src/*.h
         include/mpp_api_types.h
         include/mpp_api.h
+        include/mpp_double_buffer.h
     )
     # include path    
     mcux_add_include(
         BASE_PATH ${CMAKE_CURRENT_LIST_DIR}
         INCLUDES include
             hal/include
+            hal/os/include
             src
             .
     )
@@ -56,16 +61,21 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
             CC "-DMPP_COMMIT=${MPP_COMMIT}"
         )
     endif ()
-    # set extra build flags
-    if (NOT ${EXTRA_BUILD_FLAGS} STREQUAL "")
-        separate_arguments (LIST_FLAG UNIX_COMMAND ${EXTRA_BUILD_FLAGS})
-        foreach(flag ${LIST_FLAG})
-            message("EXTRA_BUILD_FLAGS: ${flag}")
-            mcux_add_macro (
-                CC "${flag}"
-            )
-        endforeach()
-    endif () #(NOT ${EXTRA_BUILD_FLAGS} STREQUAL "")
+    # enable code coverage if requested
+    if (NOT ${ENABLE_COVERAGE} STREQUAL "")
+        message(STATUS "Code coverage enabled")
+        mcux_add_macro (
+            CC "-DENABLE_COVERAGE=1"
+            CX "-DENABLE_COVERAGE=1"
+        )
+        mcux_add_configuration(
+            CC "-fprofile-arcs -ftest-coverage -O0 -g"
+            CX "-fprofile-arcs -ftest-coverage -O0 -g"
+            LD "--specs=rdimon.specs -lrdimon -lgcov"
+        )
+        message(STATUS "MPP: Code coverage instrumentation enabled with semihosting support")
+    endif ()
+
     # HAL sources
     mcux_add_source(
         BASE_PATH ${CMAKE_CURRENT_LIST_DIR}
@@ -77,7 +87,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/hal_graphics_cpu.c
         SOURCES hal/hal_static_image.c
         SOURCES hal/hal_utils.c
-        SOURCES hal/hal_freertos.c
+        SOURCES hal/os/freertos/hal_freertos.c
         SOURCES hal/hal_vision_algo_tflite.c
         SOURCES hal/tflite/model.cpp
         SOURCES hal/tflite/model_all_ops_micro.cpp
@@ -94,7 +104,9 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/hal_jpegdec_hw.c
         SOURCES hal/hal_camera_usb.c
         SOURCES hal/hal_camera_virtual_usb.c
+        SOURCES hal/hal_mc.c
         SOURCES hal/include/*.h
+        SOURCES hal/os/include/*.h
         SOURCES hal/tflite/*.h
     )
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -17,8 +17,24 @@ import multiprocessing
 import platform
 import re
 from pathlib import Path
+import argcomplete
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'internal'))
+
+DEBUG_CONSOLE_DEFINES = {
+    "0": {
+        "flags": "",
+        "help": "Enable core 0 console only (default mode)"
+    },
+    "1": {
+        "flags": "-DDISABLE_CORE0_CONSOLE -DENABLE_CORE1_CONSOLE",
+        "help": "Enable core 1 console only"
+    },
+    "2": {
+        "flags": "-DENABLE_CORE1_CONSOLE",
+        "help": "Enable both core 0 and core 1 console"
+    }
+}
 
 class MPPBuilder:
     def __init__(self):
@@ -38,6 +54,7 @@ class MPPBuilder:
         self.probe_id = None
         self.use_gdb = False
         self.jlinkscript = None
+        self.code_coverage_enable = False
         # Set core ID based on board
         self.board_core_map = {
             "frdmmcxn947": {
@@ -441,6 +458,17 @@ class MPPBuilder:
         examples = []
         tests = []
 
+        def parse_config_line(line):
+            """Parse a config line to extract name and arguments"""
+            line = line.strip()
+            if not line or line.startswith('#'):
+                return None
+            parts = line.split(None, 1)  # Split on first whitespace
+            if len(parts) == 1:
+                return [parts[0], ""]
+            else:
+                return [parts[0], parts[1]]
+
         # Get examples
         if exp == "all":
             examples_file = self.w_dir / "boards" / board / "examples.conf"
@@ -449,7 +477,10 @@ class MPPBuilder:
             if examples_file.exists():
                 try:
                     with open(examples_file, 'r') as f:
-                        examples.extend(f.read().split())
+                        for line in f:
+                            parsed = parse_config_line(line)
+                            if parsed:
+                                examples.append(parsed)
                 except Exception as e:
                     print(f"Warning: Could not read examples.conf: {e}")
 
@@ -457,11 +488,14 @@ class MPPBuilder:
             if internal_dir.exists() and examples_internal_file.exists():
                 try:
                     with open(examples_internal_file, 'r') as f:
-                        examples.extend(f.read().split())
+                        for line in f:
+                            parsed = parse_config_line(line)
+                            if parsed:
+                                examples.append(parsed)
                 except Exception as e:
                     print(f"Warning: Could not read examples_internal.conf: {e}")
         elif exp:
-            examples = [exp]
+            examples = [[exp, ""]]
 
         # Get tests
         if test == "all":
@@ -471,7 +505,10 @@ class MPPBuilder:
             if tests_file.exists():
                 try:
                     with open(tests_file, 'r') as f:
-                        tests.extend(f.read().split())
+                        for line in f:
+                            parsed = parse_config_line(line)
+                            if parsed:
+                                tests.append(parsed)
                 except Exception as e:
                     print(f"Warning: Could not read tests.conf: {e}")
 
@@ -479,11 +516,14 @@ class MPPBuilder:
             if internal_dir.exists() and tests_internal_file.exists():
                 try:
                     with open(tests_internal_file, 'r') as f:
-                        tests.extend(f.read().split())
+                        for line in f:
+                            parsed = parse_config_line(line)
+                            if parsed:
+                                tests.append(parsed)
                 except Exception as e:
                     print(f"Warning: Could not read tests_internal.conf: {e}")
         elif test:
-            tests = [test]
+            tests = [[test, ""]]
 
         return examples, tests
 
@@ -518,9 +558,9 @@ class MPPBuilder:
         return ""
 
     def build_app(self, app, app_type, board, build_type, core_id, panel_config_define,
-                  log_level, extra_build_flags):
+                  log_level, extra_build_flags, app_args=""):
         """Build a single application"""
-        if self.sysbuild:
+        if self.sysbuild or "--sysbuild" in app_args:
             build_path = Path("build") / app
         else:
             build_path = Path("build")
@@ -537,7 +577,10 @@ class MPPBuilder:
         if app_type == "tests":
             config_flags = self.parse_app_config("tests", app)
             if config_flags:
-                extra_build_flags = f"{extra_build_flags} {config_flags}"
+                if extra_build_flags:
+                    extra_build_flags = f"{extra_build_flags} {config_flags}"
+                else:
+                    extra_build_flags = config_flags
 
         # Determine source path
         if app_type == "examples":
@@ -560,13 +603,31 @@ class MPPBuilder:
             f"-DMPP_COMMIT={self.mpp_commit_id}"
         ]
 
-        if self.sysbuild:
-            west_cmd.append("--sysbuild")
+        if self.code_coverage_enable:
+            west_cmd.append("-DENABLE_COVERAGE=1")
 
         if panel_config_define:
             west_cmd.append(panel_config_define)
 
-        west_cmd.append(f"-DEXTRA_BUILD_FLAGS={extra_build_flags}")
+        if extra_build_flags:
+            west_cmd.append(f"-DEXTRA_CFLAGS={extra_build_flags}")
+            west_cmd.append(f"-DEXTRA_CXXFLAGS={extra_build_flags}")
+
+        # Add app-specific arguments to extra build flags
+        if app_args:
+            west_cmd.append(app_args)
+
+        if self.sysbuild:
+            west_cmd.append("--sysbuild")
+
+        if self.sysbuild or "--sysbuild" in app_args:
+            west_cmd.append(f"-D{app}_core1_HAL_LOG_LEVEL={log_level}")
+            west_cmd.append(f"-D{app}_core1_MPP_COMMIT={self.mpp_commit_id}")
+            if self.code_coverage_enable:
+                west_cmd.append(f"-D{app}_core1_ENABLE_COVERAGE=1")
+            if extra_build_flags:
+                west_cmd.append(f"-D{app}_core1_EXTRA_CFLAGS={extra_build_flags}")
+                west_cmd.append(f"-D{app}_core1_EXTRA_CXXFLAGS={extra_build_flags}")
 
         print(f"Building {app}...")
         print(f"Command: {' '.join(west_cmd)}")
@@ -692,10 +753,12 @@ class MPPBuilder:
             os.chdir(self.sdk_dir)
 
             # Build examples
-            for app in examples:
+            for example_entry in examples:
+                app_name = example_entry[0]
+                app_args = example_entry[1]
                 success = self.build_app(
-                    app, "examples", board, build_type, self.core_id,
-                    panel_config_define, log_level, extra_build_flags
+                    app_name, "examples", board, build_type, self.core_id,
+                    panel_config_define, log_level, extra_build_flags, app_args
                 )
                 if not success:
                     return False
@@ -707,10 +770,12 @@ class MPPBuilder:
                         print("Warning: Flash failed, continuing with next build...")
 
             # Build tests
-            for app in tests:
+            for test_entry in tests:
+                app_name = test_entry[0]
+                app_args = test_entry[1]
                 success = self.build_app(
-                    app, "tests", board, build_type, self.core_id,
-                    panel_config_define, log_level, extra_build_flags
+                    app_name, "tests", board, build_type, self.core_id,
+                    panel_config_define, log_level, extra_build_flags, app_args
                 )
                 if not success:
                     return False
@@ -873,6 +938,87 @@ class MPPBuilder:
 
         return "\n".join(panel_info)
 
+def get_available_examples_tests(builder, board=None):
+    """Get available examples and tests for a given board"""
+    available_examples = ["all"]
+    available_tests = ["all"]
+
+    if board and board != "all":
+        # Get examples from directory structure
+        examples_dir = builder.w_dir / "boards" / board / "examples"
+        if examples_dir.exists() and examples_dir.is_dir():
+            try:
+                for item in examples_dir.iterdir():
+                    if item.is_dir() and not item.name.startswith('.'):
+                        available_examples.append(item.name)
+            except Exception as e:
+                print(f"Warning: Could not read examples directory: {e}")
+
+        # Get tests from directory structure
+        tests_dir = builder.w_dir / "boards" / board / "tests"
+        if tests_dir.exists() and tests_dir.is_dir():
+            try:
+                for item in tests_dir.iterdir():
+                    if item.is_dir() and not item.name.startswith('.'):
+                        available_tests.append(item.name)
+            except Exception as e:
+                print(f"Warning: Could not read tests directory: {e}")
+    else:
+        # For "all" boards or no board specified, collect examples and tests from all boards
+        for board_name in ["evkbmimxrt1170", "frdmmcxn947", "mimxrt700evk"]:
+            # Get examples from directory structure
+            examples_dir = builder.w_dir / "boards" / board_name / "examples"
+            if examples_dir.exists() and examples_dir.is_dir():
+                try:
+                    for item in examples_dir.iterdir():
+                        if item.is_dir() and not item.name.startswith('.'):
+                            available_examples.append(item.name)
+                except Exception:
+                    pass
+
+            # Get tests from directory structure
+            tests_dir = builder.w_dir / "boards" / board_name / "tests"
+            if tests_dir.exists() and tests_dir.is_dir():
+                try:
+                    for item in tests_dir.iterdir():
+                        if item.is_dir() and not item.name.startswith('.'):
+                            available_tests.append(item.name)
+                except Exception:
+                    pass
+
+        # Remove duplicates while preserving order
+        available_examples = list(dict.fromkeys(available_examples))
+        available_tests = list(dict.fromkeys(available_tests))
+
+    # Remove duplicates while preserving order
+    available_examples = list(dict.fromkeys(available_examples))
+    available_tests = list(dict.fromkeys(available_tests))
+
+    return available_examples, available_tests
+
+
+class ExampleCompleter:
+    """Custom completer for examples based on board selection"""
+    def __init__(self, builder):
+        self.builder = builder
+
+    def __call__(self, prefix, parsed_args, **kwargs):
+        board = getattr(parsed_args, 'board', 'evkbmimxrt1170')
+        examples, _ = get_available_examples_tests(self.builder, board)
+        return [""] + examples
+
+
+class TestCompleter:
+    """Custom completer for tests based on board selection"""
+    def __init__(self, builder):
+        self.builder = builder
+
+    def __call__(self, prefix, parsed_args, **kwargs):
+        board = getattr(parsed_args, 'board', 'evkbmimxrt1170')
+        _, tests = get_available_examples_tests(self.builder, board)
+        return [""] + tests
+
+
 def main():
     builder = MPPBuilder()
 
@@ -888,48 +1034,69 @@ def main():
         except Exception as e:
             print(f"Warning: Could not read CMakeLists.txt: {e}")
 
+    # Define supported boards
+    supported_boards = ["evkbmimxrt1170", "frdmmcxn947", "mimxrt700evk", "all"]
+
     parser = argparse.ArgumentParser(description="MPP Build Script", formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-a", "--rebuild-tflm", action="store_true",
-                       help="rebuild libtflm.a from source")
+                        help="rebuild libtflm.a from source")
     parser.add_argument("-b", "--board", default="evkbmimxrt1170",
-                       help="board name: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk}")
+                        choices=supported_boards,
+                        help="board name: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk, all}")
     parser.add_argument("-e", "--example", default="",
-                       help="build the example app {camera_view, all, ...}")
+                        help="build the example app {camera_view, all, ...}").completer = ExampleCompleter(builder)
     parser.add_argument("-i", "--host", action="store_true",
-                       help="build for host (x86)")
+                        help="build for host (x86)")
     parser.add_argument("-d", "--log-level", default="0",
-                       help=f"log level (use the respective number from below list):\n{log_levels}")
+                        help=f"log level (use the respective number from below list):\n{log_levels}")
     parser.add_argument("-D", "--doc", action="store_true",
-                       help="build mpp and hal APIs documentation")
+                        help="build mpp and hal APIs documentation")
     parser.add_argument("-p", "--panel", default="",
-                       help="panel index as follows (use the respective number from below list):\n" +
-                       builder.list_panels(["all"]))
+                        help="panel index as follows (use the respective number from below list):\n" +
+                        builder.list_panels(["all"]))
     parser.add_argument("-c", "--config", default="release",
-                       help="build/config type: {debug, release}")
+                        help="build/config type: {debug, release}")
     parser.add_argument("-f", "--flags", default="",
-                       help="extra build flags")
+                        help="extra build flags")
     parser.add_argument("-t", "--test", default="",
-                       help="build the test app {test_image_display, all, ...}")
+                        help="build the test app {test_image_display, all, ...}").completer = TestCompleter(builder)
     parser.add_argument("-s", "--sdk-path", default=None,
-                       help="specify the path to the mcuxsdk folder")
+                        help="specify the path to the mcuxsdk folder")
     parser.add_argument("-g", "--app-config", default=None,
-                       help="the index of the app_config to be used")
+                        help="the index of the app_config to be used")
     parser.add_argument("-C", "--core-id", default=None,
-                       help="specify the core id you want to build app for (values like 0, 1, 2...)")
+                        help="specify the core id you want to build app for (values like 0, 1, 2...)")
     parser.add_argument("-S", "--sysbuild", action="store_true",
-                       help="add --sysbuild option to the build command")
+                        help="add --sysbuild option to the build command")
     parser.add_argument("-v", "--verbose", action="store_true",
-                       help="enable verbose for build")
+                        help="enable verbose for build")
     parser.add_argument("-F", "--flash", action="store_true",
-                       help="flash the built image to the board after building")
+                        help="flash the built image to the board after building")
     parser.add_argument("-P", "--probe-id", default=None,
-                       help="probe ID for flashing (auto-detected if not provided)")
+                        help="probe ID for flashing (auto-detected if not provided)")
     parser.add_argument("-G", "--use-gdb", action="store_true",
-                       help="use GDB server for flashing (only supported with jlink)")
+                        help="use GDB server for flashing (only supported with jlink)")
     parser.add_argument("-J", "--jlinkscript", default=None,
-                       help="path to JLink script file for GDB server (valid only when use_gdb is set)")
+                        help="path to JLink script file for GDB server (valid only when use_gdb is set)")
+    parser.add_argument("--debug_console", default="0", 
+                        choices=DEBUG_CONSOLE_DEFINES.keys(),
+                        help="\n".join([f'{k}: {v["help"]}' for k, v in DEBUG_CONSOLE_DEFINES.items()]))
+    parser.add_argument("-V", "--code-coverage", action="store_true",
+                        help="enable code coverage analysis during build")
+
+    argcomplete.autocomplete(parser)
 
     args = parser.parse_args()
+
+    # Validate example and test choices after parsing
+    board_for_validation = args.board
+    available_examples, available_tests = get_available_examples_tests(builder, board_for_validation)
+
+    if args.example and args.example not in [""] + available_examples:
+        parser.error(f"argument -e/--example: invalid choice: '{args.example}' (choose from {', '.join([''] + available_examples)})")
+
+    if args.test and args.test not in [""] + available_tests:
+        parser.error(f"argument -t/--test: invalid choice: '{args.test}' (choose from {', '.join([''] + available_tests)})")
 
     # Set SDK directory if provided
     if args.sdk_path:
@@ -946,6 +1113,7 @@ def main():
     builder.input_core_id = args.core_id or ""
     builder.sysbuild = "--sysbuild" if args.sysbuild else ""
     builder.gen_doc = args.doc
+    builder.code_coverage_enable = args.code_coverage
 
     # Set flash parameters
     builder.flash_after_build = args.flash
@@ -964,17 +1132,28 @@ def main():
 
     args.flags = args.flags.strip("\'\" ") if args.flags else ""
 
+    if DEBUG_CONSOLE_DEFINES[args.debug_console]["flags"]:
+        if args.flags:
+            args.flags = args.flags + " " + DEBUG_CONSOLE_DEFINES[args.debug_console]["flags"]
+        else:
+            args.flags = DEBUG_CONSOLE_DEFINES[args.debug_console]["flags"]
+
     # Build for each board
     for board in boards:
         # Adjust build type based on board
         build_rel_or_dbg = args.config
-        if board in ["frdmmcxn947", "mimxrt700evk"]:
+        if board  == "mimxrt700evk":
             if args.core_id == "1":
                 build_type = build_rel_or_dbg
             else:
                 build_type = f"flash_{build_rel_or_dbg}"
+        elif board == "frdmmcxn947":
+            build_type = build_rel_or_dbg
         else:
-            build_type = f"flexspi_nor_sdram_{build_rel_or_dbg}"
+            if args.core_id  == "1":
+                build_type = build_rel_or_dbg
+            else:
+                build_type = f"flexspi_nor_sdram_{build_rel_or_dbg}"
 
         # Set default panel
         if board in ["evkbmimxrt1170", "mimxrt700evk"]:

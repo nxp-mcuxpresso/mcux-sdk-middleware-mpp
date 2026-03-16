@@ -16,6 +16,8 @@
  *  limitations under the License.
  */
 
+#define MPP_LOG_MODULE_REGISTER
+
 #include "mpp_api.h"
 #include "mpp_api_types_internal.h"
 #include "mpp_heap.h"
@@ -35,14 +37,27 @@ extern _mpp_t *preempt_prio_lst[];
 #define MIN_CTL_TASK_PRIO 4
 
 /* global pipeline controller task */
+#if MPP_OS_ZEPHYR
+#define PIPELINE_CTL_STACK_SZ	2048 /* Zephyr has more nested function calls */
+#endif
+#if MPP_OS_FREERTOS
 #define PIPELINE_CTL_STACK_SZ	1000
+#endif
 
 /* run-to-completion task runs the rc heap */
+#ifdef CONFIG_MPP_RC_TASK_STACK_SIZE
+#define RC_TASK_STACK_SZ CONFIG_MPP_RC_TASK_STACK_SIZE
+#else
 #define RC_TASK_STACK_SZ        1200
+#endif
 static hal_task_t hrcHeapTask = NULL;
 
-/*preemptable task runs the preempt heap */
+/* preemptable task runs the preempt heap */
+#ifdef CONFIG_MPP_PR_TASK_STACK_SIZE
+#define PR_TASK_STACK_SZ CONFIG_MPP_PR_TASK_STACK_SIZE
+#else
 #define PR_TASK_STACK_SZ        1200
+#endif
 static hal_task_t hprHeapTask = NULL;
 
 /* rc heap execution time in ticks */
@@ -119,10 +134,12 @@ static void vPipelineCtlTask( void *params )
     mpp_api_params_t *mpp_params = params;
     uint32_t tick_period_ms = hal_get_tick_period_ms();
     /* RC task is the second highest priority task in the pipeline. */
-    static int rc_task_prio = MIN_CTL_TASK_PRIO - 1;
+    static int rc_task_prio = LOWER_PRIO(MIN_CTL_TASK_PRIO);
     /* PR task is the lowest-priority task in the pipeline. */
-    static int pr_task_prio = MIN_CTL_TASK_PRIO - 2;
+    static int pr_task_prio = LOWER_PRIO(LOWER_PRIO(MIN_CTL_TASK_PRIO));
 
+// TODO: fix for Zephyr
+#if MPP_OS_FREERTOS
     if (mpp_params)
     {
         if (mpp_params->pipeline_task_max_prio != 0)
@@ -142,7 +159,7 @@ static void vPipelineCtlTask( void *params )
             pr_task_prio = mpp_params->pipeline_pr_task_prio;
         }
     }
-
+#endif
     /* wait until application finished pipeline construction for the first start */
     ret = hal_sema_take(xCtlStartSem, HAL_MAX_TIMEOUT);
     if (true != ret)
@@ -247,14 +264,14 @@ static void vPipelineCtlTask( void *params )
             pr_rounds++;
         }
 
-    if (api_stats && hal_sema_take(stats_lock[MPP_STATS_GRP_API],0)) {
+    if (api_stats && hal_mutex_lock_no_wait(stats_lock[MPP_STATS_GRP_API]) == MPP_SUCCESS) {
             api_stats->api.rc_cycle = hal_tick_to_ms(rc_exec_ticks);
             api_stats->api.rc_cycle_max = hal_tick_to_ms(max_rc_cycle_ticks);
             api_stats->api.pr_slot = hal_tick_to_ms(pr_slot);
             api_stats->api.pr_rounds = pr_rounds_cnt + 1;
             api_stats->api.app_slot = hal_tick_to_ms(app_slot);
             api_stats->api.cpu_load = 100U - hal_get_idle_percent();
-            hal_sema_give(stats_lock[MPP_STATS_GRP_API]);
+            (void) hal_mutex_unlock(stats_lock[MPP_STATS_GRP_API]);
         }
 
 
@@ -272,7 +289,9 @@ int mpp_api_init(mpp_api_params_t *params)
 
     /* mpp heap initialization */
     mpp_heap_init(rc_prio_lst);
+
     mpp_heap_init(preempt_prio_lst);
+
     xCtlStartSem = hal_sema_create_binary();
     if (!xCtlStartSem)
         return MPP_ERR_ALLOC_MUTEX;
@@ -283,8 +302,11 @@ int mpp_api_init(mpp_api_params_t *params)
         return MPP_MUTEX_ERROR;
 
     xEventGroup1 = hal_eventgrp_create();
+
     xEventGroup2 = hal_eventgrp_create();
+
     xEventGroup3 = hal_eventgrp_create();
+
     if (xEventGroup1 == NULL || xEventGroup2 == NULL || xEventGroup3 == NULL) {
         MPP_LOGE("Failed to create event groups\r\n");
         return MPP_ERROR;
@@ -295,6 +317,7 @@ int mpp_api_init(mpp_api_params_t *params)
     {
         if (params->pipeline_task_max_prio != 0)
         {
+            // TODO, fix for Zephyr
             if (params->pipeline_task_max_prio > hal_get_os_max_prio())
             {
                 MPP_LOGE("pipeline task maximum priority is higher than OS max priority: %d\r\n", hal_get_os_max_prio());
@@ -352,13 +375,20 @@ int mpp_api_init(mpp_api_params_t *params)
 
     if (params)
         api_stats = params->stats;
+
     for (int grp = 0; grp < MPP_STATS_GRP_NUM; grp++) {
-        hal_mutex_create(&stats_lock[grp]);
-        if (!stats_lock[grp])
+        ret = hal_mutex_create(&stats_lock[grp]);
+        if (MPP_SUCCESS != ret) {
+             MPP_LOGE("Failed to create stats_lock[%d]\n", grp);
             return MPP_ERROR;
-        ret = hal_sema_take(stats_lock[grp], 0);
-        if (true != ret)
+        }
+
+        // Initialize to "locked" state (stats disabled by default)
+        ret = hal_mutex_lock(stats_lock[grp]);
+        if (MPP_SUCCESS != ret) {
+            MPP_LOGE("Failed to take stats_lock[%d]\n", grp);
             return MPP_MUTEX_ERROR;
+        }
     }
 
     return MPP_SUCCESS;
@@ -366,12 +396,12 @@ int mpp_api_init(mpp_api_params_t *params)
 
 void mpp_stats_enable(mpp_stats_grp_t grp)
 {
-    hal_sema_give(stats_lock[grp]);
+    (void) hal_mutex_unlock(stats_lock[grp]);
 }
 
 void mpp_stats_disable(mpp_stats_grp_t grp)
 {
-    hal_sema_take(stats_lock[grp], 0);
+    (void) hal_mutex_lock_no_wait(stats_lock[grp]);
 }
 
 mpp_t mpp_create(mpp_params_t *params, int *ret)
@@ -495,7 +525,7 @@ buf_desc_t *get_in_buff_from_prev_elem(_elem_t *elem)
             {
                 /* This is the first element in this branch
                  * Search the index of the element in the prev's element next list
-                 * We don't need to search in index 0 because that output is reserved for elements in the same branch 
+                 * We don't need to search in index 0 because that output is reserved for elements in the same branch
                  * This case refers to secondary branches of a pipeline (see mpp->hook check above) */
                 for (int i = 1; i < MPP_MAX_BRANCH_NUM; i++)
                 {
@@ -544,7 +574,7 @@ buf_desc_t *get_in_buff_from_prev_elem(_elem_t *elem)
 
     if (ret == NULL)
     {
-        /* This is an error case - it means we didn't find the input buffer for current element 
+        /* This is an error case - it means we didn't find the input buffer for current element
          * Either the element is the first element in the main pipeline (source type, camera or static image),
          * Or the current element was not found in the previous element's next list */
         MPP_LOGE("Current element: %s @ 0x%x\n\r", elem_name(elem), (uint32_t) elem);
@@ -561,6 +591,93 @@ buf_desc_t *get_in_buff_from_prev_elem(_elem_t *elem)
     return ret;
 }
 
+/* Set crt element input buffers using previous element output buffers */
+void set_in_buff_from_prev_elem(_elem_t *elem)
+{
+    _mpp_t *mpp = elem->mpp;
+    elem->io.nb_in_buf = 0;
+
+    /* Search in parent pipeline */
+    if (mpp->hook )
+    {
+        if (mpp->first_elem == elem)
+        {
+            /* If previous element has just one buffer, return that buffer */
+            if (elem->prev->io.nb_out_buf > 1)
+            {
+                /* This is the first element in this branch
+                 * Search the index of the element in the prev's element next list
+                 * We don't need to search in index 0 because that output is reserved for elements in the same branch 
+                 * This case refers to secondary branches of a pipeline (see mpp->hook check above) */
+                for (int i = 1; i < MPP_MAX_BRANCH_NUM; i++)
+                {
+                    if (elem->prev->next[i] == elem)
+                    {
+                        /* If there are more branches of a pipeline than output buffers, just use last output buffer */
+                        if ((i < MAX_OUTPUT_PORTS) && (i < elem->prev->io.nb_out_buf))
+                            elem->io.in_buf[elem->io.nb_in_buf++] = elem->prev->io.out_buf[i];
+                        else
+                            elem->io.in_buf[elem->io.nb_in_buf++] = elem->prev->io.out_buf[MAX_OUTPUT_PORTS - 1];
+                    }
+                }
+            }
+            else
+            {
+                elem->io.in_buf[elem->io.nb_in_buf++] = elem->prev->io.out_buf[0];
+            }
+        }
+        else
+        {
+            /* This is not the first element in the current branch 
+             * Check if there is a split after previous element */
+            uint32_t n_buffs = elem->prev->io.nb_out_buf;
+            if (elem->prev->next[1] != NULL)
+                n_buffs = 1;
+            for (int i = 0; i < n_buffs; i++)
+                elem->io.in_buf[elem->io.nb_in_buf++] = elem->prev->io.out_buf[i];
+        }
+    }
+    else
+    {
+        /* This is the main pipeline
+         * Check if this is the first element */
+        if (mpp->first_elem != elem)
+        {
+            /* This is not the first element in the current branch
+             * Check if there is a split after previous element */
+            uint32_t n_buffs = elem->prev->io.nb_out_buf;
+            if (elem->prev->next[1] != NULL)
+                n_buffs = 1;
+            for (int i = 0; i < n_buffs; i++)
+                elem->io.in_buf[elem->io.nb_in_buf++] = elem->prev->io.out_buf[i];
+        }
+    }
+
+    if (elem->io.nb_in_buf == 0)
+    {
+        /* This is an error case - it means we didn't find the input buffer for current element 
+         * Either the element is the first element in the main pipeline (source type, camera or static image),
+         * Or the current element was not found in the previous element's next list */
+        MPP_LOGE("Current element: %s @ 0x%x\n\r", elem_name(elem), (uint32_t) elem);
+        MPP_LOGE("\tprevious element 0x%x\r\n", (uint32_t) elem->prev);
+        MPP_LOGE("\tinput buffer: NULL\r\n");
+    }
+    else if (elem->io.nb_in_buf > MAX_INPUT_PORTS)
+    {
+        /* This is a warning case - more input buffers than supported */
+        MPP_LOGE("Current element: %s @ 0x%x\r\n", elem_name(elem), (uint32_t) elem);
+        MPP_LOGE("\tprevious element %s @ 0x%x\r\n", elem_name(elem->prev), (uint32_t) elem->prev);
+        MPP_LOGE("\tinput buffers: %d (capped at %d)\r\n", elem->io.nb_in_buf, MAX_INPUT_PORTS);
+    }
+    else
+    {
+        MPP_LOGI("Current element: %s @ 0x%x\r\n", elem_name(elem), (uint32_t) elem);
+        MPP_LOGI("\tprevious element %s @ 0x%x\r\n", elem_name(elem->prev), (uint32_t) elem->prev);
+        for (int i = 0; i < elem->io.nb_in_buf; i++)
+            MPP_LOGI("\tinput buffer %d: 0x%x\r\n", i, (uint32_t) elem->io.in_buf[i]);
+    }
+}
+
 uint32_t get_out_buff_index(_elem_t *elem, buf_desc_t *buf)
 {
     for (int i = 0; i < elem->io.nb_out_buf; i++)
@@ -570,6 +687,17 @@ uint32_t get_out_buff_index(_elem_t *elem, buf_desc_t *buf)
     }
 
     return MAX_OUTPUT_PORTS;
+}
+
+uint32_t get_in_buff_index(_elem_t *elem, buf_desc_t *buf)
+{
+    for (int i = 0; i < elem->io.nb_in_buf; i++)
+    {
+        if (elem->io.in_buf[i] == buf)
+            return i;
+    }
+
+    return MAX_INPUT_PORTS;
 }
 
 /* allocate the element and link it to the mpp */
@@ -839,6 +967,19 @@ int mpp_start(mpp_t mpp, int last, bool force_update)
             }
         }
     }
+    else if ((_mpp->first_elem->type == MPP_TYPE_SOURCE) && (_mpp->first_elem->src_typ== MPP_SRC_MC))
+    {
+        _elem_t *elem = _mpp->first_elem;
+        _multicore_dev_t *mc = elem->dev.mc;
+        /* start HAL function */
+        if (mc->dev.ops->start != NULL) {
+            if (mc->dev.ops->start(&mc->dev) != 0) {
+                MPP_LOGE("MC source fails to start\n");
+                return MPP_ERROR;
+            }
+        }
+    }
+
     if ((_mpp->last_elem->type == MPP_TYPE_SINK) && (_mpp->last_elem->sink_typ == MPP_SINK_DISPLAY))
     {
         _display_dev_t *disp = _mpp->last_elem->dev.disp;
@@ -850,8 +991,19 @@ int mpp_start(mpp_t mpp, int last, bool force_update)
             }
         }
     }
+    else if ((_mpp->last_elem->type == MPP_TYPE_SINK) && (_mpp->last_elem->sink_typ == MPP_SINK_MC))
+    {
+        _multicore_dev_t *mc = _mpp->last_elem->dev.mc;
+        /* start HAL function */
+        if (mc->dev.ops->start != NULL) {
+            if (mc->dev.ops->start(&mc->dev) != 0) {
+                MPP_LOGE("multicore sink fails to start\n");
+                return MPP_ERROR;
+            }
+        }
+    }
 
-    /* If force update was requested before and 
+    /* If force update was requested before and
      * the pipeline did not run at least once, do not overwrite it */
     if (!_mpp->force_update)
         _mpp->force_update = force_update;
@@ -956,6 +1108,16 @@ int mpp_stop(mpp_t mpp)
                     }
                 }
                 break;
+            case MPP_SRC_MC:
+                _multicore_dev_t *mc = _mpp->first_elem->dev.mc;
+                if (mc->dev.ops->stop != NULL) {
+                   if (mc->dev.ops->stop(&mc->dev) != 0)
+                    {
+                        MPP_LOGE("MC source fails to stop\n");
+                        ret = MPP_ERROR;
+                    }
+                }
+                break;
             case MPP_SRC_STATIC_IMAGE:
             case MPP_SRC_FILE:
                 MPP_LOGI("No stop implementation for source type [%d]\n",
@@ -987,6 +1149,18 @@ int mpp_stop(mpp_t mpp)
                     }
                 }
                 break;
+            case MPP_SINK_MC:
+                _multicore_dev_t *mc = _mpp->last_elem->dev.mc;
+                /* stop HAL function */
+                if (mc->dev.ops->stop != NULL)
+                {
+                    if (mc->dev.ops->stop(&mc->dev) != 0)
+                    {
+                        MPP_LOGE("multicore sink fails to stop\n");
+                        ret = MPP_ERROR;
+                    }
+                }
+                break;
             case MPP_SINK_NULL:
                 MPP_LOGI("No stop implementation for sink type [%d]\n",
                         _mpp->last_elem->type);
@@ -1009,10 +1183,10 @@ int mpp_force_update(mpp_t mpp)
         MPP_LOGE("failed to force update mpp: invalid mpp object\r\n");
         return MPP_INVALID_PARAM;
     }
-    
+
     _mpp_t *_mpp = (_mpp_t *)mpp;
 
-    /* If force update was requested before and 
+    /* If force update was requested before and
      * the pipeline did not run at least once, do not overwrite it */
     _mpp->force_update = true;
 
@@ -1038,6 +1212,12 @@ int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t
             break;
         }
 
+        if (!elem->mpp) {
+            MPP_LOGE("element has NULL mpp pointer @%p\n", elem);
+            ret = MPP_INVALID_PARAM;
+            break;
+        }
+
         /* check if element belongs to the same mpp */
         if (elem->mpp != mpp) {
             MPP_LOGE("element seems invalid wrt pipeline @%p\n", elem);
@@ -1046,7 +1226,7 @@ int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t
         }
 
         /* force an update: ensures processing steps will not be skipped in this branch */
-        /* If force update was requested before and 
+        /* If force update was requested before and
         * the pipeline did not run at least once, do not overwrite it */
         if (!elem->mpp->force_update)
             elem->mpp->force_update = force_update;

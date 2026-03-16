@@ -24,13 +24,13 @@ limitations under the License.
 #if (HAL_ENABLE_INFERENCE_TFLITE == 1)
 
 #include <stdio.h>
+#include "model.h"
+
 #include "hal_valgo_dev.h"
 #include "tensorflow/lite/micro/kernels/micro_ops.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/micro_op_resolver.h"
 #include "tensorflow/lite/schema/schema_generated.h"
-
-#include "model.h"
 
 /* Lookup table implemetation flag */
 /* Enables LUT-based implementation,

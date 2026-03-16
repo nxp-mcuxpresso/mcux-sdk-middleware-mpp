@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023, 2025 NXP
+ * Copyright 2022-2023, 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -53,6 +53,14 @@
 #define NUM_BOXES_MAX       MIN(APP_MAX_BOXES, NANODET_MAX_POINTS) /* max nb of boxes to filter */
 #define STATS_PRINT_PERIOD_MS 1000
 
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_nanodet_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_nanodet"
+#endif
+
 typedef struct _args_t {
     void *image_buffer;
 } args_t;
@@ -61,6 +69,7 @@ typedef struct _user_data_t {
     box_data boxes[NUM_BOXES_MAX];
     int detected_count;
     int inference_frame_num;
+    uint32_t inference_time_ms;
     /* boolean protecting access */
     uint32_t accessing;
 } user_data_t;
@@ -169,11 +178,12 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
                 if (app_priv->boxes[i].score > 0)
                     app_priv->detected_count++;
             }
-           /* end of modification of user data */
+            app_priv->inference_time_ms = inf_output->inference_time_ms;
+            app_priv->inference_frame_num++;
+            /* end of modification of user data */
             __atomic_store_n(&app_priv->accessing, 0, __ATOMIC_SEQ_CST);
-
         }
-        app_priv->inference_frame_num++;
+
         break;
     case MPP_EVENT_INVALID:
     default:
@@ -272,16 +282,21 @@ static void app_task(void *params)
     const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
     xLastWakeTime = xTaskGetTickCount();
     uint32_t last_inf_frame_num = user_data.inference_frame_num;
+    PRINTF("\r\nStart %s\r\n", TC_NAME);
     for (;;) {
         xTaskDelayUntil( &xLastWakeTime, xFrequency );
-        if (last_inf_frame_num != user_data.inference_frame_num)
+        if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0))
         {
-            mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
-            PRINTF("Element stats --------------------------\r\n");
-            PRINTF("nanodet : exec_time %u (ms)\r\n", nanodet_stats.elem.elem_exec_time);
-            mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
-            if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0))
+            if (last_inf_frame_num != user_data.inference_frame_num)
             {
+                mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
+                PRINTF("Element stats --------------------------\r\n");
+                PRINTF("nanodet : exec_time %u (ms)\r\n", nanodet_stats.elem.elem_exec_time);
+                PRINTF("nanodet : inference_time %u (ms)\r\n", user_data.inference_time_ms);
+                mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
+
+                int out_score = 0;
+
                 /* ignore rectangle of the Detection zone (user_data.boxes[0]) */
                 for (int i = 0; i < NUM_BOXES_MAX; i++) {
                     if (user_data.boxes[i].area > 0)
@@ -296,11 +311,30 @@ static void app_task(void *params)
                         PRINTF("Box top: %d \r\n", (int)(user_data.boxes[i].top));
                         PRINTF("Box bottom: %d \r\n", (int)(user_data.boxes[i].bottom));
                         PRINTF("     -----------\r\n");
+                        out_score = (int)(user_data.boxes[i].score * 100.0f);
                     }
                 }
-                __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
+                if ((user_data.inference_time_ms <= EXPECTED_INF_TIME) && 
+                    (user_data.detected_count == EXPECTED_INF_DETECTION_CNT) &&
+                    (out_score >= EXPECTED_INF_SCORE))
+                {
+                    PRINTF("%s - PASSED\r\n", TC_NAME);
+                }
+                else
+                {
+                    if (user_data.inference_time_ms > EXPECTED_INF_TIME)
+                        PRINTF("Bad inf time %d, expected less than %d\r\n", user_data.inference_time_ms, EXPECTED_INF_TIME);
+                    if (user_data.detected_count != EXPECTED_INF_DETECTION_CNT)
+                        PRINTF("Bad number of detections %d, expected %d\r\n", user_data.detected_count, EXPECTED_INF_DETECTION_CNT);
+                    if (out_score < EXPECTED_INF_SCORE)
+                        PRINTF("Bad score %d, expected greater than %d\r\n", out_score, EXPECTED_INF_SCORE);
+                    PRINTF("%s - FAILED\r\n", TC_NAME);
+                }
+                PRINTF("%s finished\r\n", TC_NAME);
+                PRINTF("\r\nStart %s\r\n", TC_NAME);
+                last_inf_frame_num = user_data.inference_frame_num;
             }
-            last_inf_frame_num = user_data.inference_frame_num;
+            __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
         }
     }
 

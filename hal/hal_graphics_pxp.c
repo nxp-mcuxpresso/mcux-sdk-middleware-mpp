@@ -46,6 +46,7 @@
  * Notice: enable the lock will introduce 1 ms time cost for each PXP operation
  */
 #define ENABLE_PXP_LOCK 1
+#define PXP_BUFF_ALIGN 64 /* optimal performance */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -79,8 +80,15 @@ static int HAL_GfxDev_Pxp_ComposeSurfaceAdaptForScaleAndPsRotate(const gfx_dev_t
                                                                  const gfx_surface_t *pDst,
                                                                  gfx_surface_t *pSrc_adapt);
 
+#ifdef MPP_OS_ZEPHYR
+static void PXP_IRQHandler(const void *arg)
+{
+    ARG_UNUSED(arg);
+#else
 void PXP_IRQHandler(void)
 {
+#endif
+
     if (s_GfxPxpHandle.semaphore != NULL)
     {
         bool result;
@@ -163,9 +171,20 @@ int HAL_GfxDev_Pxp_Init(gfx_dev_t *dev, void *param)
         // Notice: do the PXP_Init at the first PXP operation as observed the PXP didn't work if we put the
         //         PXP_Init in the HAL_GfxDev_Pxp_Register which will run in the main context.
         PXP_Init(PXP_DEV);
+
+        PXP_ClearStatusFlags(PXP_DEV, kPXP_CompleteFlag);
+        NVIC_ClearPendingIRQ(PXP_IRQn);
+
+#ifdef MPP_OS_ZEPHYR
+#define PXP_INTERRUPT_PRIORITY 3
+        IRQ_CONNECT(DT_IRQN(DT_NODELABEL(pxp)), PXP_INTERRUPT_PRIORITY, PXP_IRQHandler, NULL, 0);
+        PXP_EnableInterrupts(PXP_DEV, kPXP_CompleteInterruptEnable);
+        irq_enable(DT_IRQN(DT_NODELABEL(pxp)));
+#else
+        NVIC_SetPriority(PXP_IRQn, hal_get_max_syscall_prio() + 1);
         PXP_EnableInterrupts(PXP_DEV, kPXP_CompleteInterruptEnable);
         EnableIRQ(PXP_IRQn);
-        NVIC_SetPriority(PXP_IRQn, hal_get_max_syscall_prio() + 1);
+#endif
 
         PXP_SetProcessSurfaceBackGroundColor(PXP_DEV, 0U);
         // disable the AS
@@ -208,12 +227,12 @@ int HAL_GfxDev_Pxp_Getbufdesc(const gfx_dev_t *dev, hw_buf_desc_t *in_buf, hw_bu
         /* set memory policy */
         *policy = HAL_MEM_ALLOC_NONE;
         /* set hw requirement */
-        in_buf->alignment = 0;
+        in_buf->alignment = PXP_BUFF_ALIGN;
         in_buf->nb_lines = 0;
         in_buf->cacheable = false;
         in_buf->stride = 0;
         in_buf->max_image_size = 0;
-        out_buf->alignment = 0;
+        out_buf->alignment = PXP_BUFF_ALIGN;
         out_buf->cacheable = false;
         out_buf->stride = 0;
         out_buf->max_image_size = 0;

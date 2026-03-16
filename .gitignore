@@ -2,10 +2,9 @@
 cs.sh
 cscope.*
 *.bin
-!boards/mimxrt700evk/drivers/core1_image.bin
-!boards/mimxrt700evk/drivers/core1_image_QVGA.bin
-!boards/mimxrt700evk/drivers/core1_image_VGA.bin
-!boards/mimxrt700evk/drivers/core1_image_QVGA_VGA.bin
+!boards/mimxrt700evk/examples/camera_usb_final_fr_app_view/cm33_core0/core1_image_QVGA.bin
+!boards/mimxrt700evk/examples/camera_usb_final_fr_app_view/cm33_core0/core1_image_VGA.bin
+!boards/mimxrt700evk/examples/camera_usb_final_fr_app_view/cm33_core0/core1_image_QVGA_VGA.bin
 *.dis
 *.elf
 *.map

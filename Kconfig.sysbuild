@@ -6,6 +6,9 @@ config secondary_toolchain
     string
     default "$(toolchain)"
 
+# Include mpp specific config for this board with sysbuild
+osource "${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/Kconfig.sysbuild"
+
 # This is for internal board support
 osource "${SdkRootDirPath}/${board_root}/${board}/Kconfig.sysbuild"
 

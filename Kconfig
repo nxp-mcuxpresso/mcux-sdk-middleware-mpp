@@ -4,31 +4,88 @@ menu "MCU Vision Pipeline"
         select MCUX_COMPONENT_middleware.eiq.tensorflow_lite_micro
         select MCUX_COMPONENT_middleware.freertos-kernel
 
+
+    # MPP OS Selection
+    choice MPP_OS
+        prompt "MPP Operating System"
+        default MPP_OS_FREERTOS
+        help
+          Select the operating system for MPP library.
+          MPP supports both Zephyr RTOS and FreeRTOS.
+
+    config MPP_OS_FREERTOS
+        bool "FreeRTOS"
+        help
+          Build MPP library for FreeRTOS.
+          This uses FreeRTOS tasks, semaphores, queues,
+          and memory management APIs.
+
+    endchoice
+
+    config MPP_OS_NAME
+        string
+        default "freertos" if MPP_OS_FREERTOS
+
+    # MPP Task Stack Sizes
+    config MPP_RC_TASK_STACK_SIZE
+        int "RC (Run to Completion) task stack size"
+        default 1200
+        help
+          Stack size in bytes for the Run to Completion task.
+
+    config MPP_PR_TASK_STACK_SIZE
+        int "PR (Preemptible) task stack size"
+        default 1200
+        help
+          Stack size in bytes for the Preemptible task.
+          This task might run TensorFlow Lite Micro inference and
+          requires a larger stack. Increase this value if you experience
+          stack overflow issues during inference, i.e. if you enable
+          CMSIS NN support.
+
+    # MPP HAL Log Level
     config FORCE_HAL_LOG_LEVEL
         depends on MCUX_COMPONENT_middleware.eiq.mpp
         bool "Override log level"
         default n
+        help
+          Enable this to manually select the HAL log verbosity level.
+          If disabled, the default log level will be used.
 
-        choice HAL_LOG_LEVEL
+        choice HAL_LOG_LEVEL_CHOICE
             depends on FORCE_HAL_LOG_LEVEL
-            prompt "choose a log level for MPP HAL"
+            prompt "Choose a log level for MPP HAL"
             default HAL_LOG_ERR
+            help
+              Select the verbosity level for MPP HAL logging.
 
             config HAL_LOG_ERR
                 bool "0: Error"
+                help
+                  Log only error messages.
+
             config HAL_LOG_INFO
                 bool "1: Info"
+                help
+                  Log error and informational messages.
+
             config HAL_LOG_DEBUG
                 bool "2: Debug"
+                help
+                  Log all messages including debug output.
+
         endchoice
 
         config HAL_LOG_LEVEL
-            help
-                No prefix in generated macro
             int
             default 0 if HAL_LOG_ERR
             default 1 if HAL_LOG_INFO
             default 2 if HAL_LOG_DEBUG
+            help
+              HAL logging verbosity level.
+              0 = Errors only, 1 = Info, 2 = Debug.
+              This is automatically set based on the HAL log level choice above.
+
 endmenu
 
 if MCUX_COMPONENT_middleware.eiq.mpp

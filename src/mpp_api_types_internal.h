@@ -24,6 +24,7 @@
 
 #include "hal_camera_dev.h"
 #include "hal_display_dev.h"
+#include "hal_mc.h"
 #include "hal_graphics_dev.h"
 #include "hal_valgo_dev.h"
 #include "hal_vdec_dev.h"
@@ -74,6 +75,7 @@ _mpp_src_type_e {MPP_SRC_INVALID,
 				 MPP_SRC_CAMERA,
 				 MPP_SRC_STATIC_IMAGE,
 				 MPP_SRC_FILE,
+				 MPP_SRC_MC,
 				 MPP_SRC_NUM}
 _mpp_src_type_t;
 
@@ -81,6 +83,7 @@ _mpp_src_type_t;
 typedef enum
 _mpp_sink_type_e {MPP_SINK_INVALID,
                   MPP_SINK_DISPLAY,
+                  MPP_SINK_MC,
                   MPP_SINK_NULL,
                   MPP_SINK_NUM
 }_mpp_sink_type_t;
@@ -125,7 +128,8 @@ typedef struct _elem_s _elem_t;
 
 typedef int (*dequeue_func_t) (_mpp_t *mpp);
 typedef int (*enqueue_func_t) (_mpp_t *mpp);
-typedef int (*buf_processed_func_t)(_elem_t *, void *);
+typedef int (*buf_enqueue_func_t)(_elem_t *, void *);
+typedef int (*buf_dequeue_func_t)(_elem_t *, void *);
 
 typedef enum param_id_e {
     PARAM_ID_INVAL,
@@ -156,7 +160,8 @@ typedef struct
     hw_buf_desc_t hw_req_prod;  /* buffer hw requirement from producer */
     hw_buf_desc_t hw_req_cons;  /* buffer hw requirement from consumer */
     hw_buf_desc_t *hw;          /* pointer to above producer/consumer buffer requirement finally selected */
-    buf_processed_func_t callback;
+    buf_enqueue_func_t enqueue_cb; /* callback when buffer processing is finished */
+    buf_dequeue_func_t dequeue_cb; /* callback before starting processing the buffer */
 } buf_desc_t;
 
 typedef struct
@@ -228,6 +233,15 @@ typedef struct _camera_dev_s {
 	camera_dev_t dev;
 }_camera_dev_t;
 
+/* multicore source/sink dev */
+typedef struct _multicore_dev_s {
+    char name[MAX_DEV_NAME+1];
+    /* parameters */
+    mpp_mc_params_t params;
+    /* HAL/FWK type */
+    multicore_dev_t dev;
+}_multicore_dev_t;
+
 /* static image source */
 typedef struct _static_image_s {
     /* parameters */
@@ -283,6 +297,7 @@ struct _elem_s {
         _display_dev_t *disp;
         _static_image_t *img;
         vdec_dev_t *vdec;
+        _multicore_dev_t *mc;
     } dev;
 
     /* the IO buffers descriptors */
@@ -293,6 +308,9 @@ struct _elem_s {
 
     _elem_t *prev;  /* previous element in pipeline */
     _elem_t *next[MPP_MAX_BRANCH_NUM];   /* next elements in pipeline */
+
+    /* Private data for element-specific context */
+    void *priv;
 };
 
 typedef unsigned int (*elem_setup_func_t)(_elem_t *);
@@ -341,8 +359,14 @@ int mpp_create_elem(_mpp_t *mpp, _elem_t **p_elem);
 /* Get previous element output buffer */
 buf_desc_t *get_in_buff_from_prev_elem(_elem_t *elem);
 
+/* Get previous element output buffers */
+void set_in_buff_from_prev_elem(_elem_t *elem);
+
 /* Get output buffer index in list */
 uint32_t get_out_buff_index(_elem_t *elem, buf_desc_t *buf);
+
+/* Get input buffer index in list */
+uint32_t get_in_buff_index(_elem_t *elem, buf_desc_t *buf);
 
 /** \endinternal */
 #endif

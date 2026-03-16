@@ -151,7 +151,8 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
                 ret = SCRFDKPS_ProcessOutput(
                         inf_output,
                         app_priv->final_boxes,
-                        NUM_BOXES_MAX);
+                        NUM_BOXES_MAX,
+                        true); // return only the face with the largest area
 
                 app_priv->last_model = MODEL_SCRFD_KPS;
 

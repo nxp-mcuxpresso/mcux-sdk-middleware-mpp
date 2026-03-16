@@ -59,7 +59,7 @@
  ******************************************************************************/
 /**
  * @brief Private data structure for dual camera device management
- * 
+ *
  * This structure contains all the private data needed to manage a virtual USB camera
  * device that supports dual streams (RGB and IR) via RPMSG inter-core communication.
  */
@@ -95,7 +95,7 @@ typedef struct
 
 /**
  * @brief Handle structure for virtual camera instances
- * 
+ *
  * This structure manages shared resources and state for virtual camera instances.
  * Since multiple virtual camera elements can be instantiated, this handle ensures
  * proper coordination and resource sharing between them.
@@ -113,7 +113,7 @@ static virtual_camera_handle_t s_virt_cam_handle = {0};
 
 /**
  * @brief RGB camera buffer for virtual USB camera
- * 
+ *
  * This buffer is used to store RGB camera data received from the USB camera
  * running on a different core via RPMSG communication. The buffer is placed
  * in shared memory section to allow inter-core access.
@@ -126,9 +126,9 @@ uint8_t virtual_usb_cam_rgb_buff[VIRTUAL_CAMERA_RGB_BUFFER_SIZE] __attribute__((
 
 /**
  * @brief IR camera buffer for virtual USB camera
- * 
- * This buffer is used to store IR (Infrared) camera data received from the USB 
- * camera running on a different core via RPMSG communication. The buffer is 
+ *
+ * This buffer is used to store IR (Infrared) camera data received from the USB
+ * camera running on a different core via RPMSG communication. The buffer is
  * placed in shared memory section to allow inter-core access.
 
  * Total structure size: VIRTUAL_CAMERA_IR_BUFFER_SIZE (96 KB)
@@ -149,39 +149,54 @@ static hal_mutex_t s_global_mutex = NULL;
 // Initialize global mutex (call this during system init)
 static hal_camera_status_t init_global_resources(void)
 {
-    hal_atomic_enter();
+    hal_mutex_t new_mutex = NULL;
+    hal_ctx_t ctx;
+
+    if (s_global_mutex != NULL)
+        return kStatus_HAL_CameraSuccess;
+
+    if (hal_mutex_create(&new_mutex) != MPP_SUCCESS || new_mutex == NULL)
+    {
+        HAL_LOGE("Failed to create global mutex\n");
+        return kStatus_HAL_CameraError;
+    }
+
+    hal_atomic_enter(&ctx);
+
+    // make sure only one thread initializes the mutex
     if (s_global_mutex == NULL)
     {
-        hal_mutex_create(&s_global_mutex);
-        if (s_global_mutex == NULL)
-        {
-            hal_atomic_exit();
-            return kStatus_HAL_CameraError;
-        }
+        s_global_mutex = new_mutex;
+        new_mutex = NULL;
     }
-    hal_atomic_exit();
+    hal_atomic_exit(&ctx);
+
+    if (new_mutex != NULL)
+    {
+        hal_mutex_remove(new_mutex);
+    }
     return kStatus_HAL_CameraSuccess;
 }
 
 /**
  * @brief Enqueues camera stream requests to the remote USB camera core
- * 
+ *
  * This function prepares and sends stream capture requests to the USB camera running
  * on a remote core via RPMSG inter-core communication. It supports both single stream
  * (RGB or IR) and dual stream (RGB+IR) capture modes.
- * 
+ *
  * The function performs the following operations:
  * 1. Validates the stream configuration and device state
  * 2. Constructs the appropriate RPMSG message based on active streams
  * 3. Sends the request to the remote USB camera core
  * 4. Updates internal tracking state for message and stream management
- * 
+ *
  * @param dev Pointer to the camera device structure containing configuration
  * @param stream_active_cfg Array indicating which streams are active for this request
- * 
+ *
  * @return kStatus_HAL_CameraSuccess on successful enqueue operation
  * @return kStatus_HAL_CameraError on validation failure or communication error
- * 
+ *
  * @note This function is thread-safe when called with proper device locking
  * @note The remote core must be initialized and ready to receive messages
  * @note Buffer addresses are shared memory locations accessible by both cores
@@ -321,19 +336,19 @@ static hal_camera_status_t camera_dev_enqueue(const camera_dev_t *dev, bool *str
 
 /**
  * @brief Finds the next enqueued stream index in the camera device configuration
- * 
+ *
  * This function iterates through the camera streams starting from the current index
  * to find the next stream that has been enqueued for processing. It checks the
  * stream_enqueued flag array to determine which streams are currently queued.
- * 
+ *
  * @param dev Pointer to the camera device structure containing stream configuration
  * @param crt_active_stream_idx Pointer to current stream index (input/output parameter)
  *                              - Input: Starting index for search
  *                              - Output: Index of next enqueued stream if found
- * 
+ *
  * @return kStatus_HAL_CameraSuccess if an enqueued stream is found
  * @return kStatus_HAL_CameraError if no enqueued streams are found
- * 
+ *
  * @note The function modifies the crt_active_stream_idx parameter to point to the
  *       next enqueued stream index, or to n_streams if none found
  * @note This function is used during dequeue operations to process streams in order
@@ -363,19 +378,19 @@ static hal_camera_status_t get_next_enqueued_stream_idx(const camera_dev_t *dev,
 
 /**
  * @brief Finds the next active stream index in the camera device configuration
- * 
+ *
  * This function searches through the camera streams starting from the current index
  * to locate the next stream that is marked as active in the device configuration.
  * It examines the stream.active flag to determine stream availability.
- * 
+ *
  * @param dev Pointer to the camera device structure containing stream configuration
  * @param crt_active_stream_idx Pointer to current stream index (input/output parameter)
  *                              - Input: Starting index for search
  *                              - Output: Index of next active stream if found
- * 
+ *
  * @return kStatus_HAL_CameraSuccess if an active stream is found
  * @return kStatus_HAL_CameraError if no active streams are found
- * 
+ *
  * @note The function modifies the crt_active_stream_idx parameter to point to the
  *       next active stream index, or to n_streams if none found
  * @note This function is used during buffer descriptor operations and initialization
@@ -405,14 +420,14 @@ static hal_camera_status_t get_next_active_stream_idx(const camera_dev_t *dev, u
 
 /**
  * @brief Resets the enqueue/dequeue state for all camera streams
- * 
+ *
  * This function reinitializes all stream management state variables to their
  * default values, effectively clearing any pending operations and resetting
  * the camera device to a clean state. This is typically called during
  * initialization or when recovering from error conditions.
- * 
+ *
  * @param dev_data Pointer to the dual camera device private data structure
- * 
+ *
  * @note This function resets counters, clears enqueue flags, invalidates
  *       message types, and zeros out all stream-specific data structures
  */
@@ -420,37 +435,37 @@ static void reset_enqueue_dequeue_state(dual_camera_dev_private_data_t *dev_data
 {
     /* Reset the current dequeue stream index to start from the beginning */
     dev_data->crt_dequeue_stream_idx = 0;
-    
+
     /* Clear the count of streams that have been dequeued */
     dev_data->dequeued_streams = 0;
-    
+
     /* Clear the count of streams that have been enqueued */
     dev_data->enqueued_streams = 0;
-    
+
     /* Reset the count of messages sent to the remote core */
     dev_data->messages_sent = 0;
-    
+
     /* Reset the count of messages received from the remote core */
     dev_data->messages_received = 0;
-    
+
     /* Loop through all available streams to reset per-stream state */
     for (int i = 0; i < NUM_STREAMS; i++)
     {
         /* Mark stream as not enqueued (clear enqueue flag) */
         dev_data->stream_enqueued[i] = false;
-        
+
         /* Reset the enqueued message type to indicate no message */
         dev_data->enq_msg_type[i] = VIRT_USB_CAM_NOMSG;
-        
+
         /* Clear the stored dequeue stream size */
         dev_data->dequeue_stream_sizes[i] = 0;
-        
+
         /* Reset stream type to invalid value (NUM_STREAMS acts as invalid marker) */
         dev_data->stream_dequeue_req[i].stream_type = NUM_STREAMS;
-        
+
         /* Clear the stream buffer address pointer */
         dev_data->stream_dequeue_req[i].stream_addr = NULL;
-        
+
         /* Clear the stream size pointer */
         dev_data->stream_dequeue_req[i].stream_size = NULL;
     }
@@ -458,18 +473,18 @@ static void reset_enqueue_dequeue_state(dual_camera_dev_private_data_t *dev_data
 
  /**
  * @brief Validates that a frame size does not exceed the allocated buffer capacity
- * 
+ *
  * This function performs bounds checking to ensure that incoming frame data from the
  * remote USB camera core will fit within the locally allocated buffer. This prevents
  * potential buffer overflows when copying frame data.
- * 
+ *
  * @param frame_size The size of the incoming frame data in bytes
  * @param max_size The maximum capacity of the allocated buffer in bytes
  * @param stream_name Human-readable name of the stream (e.g., "RGB", "IR") for error reporting
- * 
+ *
  * @return kStatus_HAL_CameraSuccess if frame size is within bounds
  * @return kStatus_HAL_CameraError if frame size exceeds buffer capacity
- * 
+ *
  * @note This validation is critical for preventing memory corruption when receiving
  *       variable-sized compressed data (e.g., JPEG frames) from the remote core
  */
@@ -485,24 +500,24 @@ static hal_camera_status_t validate_frame_size(uint32_t frame_size, uint32_t max
 
   /**
  * @brief Flushes all pending enqueued messages from the remote USB camera core
- * 
+ *
  * This function receives and discards all outstanding response messages from the remote
  * USB camera core that correspond to previously sent enqueue requests. It's used during
  * cleanup operations (like camera stop) to ensure the message queue is cleared and both
  * cores are synchronized before resetting the device state.
- * 
+ *
  * The function performs the following operations:
  * 1. Validates that there are pending messages to flush
  * 2. Iterates through all unprocessed sent messages
  * 3. Receives corresponding response messages from the remote core
  * 4. Validates message types and source addresses
  * 5. Resets the device state after successful flush
- * 
+ *
  * @param dev_data Pointer to the dual camera device private data structure
- * 
+ *
  * @return kStatus_HAL_CameraSuccess if all messages were successfully flushed
  * @return kStatus_HAL_CameraError if validation fails or communication error occurs
- * 
+ *
  * @note This function blocks until all pending messages are received
  * @note The device state is always reset at the end, regardless of success/failure
  * @note Used primarily during camera stop operations to prevent message queue overflow
@@ -540,9 +555,9 @@ static hal_camera_status_t flush_enqueued_messages(dual_camera_dev_private_data_
         /* Receive the response message from the remote USB camera core */
         rpmsg_ret = rpmsg_queue_recv(dev_data->rpmsg_inst,
                         dev_data->rpmsg_queue,
-                        (uint32_t *)&remote_addr, 
-                        (char *)&msg, 
-                        sizeof(virtual_usb_cam_msg_t), 
+                        (uint32_t *)&remote_addr,
+                        (char *)&msg,
+                        sizeof(virtual_usb_cam_msg_t),
                         &len,
                         RL_BLOCK);
 
@@ -592,7 +607,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Init(
     dual_camera_dev_private_data_t *dev_data;
     bool global_mutex_locked = false;
 
-    RETURN_ON_ERROR(config->n_streams > NUM_STREAMS, kStatus_HAL_CameraError, 
+    RETURN_ON_ERROR(config->n_streams > NUM_STREAMS, kStatus_HAL_CameraError,
         "Max number of streams for this camera is: %d. Configured value is: %d\n", NUM_STREAMS, config->n_streams);
 
     dev_data = (dual_camera_dev_private_data_t *) hal_malloc(sizeof(dual_camera_dev_private_data_t));
@@ -607,7 +622,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Init(
 
     // Protect global state access
     GOTO_ON_ERROR(init_global_resources() != kStatus_HAL_CameraSuccess, cleanup_resources, "Global resources initialization failed\n");
-    hal_mutex_lock(s_global_mutex);
+    (void) hal_mutex_lock(s_global_mutex);
     global_mutex_locked = true;
 
     dev_data->rpmsg_local_addr = MPP_EPT_ADDRESSS + s_virt_cam_handle.n_instances;
@@ -657,21 +672,21 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Init(
                                     (char *)&cfg_msg,
                                     sizeof(virtual_usb_cam_msg_t),
                                     RL_DONT_BLOCK);
-        GOTO_ON_ERROR(rpmsg_ret != RL_SUCCESS, cleanup_resources, 
+        GOTO_ON_ERROR(rpmsg_ret != RL_SUCCESS, cleanup_resources,
             "Got error %d while trying to send config msg to USB camera core\r\n", rpmsg_ret);
 
-        /* Wait for config ACK 
+        /* Wait for config ACK
         * This handshake is needed for synchronizing the two endpoints and not miss messages */
         rpmsg_ret = rpmsg_queue_recv(s_virt_cam_handle.rpmsg_instance,
                                     dev_data->rpmsg_queue,
-                                    (uint32_t *)&recv_addr, 
-                                    (char *)&cfg_msg, 
-                                    sizeof(virtual_usb_cam_msg_t), 
+                                    (uint32_t *)&recv_addr,
+                                    (char *)&cfg_msg,
+                                    sizeof(virtual_usb_cam_msg_t),
                                     (void *) 0,
                                     RL_BLOCK);
         if (rpmsg_ret == RL_SUCCESS)
         {
-            GOTO_ON_ERROR(cfg_msg.msg_type != VIRT_USB_CAM_CONFIG_ACK, cleanup_resources, 
+            GOTO_ON_ERROR(cfg_msg.msg_type != VIRT_USB_CAM_CONFIG_ACK, cleanup_resources,
                 "Received unexpected message from USB camera core %d\r\n", cfg_msg.msg_type);
 
             GOTO_ON_ERROR(s_virt_cam_handle.rpmsg_remote_addr != recv_addr, cleanup_resources,
@@ -687,7 +702,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Init(
     else
     {
         GOTO_ON_ERROR(s_virt_cam_handle.rpmsg_instance == NULL,  cleanup_resources, "RPMSG instance is not initialized\r\n");
-        
+
         dev_data->rpmsg_queue = rpmsg_queue_create(s_virt_cam_handle.rpmsg_instance);
         GOTO_ON_ERROR(dev_data->rpmsg_queue == NULL, cleanup_resources, "RPMSG queue creation failed\n");
 
@@ -700,7 +715,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Init(
 
     dev->id = s_virt_cam_handle.n_instances++;
 
-    hal_mutex_unlock(s_global_mutex);
+    (void) hal_mutex_unlock(s_global_mutex);
     global_mutex_locked = false;
 
     /* Init internal data */
@@ -751,9 +766,9 @@ cleanup_resources:
     }
     if ((s_global_mutex != NULL) && (global_mutex_locked == true))
     {
-        hal_mutex_unlock(s_global_mutex);
+        (void) hal_mutex_unlock(s_global_mutex);
         global_mutex_locked = false;
-    }   
+    }
     if (dev_data != NULL)
     {
         if (dev_data->mutex != NULL)
@@ -828,7 +843,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Deinit(camera_dev_t *dev)
     HAL_LOGD("dev id: %d, local addr: %d\r\n", dev->id, dev_data->rpmsg_local_addr);
 
     // Lock global state
-    hal_mutex_lock(s_global_mutex);
+    (void) hal_mutex_lock(s_global_mutex);
 
     /* Check if rpmsg instance is still configured */
     if (dev_data->rpmsg_inst == NULL)
@@ -836,7 +851,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Deinit(camera_dev_t *dev)
         HAL_LOGE("RPMSG instance pointer is null.. skipping deinit\n");
         hal_mutex_remove(dev_data->mutex);
         hal_free(dev_data);
-        hal_mutex_unlock(s_global_mutex);
+        (void) hal_mutex_unlock(s_global_mutex);
         return kStatus_HAL_CameraError;
     }
 
@@ -862,7 +877,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Deinit(camera_dev_t *dev)
     if (s_virt_cam_handle.n_instances > 0)
     {
         s_virt_cam_handle.n_instances--;
-        
+
         // Only cleanup global resources when no instances remain
         if (s_virt_cam_handle.n_instances == 0)
         {
@@ -872,7 +887,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Deinit(camera_dev_t *dev)
         }
     }
 
-    hal_mutex_unlock(s_global_mutex);
+    (void) hal_mutex_unlock(s_global_mutex);
 
     HAL_LOGD("--HAL_CameraDev_Virtual_USB_Deinit\n");
     return ret;
@@ -989,14 +1004,14 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Dequeue(const camera_dev_t *dev, v
         {
             /* Attempt in-place enqueue if no streams are currently enqueued */
             uint32_t req_cnt = 0;
-        
+
             /* Count how many streams are both active and requested */
             for (int i = 0; i < dev->config.n_streams; i++)
             {
                 if (dev->config.stream[i].active == true && dev->config.stream_requested[i] == true)
                     req_cnt++;
             }
-        
+
             /* If no streams are requested, return no data available */
             if (!req_cnt)
             {
@@ -1028,15 +1043,15 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Dequeue(const camera_dev_t *dev, v
     }
 
     /* Validate that messages were actually sent for the enqueued streams */
-    GOTO_ON_ERROR(dev_data->messages_sent == 0, dequeue_cleanup, 
+    GOTO_ON_ERROR(dev_data->messages_sent == 0, dequeue_cleanup,
                 "No messages sent even though equeued streams is %d\r\n", dev_data->enqueued_streams);
 
     /* Ensure we haven't already received more messages than configured streams */
-    GOTO_ON_ERROR(dev_data->messages_received >= dev->config.n_streams, dequeue_cleanup, 
+    GOTO_ON_ERROR(dev_data->messages_received >= dev->config.n_streams, dequeue_cleanup,
                 "received message already exceeding configured number of streams\r\n");
 
     /* Check if we've already received all sent messages */
-    GOTO_ON_ERROR(dev_data->messages_received >= dev_data->messages_sent, dequeue_cleanup, 
+    GOTO_ON_ERROR(dev_data->messages_received >= dev_data->messages_sent, dequeue_cleanup,
                 "Already received all messages\r\n");
 
     /* Validate that we haven't exceeded the maximum number of streams for dequeue */
@@ -1128,9 +1143,9 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Dequeue(const camera_dev_t *dev, v
     /* Receive the response message from the remote USB camera core */
     rpmsg_ret = rpmsg_queue_recv(dev_data->rpmsg_inst,
                                 dev_data->rpmsg_queue,
-                                (uint32_t *)&remote_addr, 
-                                (char *)&msg, 
-                                sizeof(virtual_usb_cam_msg_t), 
+                                (uint32_t *)&remote_addr,
+                                (char *)&msg,
+                                sizeof(virtual_usb_cam_msg_t),
                                 &len,
                                 RL_BLOCK);
 
@@ -1143,7 +1158,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Dequeue(const camera_dev_t *dev, v
                 "Received message from an unexpected remote address: %d\r\n", remote_addr);
 
     /* Check if received message type matches expected (allow flexibility for separate stream dequeue) */
-    GOTO_ON_ERROR((msg.msg_type != reply_msg) && (!separate_stream_dequeue), dequeue_cleanup, 
+    GOTO_ON_ERROR((msg.msg_type != reply_msg) && (!separate_stream_dequeue), dequeue_cleanup,
                 "Received unexpected message %d from USB camera core\r\n", msg.msg_type);
 
     /* Validate frame sizes and store them based on message type */
@@ -1198,23 +1213,23 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Dequeue(const camera_dev_t *dev, v
 
             /* Validate stream type is within expected range */
             GOTO_ON_ERROR(stream_type >= NUM_STREAMS, dequeue_cleanup, "Invalid stream type %d\r\n", stream_type);
-        
+
             /* Ensure stream address pointer is valid */
-            GOTO_ON_ERROR(dev_data->stream_dequeue_req[i].stream_addr == NULL, dequeue_cleanup, 
+            GOTO_ON_ERROR(dev_data->stream_dequeue_req[i].stream_addr == NULL, dequeue_cleanup,
                             "Stream address is NULL for stream index %d\r\n", i);
-        
+
             /* Ensure stream size pointer is valid */
-            GOTO_ON_ERROR(dev_data->stream_dequeue_req[i].stream_size == NULL, dequeue_cleanup, 
+            GOTO_ON_ERROR(dev_data->stream_dequeue_req[i].stream_size == NULL, dequeue_cleanup,
                             "Stream size pointer is NULL for stream index %d\r\n", i);
 
             /* Set the output buffer address to point to the shared memory buffer */
             *(dev_data->stream_dequeue_req[i].stream_addr) = (void *) (dev_data->stream_addr[stream_type]);
-        
+
             /* Set the compressed size based on format type */
             if (dev->config.format == MPP_PIXEL_JPEG)
             {
                 /* For JPEG format, use the actual compressed size received from remote core */
-                GOTO_ON_ERROR(dev_data->dequeue_stream_sizes[stream_type] == 0, dequeue_cleanup, 
+                GOTO_ON_ERROR(dev_data->dequeue_stream_sizes[stream_type] == 0, dequeue_cleanup,
                             "Error: Stream size is zero for JPEG format for stream index %d\r\n", i);
 
                 *(dev_data->stream_dequeue_req[i].stream_size) = dev_data->dequeue_stream_sizes[stream_type];

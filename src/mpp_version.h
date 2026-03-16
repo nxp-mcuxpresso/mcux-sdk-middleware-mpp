@@ -20,8 +20,8 @@
 #define _MPP_VERSION_H
 
 /* MPP version */
-#define MPP_VERSION_MAJOR 3
-#define MPP_VERSION_MINOR 8
+#define MPP_VERSION_MAJOR 4
+#define MPP_VERSION_MINOR 0
 #ifdef MPP_COMMIT
 #define MPP_VERSION_COMMIT MPP_COMMIT
 #else

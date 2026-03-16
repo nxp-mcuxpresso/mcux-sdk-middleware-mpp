@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 NXP
+ * Copyright 2024-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -270,13 +270,13 @@ static int check_persondetect_inference_output(box_data final_boxes[], int num_d
 	int status = 0;
 #if (SOURCE_STATIC_IMAGE == 1)
 	if (num_detections != EXPECTED_NUM_DETECTED_PERSONS) {
-		PRINTF("\r\nERROR: expected to detect %d person(s) but got %d person(s) detected\r\n", EXPECTED_NUM_DETECTED_PERSONS, num_detections);
+		PRINTF("\r\nexpected to detect %d person(s) but got %d person(s) detected\r\n", EXPECTED_NUM_DETECTED_PERSONS, num_detections);
 		status = -1;
 	} else {
 		for (int i = 0; i < NUM_BOXES_MAX; i++) {
 			if ((final_boxes[i].area != 0)) {
 				if ((final_boxes[i].score * 100.0f) < EXPECTED_CONFIDENCE_MIN) {
-					PRINTF("\r\nERROR: expected confidence score #%d > %d, but got %d\r\n", i, EXPECTED_CONFIDENCE_MIN, (int)(final_boxes[i].score * 100.0f));
+					PRINTF("\r\nexpected confidence score #%d > %d, but got %d\r\n", i, EXPECTED_CONFIDENCE_MIN, (int)(final_boxes[i].score * 100.0f));
 					status = -1;
 					break;
 				} else {

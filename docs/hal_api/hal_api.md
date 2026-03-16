@@ -1,6 +1,6 @@
 # eIQ MPP Hardware Abstraction Layer API
 
-MPP-HAL VERSION 3.8
+MPP-HAL VERSION 4.0
 
 ## Chapter 1
 
@@ -74,7 +74,7 @@ Currently, the MPP HAL supports the following boards:
 - evkbmimxrt1170 is supported by porting the following devices:
     * Cameras:  OV5640.
     * Displays: LVGL, RK055AHD091 and RK055MHD091.
-    
+
 - frdmmcxn947 is supported by porting the following devices:
     * Cameras:  OV7670.
     * Displays: Mikroe TFT Proto 5" and NXP's LCD-PAR-S035.
@@ -83,24 +83,24 @@ Currently, the MPP HAL supports the following boards:
     * Cameras:  OV7670, Logitech C920 PRO HD WEBCAM
     * Displays: RK055AHD091 and RK055MHD091.
 
-How to port new boards/devices: 
-The MPP Hal provides the flexibility to the user to port new boards and devices(cameras and displays). 
+How to port new boards/devices:
+The MPP Hal provides the flexibility to the user to port new boards and devices(cameras and displays).
 
-Supporting new boards: 
-To support a new board a new file hal\_{board\_name} should be added under the 'hal' directory. 
+Supporting new boards:
+To support a new board a new file hal\_{board\_name} should be added under the 'hal' directory.
 
-Supporting new devices: 
-The hal components that can support new devices are: 
+Supporting new devices:
+The hal components that can support new devices are:
 - Cameras
 - Display
-- Graphics processing 
+- Graphics processing
 
-A new device can simply be supported by: 
-- Providing the approriate hal\_{device\_module} implementation. 
-- Adding his name and setup entry point to the appropriate device list in the associated board hal\_{board\_name} file. 
+A new device can simply be supported by:
+- Providing the approriate hal\_{device\_module} implementation.
+- Adding his name and setup entry point to the appropriate device list in the associated board hal\_{board\_name} file.
 
-Enabling/Disabling Hal components and devices: 
-- The HAL components can be enabled/disabled from "mpp\_config.h" using the compilation flags(HAL\_ENABLE\_{component\_name}). 
+Enabling/Disabling Hal components and devices:
+- The HAL components can be enabled/disabled from "mpp\_config.h" using the compilation flags(HAL\_ENABLE\_{component\_name}).
 - The HAL devices can also be enabled/disabled from "mpp\_config.h" using the compilation flags(HAL\_ENABLE\_{device\_name}).
 
 
@@ -303,64 +303,64 @@ Enabling/Disabling Hal components and devices:
 - int **setup\_static\_image\_elt** (static\_image\_t ∗elt)
 - uint32\_t **calc\_checksum** (int size\_b, void ∗pbuf)
 
-#### 2.1.1 Detailed Description  
+#### 2.1.1 Detailed Description
 
-This section provides the detailed documentation for the MPP HAL types.  
+This section provides the detailed documentation for the MPP HAL types.
 
-##### 2.1.1.1 Data Structure Documentation  
+##### 2.1.1.1 Data Structure Documentation
 
 ##### camera_dev_static_config_t
 
 **struct camera\_dev\_static\_config\_t**
 
-Structure that characterizes the camera device.  
+Structure that characterizes the camera device.
 
-**Data Fields**  
+**Data Fields**
 
-|type|name|description|  
-|---|---|---|  
-|int|height|buffer height|  
-|int|width|buffer width|  
-|int|pitch|buffer pitch|  
-|int|left|left position|  
-|int|top|top position|  
-|int|right|right position|  
-|int|bottom|bottom position|  
-|mpp\_rotate\_degree\_t|rotate|rotate degree|  
-|mpp\_flip\_mode\_t|flip|flip|  
-|int|swapByte|swap byte per two bytes|  
-|mpp\_pixel\_format\_t|format|pixel format|  
-|int|framerate|frame rate|  
-|int|stripe\_size|stripe size in bytes|  
-|bool|stripe|stripe mode|  
-|uint32\_t|n\_streams|number of total output video streams|  
-|uint32\_t|min\_stream\_req\_cnt|minimum number of enqueue calls to wait for|  
-|uint32\_t|crt\_stream\_req\_cnt|number of streams requested for enqueue|  
-|mpp\_exec\_flag\_t|req\_cnt\_type|flag to control stream request counting|  
-|mpp\_camera\_stream\_cfg|stream[NUM\_STREAMS]|stream configuration|  
-|bool|stream\_requested[NUM\_STREAMS]|flag to track if a stream is required for enqueue|  
-|bool|in\_advance\_enqueue|flag to indicate advance enqueue mode|  
+|type|name|description|
+|---|---|---|
+|int|height|buffer height|
+|int|width|buffer width|
+|int|pitch|buffer pitch|
+|int|left|left position|
+|int|top|top position|
+|int|right|right position|
+|int|bottom|bottom position|
+|mpp\_rotate\_degree\_t|rotate|rotate degree|
+|mpp\_flip\_mode\_t|flip|flip|
+|int|swapByte|swap byte per two bytes|
+|mpp\_pixel\_format\_t|format|pixel format|
+|int|framerate|frame rate|
+|int|stripe\_size|stripe size in bytes|
+|bool|stripe|stripe mode|
+|uint32\_t|n\_streams|number of total output video streams|
+|uint32\_t|min\_stream\_req\_cnt|minimum number of enqueue calls to wait for|
+|uint32\_t|crt\_stream\_req\_cnt|number of streams requested for enqueue|
+|mpp\_exec\_flag\_t|req\_cnt\_type|flag to control stream request counting|
+|mpp\_camera\_stream\_cfg|stream[NUM\_STREAMS]|stream configuration|
+|bool|stream\_requested[NUM\_STREAMS]|flag to track if a stream is required for enqueue|
+|bool|in\_advance\_enqueue|flag to indicate advance enqueue mode|
 
 ##### camera_dev_private_capability_t
 
 **struct camera\_dev\_private\_capability\_t**
 
-Camera device private capability.  
+Camera device private capability.
 
-**Data Fields**  
+**Data Fields**
 
-|type|name|description|  
+|type|name|description|
 |-|-|-|
 |[camera_dev_callback_t](#camera_dev_callback_t)|callback|callback|
-|void ∗|param|parameter for the callback|  
+|void ∗|param|parameter for the callback|
 
 ##### camera_dev
 
 **struct \_camera\_dev**
 
 Camera devices can enqueue and dequeue frames as well as react to events from input devices via the "input← Notify" function. Camera devices can use any number of interfaces, including MIPI and CSI as long as the HAL driver implements the necessary functions found in[ camera_dev_operator_t.](#camera_dev_operator_t) Examples of camera devices include the Orbbec U1S 3D SLM camera module and the OnSemi MT9M114 camera module.
- 
-**Data Fields**  
+
+**Data Fields**
 
 |int|id|unique id which is assigned by camera manager during registration|
 | - | - | :- |
@@ -374,7 +374,7 @@ Camera devices can enqueue and dequeue frames as well as react to events from in
 
 **struct virtual\_usb\_cam\_config\_msg\_t**
 
-Structure that characterizes the payload of the camera config message sent from core 0 to core 1. 
+Structure that characterizes the payload of the camera config message sent from core 0 to core 1.
 
 **Data Fields**
 
@@ -420,7 +420,7 @@ Structure that characterizes the payload of the camera request message containin
 
 **struct virtual\_usb\_cam\_msg\_t**
 
-Structure that characterizes the messages sent between cores. 
+Structure that characterizes the messages sent between cores.
 
 **Data Fields**
 
@@ -434,32 +434,32 @@ Structure that characterizes the messages sent between cores.
 
 **struct static\_image\_static\_config\_t**
 
-Structure that characterizes the image element.  
+Structure that characterizes the image element.
 
-**Data Fields**  
-|type|name|description|  
+**Data Fields**
+|type|name|description|
 |---|---|---|
-|int|height|buffer height|  
-|int|width|buffer width|  
-|int|left|left position|  
-|int|top|top position|  
-|int|right|right position|  
-|int|bottom|bottom position|  
-|mpp\_pixel\_format\_t|format|pixel format|  
-|bool|stripe|stripe mode|  
-|int|compressed\_size|compressed size in bytes|  
+|int|height|buffer height|
+|int|width|buffer width|
+|int|left|left position|
+|int|top|top position|
+|int|right|right position|
+|int|bottom|bottom position|
+|mpp\_pixel\_format\_t|format|pixel format|
+|bool|stripe|stripe mode|
+|int|compressed\_size|compressed size in bytes|
 
 ##### static_image
 
-**struct \_static\_image** 
- 
-Attributes of an image element. 
- 
-**Data Fields**  
+**struct \_static\_image**
 
-|type|name|description|  
-|---|---|---|  
-|int|id|unique id which is assigned by image manager|  
+Attributes of an image element.
+
+**Data Fields**
+
+|type|name|description|
+|---|---|---|
+|int|id|unique id which is assigned by image manager|
 |const[ static_image_operator_t ](#static_image_operator_t)∗|ops|operations|
 |[static_image_static_config_t](#static_image_static_config_t)|config|static configs|
 |int|stripe\_idx|the current stripe index|
@@ -467,76 +467,76 @@ Attributes of an image element.
 
 ##### gfx_surface_t
 
-**struct gfx\_surface\_t**  
+**struct gfx\_surface\_t**
 
-Gfx surface parameters. 
- 
-**Data Fields**  
+Gfx surface parameters.
 
-|type|name|description|  
-|---|---|---|  
-|int|height|buffer height|  
-|int|width|buffer width|  
-|int|pitch|buffer pitch|  
-|int|left|left position|  
-|int|top|top position|  
-|int|right|right position|  
-|int|bottom|bottom position|  
-|int|swapByte|swap byte per two bytes|  
-|mpp\_pixel\_format\_t|format|pixel format|  
-|void ∗|buf|buffer|  
-|void ∗|lock|the structure is determined by hal and set to null if not use in hal|  
+**Data Fields**
+
+|type|name|description|
+|---|---|---|
+|int|height|buffer height|
+|int|width|buffer width|
+|int|pitch|buffer pitch|
+|int|left|left position|
+|int|top|top position|
+|int|right|right position|
+|int|bottom|bottom position|
+|int|swapByte|swap byte per two bytes|
+|mpp\_pixel\_format\_t|format|pixel format|
+|void ∗|buf|buffer|
+|void ∗|lock|the structure is determined by hal and set to null if not use in hal|
 
 ##### gfx_rotate_config_t
 
-**struct gfx\_rotate\_config\_t**  
+**struct gfx\_rotate\_config\_t**
 
-gfx rotate configuration. 
- 
-**Data Fields** 
- 
-|type|name|description|  
+gfx rotate configuration.
+
+**Data Fields**
+
+|type|name|description|
 |---|---|---|
-|gfx\_rotate\_target\_t|target|| 
-|mpp\_rotate\_degree\_t|degree||  
+|gfx\_rotate\_target\_t|target||
+|mpp\_rotate\_degree\_t|degree||
 
 ##### gfx_dev
 
-**struct \_gfx\_dev** 
- 
-**Data Fields**  
+**struct \_gfx\_dev**
 
-|type|name|description|  
-|---|---|---|  
-|int|id||  
+**Data Fields**
+
+|type|name|description|
+|---|---|---|
+|int|id||
 |const[ gfx_dev_operator_t ](#gfx_dev_operator_t)|ops||
 |[gfx_surface_t](#gfx_surface_t)|src||
 |[gfx_surface_t](#gfx_surface_t)|dst||
 |[mpp_callback_t](#mpp_callback_t)|callback||
-|void ∗|user\_data||  
+|void ∗|user\_data||
 
 ##### hal_rect_t
 
 **struct hal\_rect\_t**
 
-rectangle positions.  
+rectangle positions.
 
-**Data Fields**  
+**Data Fields**
 
-|type|name|description|  
-|---|---|---|  
-|int|top||  
-|int|left||  
-|int|bottom||  
-|int|right||  
+|type|name|description|
+|---|---|---|
+|int|top||
+|int|left||
+|int|bottom||
+|int|right||
 
 ##### vdec_dev_t
 
 **struct \_vdec\_dev**
 
-**Data Fields**  
+**Data Fields**
 
-|type|name|description|  
+|type|name|description|
 |---|---|---|
 |int|id||
 |const[ vdec_dev_operator_t ](#vdec_dev_operator_t)∗|ops||
@@ -545,12 +545,12 @@ rectangle positions.
 
 ##### model_param_t
 
-**struct model\_param\_t**  
+**struct model\_param\_t**
 
-Structure passed to HAL as description of the binary model provided by user.  
+Structure passed to HAL as description of the binary model provided by user.
 
-**Data Fields** 
- 
+**Data Fields**
+
 - const void ∗[model_data](#model_data)
 - int[ model_size](#model_size)
 - float[ model_input_mean](#model_input_mean)
@@ -565,7 +565,7 @@ Structure passed to HAL as description of the binary model provided by user.
 - int(∗[evt_callback_f ](#evt_callback_f))(mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
 - void ∗[cb_userdata](#cb_userdata)
 
-**Field Documentation** 
+**Field Documentation**
 
 ##### model_data
 
@@ -835,7 +835,7 @@ Event data value indicating that the application endpoint is ready for communica
 
 **HAL\_GFX\_DEV\_CPU\_NAME**
 
-#define HAL\_GFX\_DEV\_CPU\_NAME 
+#define HAL\_GFX\_DEV\_CPU\_NAME
 
 hal graphics (gfx) device declaration.
 
@@ -845,7 +845,7 @@ Graphics processing devices can be used to perform conversion from one image for
 
 **GUI\_PRINTF\_BUF\_SIZE**
 
-#define GUI\_PRINTF\_BUF\_SIZE 
+#define GUI\_PRINTF\_BUF\_SIZE
 
 Local text buffer size.
 
@@ -871,7 +871,7 @@ maximum number of element inputs/outputs
 
 **HAL\_DEVICE\_NAME\_MAX\_LENGTH**
 
-#define HAL\_DEVICE\_NAME\_MAX\_LENGTH 
+#define HAL\_DEVICE\_NAME\_MAX\_LENGTH
 
 maximum length of device name
 
@@ -1094,9 +1094,9 @@ error code (0: success, otherwise: failure)
 
 **HAL\_JPEG\_CPU\_Register()**
 
-int HAL\_JPEG\_CPU\_Register ( vdec\_dev\_t ∗ dev ) 
+int HAL\_JPEG\_CPU\_Register ( vdec\_dev\_t ∗ dev )
 
-Register the jpeg SW decoder device. 
+Register the jpeg SW decoder device.
 
 **Parameters**
 
@@ -1111,9 +1111,9 @@ error code (0: success, otherwise: failure)
 
 **HAL\_JPEG\_HW\_Register()**
 
-int HAL\_JPEG\_HW\_Register ( vdec\_dev\_t ∗ dev ) 
+int HAL\_JPEG\_HW\_Register ( vdec\_dev\_t ∗ dev )
 
-Register the jpeg HW decoder device. 
+Register the jpeg HW decoder device.
 
 **Parameters**
 
@@ -1231,9 +1231,9 @@ get buffer descriptors and policy
 
 ##### lock
 
-**lock** 
+**lock**
 
-[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::lock) (const camera\_dev\_t ∗dev) 
+[hal_camera_status_t](#hal_camera_status_t)(∗ camera\_dev\_operator\_t::lock) (const camera\_dev\_t ∗dev)
 
 lock the device for exclusive access and operations
 
@@ -1256,15 +1256,15 @@ Operation that needs to be implemented by an image element.
 
 ##### init
 
-**init** 
+**init**
 
 [hal_image_status_t](#hal_image_status_t)(∗ static\_image\_operator\_t::init) (static\_image\_t ∗elt, mpp← \_img\_params\_t ∗config, void ∗param)
 
    initialize the elt
-   
+
 ##### dequeue
 
-**dequeue** 
+**dequeue**
 
 [hal_image_status_t](#hal_image_status_t)(∗ static\_image\_operator\_t::dequeue) (static\_image\_← t ∗elt, [hw_buf_desc_t](#hw_buf_desc_t) ∗out\_buf, int ∗stripe\_num)
 
@@ -1316,7 +1316,7 @@ Operation that needs to be implemented by a vision algorithm device.
 
 ##### init
 
-**init** 
+**init**
 
 [hal_valgo_status_t](#hal_valgo_status_t)(∗ vision\_algo\_dev\_operator\_t::init) (vision\_algo\_dev\_t ∗dev, [model_param_t](#model_param_t) ∗param)
 
@@ -1338,7 +1338,7 @@ Operation that needs to be implemented by a vision algorithm device.
 
 ##### get_buf_desc
 
-**get\_buf\_desc** 
+**get\_buf\_desc**
 
 [hal_valgo_status_t](#hal_valgo_status_t)(∗ vision\_algo\_dev\_operator\_t::get\_buf\_desc) (const vision\_algo\_dev\_t ∗dev, [hw_buf_desc_t](#hw_buf_desc_t) ∗in\_buf, [mpp_memory_policy_t](#mpp_memory_policy_t) ∗policy)
 
@@ -1365,7 +1365,7 @@ Operation that needs to be implemented by a display device.
 
 [hal_display_status_t](#hal_display_status_t)(∗ display\_dev\_operator\_t::init) (display\_dev\_t ∗dev, mpp← \_display\_params\_t ∗config, [mpp_callback_t](#mpp_callback_t) callback, void ∗user\_data)
 
-   initialize the dev 
+   initialize the dev
 
 **deinit**
 
@@ -1397,7 +1397,7 @@ Operation that needs to be implemented by a display device.
 
 **mpp\_callback\_t**
 
-typedef int(∗ mpp\_callback\_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data) 
+typedef int(∗ mpp\_callback\_t) (mpp\_t mpp, mpp\_evt\_t evt, void ∗evt\_data, void ∗user\_data)
 
 The mpp callback function prototype.
 
@@ -1439,7 +1439,7 @@ uint16\_t ∗ pDst,
 uint32\_t x,
 uint32\_t y,
 uint16\_t color,
-uint32\_t lcd\_w ) 
+uint32\_t lcd\_w )
 
 Draws pixel with RGB565 color to defined point.
 
@@ -1599,7 +1599,7 @@ mpp\_landmark\_t ∗ lk,
 int stripe,
 int stripe\_max )
 
-Implementation of hal landmark component that draws a landmark on an input image. 
+Implementation of hal landmark component that draws a landmark on an input image.
 
 **Parameters**
 
@@ -1717,4 +1717,3 @@ If name is NULL, the first available decoder supported by Hw will be selected. T
 **Returns**
 
 error code (0: success, otherwise: failure)
-

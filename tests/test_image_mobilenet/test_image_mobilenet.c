@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP
+ * Copyright 2022-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -101,6 +101,14 @@ void *image_data = (void *)stopwatch128_128_rgb_data;
 #define MOBILENET_FORMAT  MPP_PIXEL_RGB
 
 #define STATS_PRINT_PERIOD_MS 1000
+
+#if APP_CONFIG
+#define ARG2STR(x) #x
+#define CONFIG2STR(x) ARG2STR(x)
+#define TC_NAME "test_image_mobilenet_config" CONFIG2STR(APP_CONFIG)
+#else
+#define TC_NAME "test_image_mobilenet"
+#endif
 
 /** Default priority for application tasks
    Tasks created by the application have a lower priority than pipeline tasks by default.
@@ -220,6 +228,24 @@ void print_result(mpp_stats_t *mobilenet_stats, user_data_t *user_data) {
     {
     	PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
         PRINTF("mobilenet : %s (%d%%)\r\n", user_data->inf_out.label, user_data->inf_out.score);
+        if ((user_data->inference_time_ms <= EXPECTED_INF_TIME) && 
+             (strcmp(user_data->inf_out.label, EXPECTED_LABEL) == 0) &&
+              (user_data->inf_out.score >= EXPECTED_INF_SCORE))
+        {
+            PRINTF("%s - PASSED\r\n", TC_NAME);
+        }
+        else
+        {
+            if (user_data->inference_time_ms > EXPECTED_INF_TIME)
+                PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+            if (strcmp(user_data->inf_out.label, EXPECTED_LABEL))
+                PRINTF("Bad label %s, expected %s\r\n", user_data->inf_out.label, EXPECTED_LABEL);
+            if (user_data->inf_out.score < EXPECTED_INF_SCORE)
+                PRINTF("Bad score %d, expected greater than %d\r\n", user_data->inf_out.score, EXPECTED_INF_SCORE);
+            PRINTF("%s - FAILED\r\n", TC_NAME);
+        }
+        PRINTF("%s finished\r\n", TC_NAME);
+        PRINTF("\r\nStart %s\r\n", TC_NAME);
         /* after reading, inference output should be cleared */
         user_data->inf_out.label = "No label detected";
         user_data->inf_out.score = 0;
@@ -320,6 +346,7 @@ static void app_task(void *params)
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
     uint32_t last_inf_frame_num = user_data.inference_frame_num;
+    PRINTF("\r\nStart %s\r\n", TC_NAME);
     for (;;) {
         xTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (last_inf_frame_num != user_data.inference_frame_num) {

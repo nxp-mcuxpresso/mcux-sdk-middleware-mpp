@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP
+ * Copyright 2022-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -31,7 +31,7 @@
 #endif
 
 #include "hal_debug.h"
-#include "hal_freertos.h"
+#include "hal_os.h"
 #include "hal_utils.h"
 #include "hal_os.h"
 
@@ -111,11 +111,11 @@
 #endif
 
 #if ( defined(APP_DISPLAY_REMOTE_FB) && (APP_DISPLAY_REMOTE_FB == 1) && (IMG_FULL_SCREEN != 1))
-    #define DISP_BUF_WIDTH SRC_IMAGE_WIDTH;
-    #define DISP_BUF_HEIGHT SRC_IMAGE_HEIGHT;
+    #define DISP_BUF_WIDTH SRC_IMAGE_WIDTH
+    #define DISP_BUF_HEIGHT SRC_IMAGE_HEIGHT
 #else
-    #define DISP_BUF_WIDTH APP_DISPLAY_WIDTH;
-    #define DISP_BUF_HEIGHT APP_DISPLAY_HEIGHT;
+    #define DISP_BUF_WIDTH APP_DISPLAY_WIDTH
+    #define DISP_BUF_HEIGHT APP_DISPLAY_HEIGHT
 #endif  /* (APP_DISPLAY_REMOTE_FB == 1) && (IMG_FULL_SCREEN != 1)) */
 
 #if APP_CONFIG
@@ -228,10 +228,17 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
         if (chksm == NULL) {
             return 0;
         }
+#if defined(CHECKSUM_TYPE_EXPECTED_PISANO) && (CHECKSUM_TYPE_EXPECTED_PISANO == 1)
+        if (chksm->type != CHECKSUM_TYPE_PISANO) {
+            PRINTF("ERROR: checksum calculated should be using PISANO for MCXN CPUs\n");
+            return 0;
+        }
+#else
         if (chksm->type != CHECKSUM_TYPE_CRC_ELCDIF) {
             PRINTF("ERROR: checksum calculated should be using CRC LCDIF\n");
             return 0;
         }
+#endif
         /* if check period elapsed, test again */
         int time = hal_tick_to_ms(hal_get_ostick());
         if (time > chksm_time + TEST_CHECK_PERIOD_MS)
@@ -244,9 +251,17 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
         {
             PRINTF("\r\nStart %s\r\n", TC_NAME);
             chksm_done = true;
-            chksm_ok = ((chksm->value == EXPECTED_CHECKSUM) || (APP_STRIPE_MODE > 0));  /* ignore checksum for stripes */
+            chksm_ok = ((chksm->value == EXPECTED_CHECKSUM) || (APP_STRIPE_MODE > 0)
+                             || (EXPECTED_CHECKSUM == 0));  /* ignore checksum for stripes */
             if (chksm_ok)
+            {
+                if (APP_STRIPE_MODE > 0)
+                    PRINTF("APP_STRIPE_MODE enabled. Skip checksum validation\r\n");
+                if (EXPECTED_CHECKSUM == 0)
+                    PRINTF("EXPECTED_CHECKSUM is 0; computed checksum is 0x%x\r\nSkip checksum validation\r\n",
+                           chksm->value);
                 PRINTF("%s - PASSED\r\n", TC_NAME);
+            }
             else
             {
                 PRINTF("Bad checksum 0x%08x\r\n", chksm->value);

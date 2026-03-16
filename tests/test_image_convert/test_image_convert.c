@@ -27,7 +27,7 @@
 #include "app.h"
 
 #include "hal_debug.h"
-#include "hal_freertos.h"
+#include "hal_os.h"
 #include "hal_utils.h"
 #include "hal_os.h"
 

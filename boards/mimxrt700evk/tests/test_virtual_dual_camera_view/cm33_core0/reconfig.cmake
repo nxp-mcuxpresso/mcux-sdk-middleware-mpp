@@ -28,5 +28,6 @@ mcux_add_linker_symbol(
              __heap_size__=0x20000 \
              __use_shmem__=1 \
              __multicore__=1 \
+             __camera_buffers_shmem_size__=0xC8000 \
             "
 )

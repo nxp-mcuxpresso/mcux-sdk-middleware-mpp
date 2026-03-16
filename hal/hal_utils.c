@@ -26,7 +26,12 @@ extern "C" {
 #include <stddef.h>
 #include <assert.h>
 
+#include "hal_os.h"
+
+#if MPP_OS_FREERTOS
 #include "fsl_debug_console.h"
+#endif
+
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -35,12 +40,16 @@ extern "C" {
 #include "mpp_config.h"
 #include "hal_debug.h"
 #include "hal_static_image.h"
-#include "hal_os.h"
 
+#if MPP_OS_FREERTOS
 #define LOG_STRING_MAX_SIZE 128
 
 #ifndef HAL_LOG_LEVEL
 #define HAL_LOG_LEVEL LOG_DEFAULT_LEVEL
+#endif
+
+#ifndef PRINTF
+#define PRINTF printf
 #endif
 
 static void LOG_STR(const char* module, const char* func, int line, const char* lvl_str, const char* str)
@@ -115,6 +124,7 @@ void LOGD(const char* module, const char* func, int line, const char* format, ..
     return;
 }
 #endif
+#endif /* MPP_OS_FREERTOS */
 
 int setup_graphic_dev(hal_graphics_setup_t gfx_setup[], int graphic_nb,
                       const char *name, gfx_dev_t *dev)

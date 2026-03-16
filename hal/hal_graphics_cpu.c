@@ -76,6 +76,7 @@ typedef struct
     uint8_t shift_dst;
 } hal_gfx_cpu_color_conv;
 
+#if !defined(ENABLE_COVERAGE) || (ENABLE_COVERAGE == 0)
 static int HAL_GfxDev_Cpu_Rotate(gfx_surface_t *pSrc, gfx_surface_t *pDst,
                                  mpp_rotate_degree_t degree, cpu_blit_dims_t *pBlit_dims)  __attribute__((unused));
 static int HAL_GfxDev_Cpu_Scale(gfx_surface_t *pSrc, gfx_surface_t *pDst,
@@ -84,6 +85,8 @@ static int HAL_GfxDev_Cpu_ColorConvert(gfx_surface_t *pSrc, gfx_surface_t *pDst,
                                        cpu_blit_dims_t *pBlit_dims)  __attribute__((unused));
 static int HAL_GfxDev_Cpu_NoneConvert(gfx_surface_t *pSrc, gfx_surface_t *pDst,
                                       cpu_blit_dims_t *pBlit_dims)  __attribute__((unused));
+#endif  /* !defined(ENABLE_COVERAGE) || (ENABLE_COVERAGE == 0) */
+
 static int HAL_GfxDev_Scale_RGB565to888(const gfx_dev_t *dev, const gfx_surface_t *pSrc,
         const gfx_surface_t *pDst, const gfx_rotate_config_t *pRotate, mpp_flip_mode_t flip);
 static int HAL_GfxDev_any_OP(const gfx_dev_t *dev, const gfx_surface_t *pSrc,
@@ -401,6 +404,7 @@ static inline void write_gray(void *pixel, uint8_t gray)
     *dstpix = gray;
 }
 
+#if !defined(ENABLE_COVERAGE) || (ENABLE_COVERAGE == 0)
 static int HAL_GfxDev_Cpu_RGB888ToRGB(gfx_surface_t *pSrc, gfx_surface_t *pDst,
                                       cpu_blit_dims_t *pBlit_dims)
 {
@@ -524,6 +528,7 @@ static int HAL_GfxDev_Cpu_RGB565ToRGB(gfx_surface_t *pSrc, gfx_surface_t *pDst,
 
     return 0;
 }
+#endif  /* !defined(ENABLE_COVERAGE) || (ENABLE_COVERAGE == 0) */
 
 /*
  * Clamp a value to the range of 0 to 255
@@ -640,6 +645,7 @@ const static hal_gfx_cpu_yuv_ops s_GfxDevCpuOps_VUYX444 = {
 #define RGB_PIXELS_IN_4B_YUV422  2
 #define RGB_PIXELS_MAX_IN_4B_YUV 2
 
+#if !defined(ENABLE_COVERAGE) || (ENABLE_COVERAGE == 0)
 /*
  * This function converts from YUV format to RGB format.
  *
@@ -1036,6 +1042,7 @@ static int HAL_GfxDev_Cpu_Rotate(gfx_surface_t *pSrc, gfx_surface_t *pDst,
 
     return 0;
 }
+#endif  /* !defined(ENABLE_COVERAGE) || (ENABLE_COVERAGE == 0) */
 
 /* Scaler: number of sub-pixels increments in source image */
 #define SUBPIXPOW 8
@@ -1180,30 +1187,27 @@ static inline uint8_t scale_rgb565_rot0(int x, int y, uint8_t *buf, int pitch, i
 {
     uint8_t tl, tr, bl, br; /* 4 neighbors values in source */
     
-    /* INT32-C & INT31-C: Bilinear interpolation arithmetic is safe.
-     * Input: 8-bit color values (0-255), SUBPIXINC=256
-     * Max intermediate: 255*256=65,280; after addition: 130,560; after shift: 510 (fits in int and uint8_t after final shift)
-     * This is standard image processing and is mathematically bounded.
-     */
-    
-    /* INT32-C: Bilinear interpolation with 8-bit color values (0-255).
-     * Maximum intermediate value: 255 * 256 = 65,280 (fits in int)
-     * After multiplication: 65,280 * 256 = 16,711,680 (fits in int)
-     * This is a standard image processing pattern and is safe. */
-    
     int src_y = y >> SUBPIXPOW;
     int disty = y % SUBPIXINC;
-
-    /* get 4 neighbors at source pixel positions */
-    /* divide by SUBPIXINC */
     int src_x = x >> SUBPIXPOW;
+    int distx = x % SUBPIXINC;
+
+    /* INT32-C: Clamp coordinates to prevent out-of-bounds access in bilinear interpolation */
+    int src_x_next = (src_x + 1 < width) ? (src_x + 1) : (width - 1);
+    int src_y_next = (src_y + 1 < height) ? (src_y + 1) : (height - 1);
+
+    /* ARR30-C & STR31-C: Validate offset is non-negative */
+    if (offset < 0 || offset >= MAX_COMP_PER_PIXEL) {
+        HAL_LOGE("Invalid offset.");
+        return 0;
+    }
 
     tl = get_color_byte_from_rgb565_rot0(src_x, src_y, buf, pitch, offset, width, height);
-    tr = get_color_byte_from_rgb565_rot0(src_x+1, src_y, buf, pitch, offset, width, height);
-    bl = get_color_byte_from_rgb565_rot0(src_x, src_y+1, buf, pitch, offset, width, height);
-    br = get_color_byte_from_rgb565_rot0(src_x+1, src_y+1, buf, pitch, offset, width, height);
+    tr = get_color_byte_from_rgb565_rot0(src_x_next, src_y, buf, pitch, offset, width, height);
+    bl = get_color_byte_from_rgb565_rot0(src_x, src_y_next, buf, pitch, offset, width, height);
+    br = get_color_byte_from_rgb565_rot0(src_x_next, src_y_next, buf, pitch, offset, width, height);
+    
     /* interpolate horizontally */
-    int distx = x % SUBPIXINC;
     int top = ( (tl * (SUBPIXINC - distx)) + (tr * distx) ) >> SUBPIXPOW;
     int bot = ( (bl * (SUBPIXINC - distx)) + (br * distx) ) >> SUBPIXPOW;
     /* interpolate vertically */
@@ -1304,6 +1308,7 @@ static inline void color_VYUY422ToRGB(uint8_t pix_id, uint8_t *pixel, uint8_t *r
     *b = YUV2B(c, d, e);
 }
 
+#if !defined(ENABLE_COVERAGE) || (ENABLE_COVERAGE == 0)
 /*
  * Image scaling using CPU backend:
  *
@@ -1513,11 +1518,12 @@ static int HAL_GfxDev_Cpu_NoneConvert(gfx_surface_t *pSrc, gfx_surface_t *pDst,
     HAL_LOGD("No image conversion.\n");
 
     for (int y = 0; y < pBlit_dims->dst_h; y++)
-        memcpy(pDst->buf + pDst->pitch*y, pSrc->buf + pSrc->pitch*y,
+        memcpy((uint8_t *)pDst->buf + pDst->pitch*y, (uint8_t *)pSrc->buf + pSrc->pitch*y,
                pBlit_dims->src_w * get_bitpp(pSrc->format)/8);
 
     return 0;
 }
+#endif  /* !defined(ENABLE_COVERAGE) || (ENABLE_COVERAGE == 0) */
 
 /*
  * @brief blit the source surface to the destination surface.
@@ -1550,7 +1556,8 @@ int HAL_GfxDev_Cpu_Blit(
 }
 
 static int HAL_GfxDev_Scale_RGB565to888(
-        const gfx_dev_t *dev, const gfx_surface_t *pSrc, const gfx_surface_t *pDst, const gfx_rotate_config_t *pRotate, mpp_flip_mode_t flip)
+        const gfx_dev_t *dev, const gfx_surface_t *pSrc, const gfx_surface_t *pDst, 
+        const gfx_rotate_config_t *pRotate, mpp_flip_mode_t flip)
 {
     /* INT32-C: Validate dimensions at function entry */
     assert(pSrc != NULL && pDst != NULL);
@@ -1560,45 +1567,109 @@ static int HAL_GfxDev_Scale_RGB565to888(
     int error = 0;
     int src_pitch = pSrc->pitch;
     int dst_pitch = pDst->pitch;
-    int h_incr = 1;
-    int v_incr = 1;
-    uint8_t *srcbuf;
+    int h_incr;
+    int v_incr;
+    uint16_t *srcbuf16;
     uint8_t *dstbuf;
-    int x, y, sub_x, sub_y;   /* position in destination */
-    uint8_t r, g, b;
+    int x, y, sub_x, sub_y;
 
-    /* INT32-C: Validate dimensions at function entry */
-    assert(pSrc != NULL && pDst != NULL);
+    /* Calculate dimensions */
     int src_w = pSrc->right - pSrc->left + 1;
     int src_h = pSrc->bottom - pSrc->top + 1;
     int dst_w = pDst->right - pDst->left + 1;
     int dst_h = pDst->bottom - pDst->top + 1;
-    assert(src_w > 0 && src_h > 0 && dst_w > 0 && dst_h > 0);
 
-    int loop_width = dst_w;
-    int loop_height = dst_h;
+    /* Validate dimensions - need at least 2 pixels for bilinear interpolation */
+    if (src_w < 2 || src_h < 2 || dst_w < 1 || dst_h < 1) {
+        HAL_LOGE("Dimensions too small for scaling: src=%dx%d, dst=%dx%d\n", 
+                 src_w, src_h, dst_w, dst_h);
+        return -1;
+    }
+
+    /* Check for overflow before scaling calculation */
+    if ((src_w - 1) > INT_MAX / SUBPIXINC) {
+        HAL_LOGE("Source width %d too large for scaling\n", src_w);
+        return -1;
+    }
+    if ((src_h - 1) > INT_MAX / SUBPIXINC) {
+        HAL_LOGE("Source height %d too large for scaling\n", src_h);
+        return -1;
+    }
+
+    /* Calculate scaling increments */
+    h_incr = ((src_w - 1) * SUBPIXINC) / (dst_w - 1);
+    v_incr = ((src_h - 1) * SUBPIXINC) / (dst_h - 1);
 
     HAL_LOGD("Input window: width=[%d], height=[%d].\n", src_w, src_h);
     HAL_LOGD("Output window: width=[%d], height=[%d].\n", dst_w, dst_h);
+    HAL_LOGD("Scaling increments: h_incr=%d, v_incr=%d\n", h_incr, v_incr);
 
-    HAL_LOGD("Input buffer addr=0x%x\n", (unsigned int)pSrc->buf);
-    HAL_LOGD("Output buffer addr=0x%x\n", (unsigned int)pDst->buf);
+    /* Adapt buffers with crop and output window parameters */
+    srcbuf16 = (uint16_t *)((uint8_t *)pSrc->buf + (pSrc->left * 2) + (pSrc->top * pSrc->pitch));
+    dstbuf = ((uint8_t *)pDst->buf + (pDst->left * 3) + (pDst->top * pDst->pitch));
 
-    /* adapt buffers with crop and output window parameters */
-    /* INT32-C: Safe pointer arithmetic with validated dimensions */
-    assert(pSrc->left >= 0 && pSrc->top >= 0);
-    srcbuf = (uint8_t *)(pSrc->buf + (pSrc->left * 2) + (pSrc->top * pSrc->pitch));
-    assert(pDst->left >= 0 && pDst->top >= 0);
-    dstbuf = (uint8_t *)(pDst->buf + (pDst->left * 3) + (pDst->top * pDst->pitch));
-
-    for (y = 0, sub_y = 0; y < loop_height; y++, sub_y += v_incr)
+    /* Pre-calculate pitch in uint16_t units for faster indexing */
+    int src_pitch16 = src_pitch >> 1;
+    
+    /* Perform scaling with bilinear interpolation - optimized version */
+    for (y = 0, sub_y = 0; y < dst_h; y++, sub_y += v_incr)
     {
-        for (x = 0, sub_x = 0; x < loop_width; x++, sub_x += h_incr)
+        int src_y = sub_y >> SUBPIXPOW;
+        int disty = sub_y & (SUBPIXINC - 1);  // Faster modulo for power of 2
+        int inv_disty = SUBPIXINC - disty;
+        
+        /* Pre-calculate row pointers */
+        uint16_t *src_row_top = srcbuf16 + (src_y * src_pitch16);
+        uint16_t *src_row_bot = srcbuf16 + ((src_y + 1) * src_pitch16);
+        uint8_t *dst_row = dstbuf + (y * dst_pitch);
+        
+        for (x = 0, sub_x = 0; x < dst_w; x++, sub_x += h_incr)
         {
-            r = scale_rgb565_rot0(sub_x, sub_y, srcbuf, src_pitch, 0, src_w, src_h);
-            g = scale_rgb565_rot0(sub_x, sub_y, srcbuf, src_pitch, 1, src_w, src_h);
-            b = scale_rgb565_rot0(sub_x, sub_y, srcbuf, src_pitch, 2, src_w, src_h);
-            write_rgb888(&dstbuf[(y * dst_pitch) + (x * 3)], r, g, b);
+            int src_x = sub_x >> SUBPIXPOW;
+            int distx = sub_x & (SUBPIXINC - 1);  // Faster modulo for power of 2
+            int inv_distx = SUBPIXINC - distx;
+            
+            /* Fetch 4 neighbor pixels */
+            uint16_t tl = src_row_top[src_x];
+            uint16_t tr = src_row_top[src_x + 1];
+            uint16_t bl = src_row_bot[src_x];
+            uint16_t br = src_row_bot[src_x + 1];
+            
+            /* Extract and interpolate RED channel (5 bits) */
+            int r_tl = ((tl >> RGB565_RSHIFT) & RGB565_RMASK) << 3;
+            int r_tr = ((tr >> RGB565_RSHIFT) & RGB565_RMASK) << 3;
+            int r_bl = ((bl >> RGB565_RSHIFT) & RGB565_RMASK) << 3;
+            int r_br = ((br >> RGB565_RSHIFT) & RGB565_RMASK) << 3;
+            
+            int r_top = (r_tl * inv_distx + r_tr * distx) >> SUBPIXPOW;
+            int r_bot = (r_bl * inv_distx + r_br * distx) >> SUBPIXPOW;
+            int r = (r_top * inv_disty + r_bot * disty) >> SUBPIXPOW;
+            
+            /* Extract and interpolate GREEN channel (6 bits) */
+            int g_tl = ((tl >> RGB565_GSHIFT) & RGB565_GMASK) << 2;
+            int g_tr = ((tr >> RGB565_GSHIFT) & RGB565_GMASK) << 2;
+            int g_bl = ((bl >> RGB565_GSHIFT) & RGB565_GMASK) << 2;
+            int g_br = ((br >> RGB565_GSHIFT) & RGB565_GMASK) << 2;
+            
+            int g_top = (g_tl * inv_distx + g_tr * distx) >> SUBPIXPOW;
+            int g_bot = (g_bl * inv_distx + g_br * distx) >> SUBPIXPOW;
+            int g = (g_top * inv_disty + g_bot * disty) >> SUBPIXPOW;
+            
+            /* Extract and interpolate BLUE channel (5 bits) */
+            int b_tl = (tl & RGB565_BMASK) << 3;
+            int b_tr = (tr & RGB565_BMASK) << 3;
+            int b_bl = (bl & RGB565_BMASK) << 3;
+            int b_br = (br & RGB565_BMASK) << 3;
+            
+            int b_top = (b_tl * inv_distx + b_tr * distx) >> SUBPIXPOW;
+            int b_bot = (b_bl * inv_distx + b_br * distx) >> SUBPIXPOW;
+            int b = (b_top * inv_disty + b_bot * disty) >> SUBPIXPOW;
+            
+            /* Write RGB888 pixel directly */
+            int dst_offset = x * 3;
+            dst_row[dst_offset] = (uint8_t)r;
+            dst_row[dst_offset + 1] = (uint8_t)g;
+            dst_row[dst_offset + 2] = (uint8_t)b;
         }
     }
 
@@ -1675,8 +1746,8 @@ static int HAL_GfxDev_any_OP(
     /* adapt buffers with crop and output window parameters */
     /* INT32-C: Safe pointer arithmetic with validated dimensions */
     assert(get_bitpp(pSrc->format) > 0 && get_bitpp(pDst->format) > 0);
-    srcbuf = (uint8_t *)(pSrc->buf + (pSrc->left * get_bitpp(pSrc->format)/8) + (pSrc->top * pSrc->pitch));
-    dstbuf = (uint8_t *)(pDst->buf + (pDst->left * get_bitpp(pDst->format)/8) + (pDst->top * pDst->pitch));
+    srcbuf = ((uint8_t *)pSrc->buf + (pSrc->left * get_bitpp(pSrc->format)/8) + (pSrc->top * pSrc->pitch));
+    dstbuf = ((uint8_t *)pDst->buf + (pDst->left * get_bitpp(pDst->format)/8) + (pDst->top * pDst->pitch));
 
     if ( ((pRotate->degree == ROTATE_0) || (pRotate->degree == ROTATE_180)) &&
          ((dst_w != src_w) || (dst_h != src_h)) ) {

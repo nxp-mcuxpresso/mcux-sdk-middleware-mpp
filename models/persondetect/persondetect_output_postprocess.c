@@ -9,7 +9,14 @@
 #include <math.h>
 #include <stdio.h>
 #include "get_top_n.h"
+
+#include "hal_os_config.h"
+#ifdef MPP_OS_FREERTOS
 #include "fsl_debug_console.h"
+#else
+#include "hal_debug.h"
+#endif
+
 #include "mpp_config.h"
 #define EOL "\r\n"
 

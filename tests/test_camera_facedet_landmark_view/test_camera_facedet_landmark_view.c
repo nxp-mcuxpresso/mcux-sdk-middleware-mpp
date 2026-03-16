@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -271,7 +271,8 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
             ret = SCRFDKPS_ProcessOutput(
                     inf_output,
                     app_priv->boxes,
-                    NUM_BOXES_MAX);
+                    NUM_BOXES_MAX,
+                    false);
             if (ret != kStatus_Success)
                 PRINTF("mpp_event_listener: process output error!");
 

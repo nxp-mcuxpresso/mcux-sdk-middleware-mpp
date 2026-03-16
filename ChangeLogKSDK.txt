@@ -2,7 +2,30 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-  Current version is 3.8.0
+  Current version is 4.0.0
+  - 4.0.0
+    - New features:
+      - Added multicore pipeline support using RPMsg sink/source elements
+      - Added multicore examples for RT700, RT1170 and MCXN947 boards
+      - Configurable memory allocation between cores from application's reconfig.cmake
+      - Added generic double buffering helper for pipeline elements
+      - Added Zephyr RTOS support (HAL, camera, display, PXP, TensorFlow Lite Micro)
+      - Allow override for default RC, PR task stack sizes
+      - Added optional code coverage support
+    - Bug fixes:
+      - Fixed FreeRTOS API calls inside critical section
+      - Fixed potential sleep during atomic in init_global_resources()
+      - Fixed issue in HAL_JPEG_Hw_Deinit()
+      - Fixed missing M_PI when compiling with CONFIG_STD_CPP17=y
+      - Fixed TICK_PERIOD_MS precision loss when multiplying os_tick
+      - Do cache flush after src dequeue for static image source
+      - Fixed (and optimized) CPU RGB565 to RGB888 conversion which was breaking the FRDMMCXN947 models no detection
+    - Known issues:
+      - static_image_mobilenet_view on mimxrt700evk: accuracy is lower than expected
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170
+      - mimxrt700evk
   - 3.8.0
     - New features:
       - New pipeline element for image quality check.
@@ -83,7 +106,7 @@
       - static_image_ultraface_view on mimxrt700evk: wrong detections
       - camera_ultraface_view on frdmmcxn947: wrong detections (no box drawn when face is detected)
     - New Features
-      - added infra red support 
+      - added infra red support
       - support conversion from and to the format MPP_PIXEL_GRAY
       - support a new display: LVGL
       - added BGRX and RGBX 32bits inputs formats

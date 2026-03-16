@@ -69,7 +69,7 @@ archive_armgcc () {
             CORE_ID="cm7"
             ;;
         frdmmcxn947)
-            BUILD_PREFIX="flash_"
+            BUILD_PREFIX=""
             CORE_ID="cm33_core0"
             ;;
         mimxrt700evk)

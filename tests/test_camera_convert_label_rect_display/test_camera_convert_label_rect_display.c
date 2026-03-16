@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023, 2025 NXP
+ * Copyright 2022-2023, 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -374,7 +374,7 @@ static void app_task(void *params) {
         marks[1].y += steplk1;
 
         /* 3rd (nose) move left then right */
-        if (((marks[2].x + steplk2) >= width) || ((marks[2].x + steplk2) <= 0)) {
+        if (((marks[2].x + steplk2) >= (width - marks[2].width)) || ((marks[2].x + steplk2) <= marks[2].width)) {
             steplk2 = 0 - steplk2;
         }
         marks[2].x += steplk2;

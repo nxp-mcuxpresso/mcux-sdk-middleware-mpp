@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP
+ * Copyright 2025-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -79,9 +79,6 @@ int main(int argc, char *argv[])
 {
     BaseType_t ret = pdFAIL;
     TaskHandle_t handle = NULL;
-
-    /* Early init mcmgr - this function must be called at the start of the main function */
-    mpp_mcmgr_early_init();
 
     /* Init board hardware. */
     BOARD_Init();
