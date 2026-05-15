@@ -37,6 +37,7 @@
 typedef struct _tflite_model_param
 {
     model_param_t user_params;
+    model_interpreter_data_t model_interpreter_data;
     mpp_inference_tensor_params_t input_tensor;
     mpp_inference_cb_param_t out_param;
 } tflite_model_param_t;
@@ -49,9 +50,9 @@ static bool check_model_input_dims(tflite_model_param_t *param)
         HAL_LOGE("Model parameters is NULL pointer\n");
         return false;
     }
-    if (param->input_tensor.dims.size != 4)
+    if (param->input_tensor.dims.size < 2)
     {
-        HAL_LOGE("Input Tensor not supported, expected 4 dimensions\n");
+        HAL_LOGE("Input Tensor not supported, expected at least 2 dimensions\n");
         return false;
     }
     return true;
@@ -63,11 +64,17 @@ static int get_model_input_width(tflite_model_param_t *param)
 
     if (param->user_params.tensor_order == MPP_TENSOR_ORDER_NCHW)
     {
-        return param->input_tensor.dims.data[3];
+        if (param->input_tensor.dims.size > 3)
+            return param->input_tensor.dims.data[3];
+        else
+            return 1;
     }
     else if (param->user_params.tensor_order == MPP_TENSOR_ORDER_NHWC)
     {
-        return param->input_tensor.dims.data[2];
+        if (param->input_tensor.dims.size > 2)
+            return param->input_tensor.dims.data[2];
+        else
+            return 1;
     }
     else
     {
@@ -82,11 +89,17 @@ static int get_model_input_height(tflite_model_param_t *param)
 
     if (param->user_params.tensor_order == MPP_TENSOR_ORDER_NCHW)
     {
-        return param->input_tensor.dims.data[2];
+        if (param->input_tensor.dims.size > 2)
+            return param->input_tensor.dims.data[2];
+        else
+            return 1;
     }
     else if (param->user_params.tensor_order == MPP_TENSOR_ORDER_NHWC)
     {
-        return param->input_tensor.dims.data[1];
+        if (param->input_tensor.dims.size > 1)
+            return param->input_tensor.dims.data[1];
+        else
+            return 1;
     }
     else
     {
@@ -101,11 +114,17 @@ static int get_model_input_channels(tflite_model_param_t *param)
 
     if (param->user_params.tensor_order == MPP_TENSOR_ORDER_NCHW)
     {
-        return param->input_tensor.dims.data[1];
+        if (param->input_tensor.dims.size > 1)
+            return param->input_tensor.dims.data[1];
+        else
+            return 1;
     }
     else if (param->user_params.tensor_order == MPP_TENSOR_ORDER_NHWC)
     {
-        return param->input_tensor.dims.data[3];
+        if (param->input_tensor.dims.size > 3)
+            return param->input_tensor.dims.data[3];
+        else
+            return 1;
     }
     else
     {
@@ -120,7 +139,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Init(vision_algo_dev_t *dev, 
     tflite_model_param_t *tflite_model_param;
 
     HAL_LOGD("++HAL_VisionAlgoDev_TFLite_Init\n");
-    
+
     // init the device
     memset(&dev->cap, 0, sizeof(dev->cap));
     dev->priv_data = hal_malloc(sizeof(tflite_model_param_t));
@@ -152,6 +171,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Init(vision_algo_dev_t *dev, 
 
     // initialize TFLite with model and get missing in/out tensor info
     if (kStatus_Success != MODEL_Init(param->model_data,
+            &tflite_model_param->model_interpreter_data,
             &tflite_model_param->input_tensor,
             tflite_model_param->out_param.out_tensors,
             tflite_model_param->user_params.model_input_mean,
@@ -170,22 +190,24 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Init(vision_algo_dev_t *dev, 
     }
 
     /* display model input format info */
-    HAL_LOGI("Model expects width = %d", get_model_input_width(tflite_model_param));
-    HAL_LOGI("Model expects height = %d", get_model_input_height(tflite_model_param));
+    HAL_LOGI("Model expects width = %d\r\n", get_model_input_width(tflite_model_param));
+    HAL_LOGI("Model expects height = %d\r\n", get_model_input_height(tflite_model_param));
 
     switch(tflite_model_param->input_tensor.type) {
     case MPP_TENSOR_TYPE_UINT8:
     case MPP_TENSOR_TYPE_INT8:
         if (get_model_input_channels(tflite_model_param) == 3) {
-            HAL_LOGI("Model expects format = MPP_PIXEL_RGB");
+            HAL_LOGI("Model expects format = MPP_PIXEL_RGB\r\n");
         } else if (get_model_input_channels(tflite_model_param) == 1) {
-            HAL_LOGI("Model expects format = MPP_PIXEL_GRAY");
+            HAL_LOGI("Model expects format = MPP_PIXEL_GRAY\r\n");
         } else {
             HAL_LOGE("--HAL_VisionAlgoDev_TFLite_getInput: invalid number of channels\n");
             ret = kStatus_HAL_ValgoError;
         }
         break;
     case MPP_TENSOR_TYPE_FLOAT32:
+        HAL_LOGI("Model expects float input format, number of channels is %d\r\n", get_model_input_channels(tflite_model_param));
+        break;
     default:
         HAL_LOGE("--HAL_VisionAlgoDev_TFLite_getInput: input tensor format not supported\n");
         ret = kStatus_HAL_ValgoError;
@@ -214,7 +236,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Deinit(vision_algo_dev_t *dev
         return kStatus_HAL_ValgoError;
     }
 
-    MODEL_DeInit();
+    MODEL_DeInit(&tflite_model_param->model_interpreter_data);
 
     int i;
     for(i = 0; i < tflite_model_param->user_params.inference_params.num_outputs; i++)
@@ -240,6 +262,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Run(const vision_algo_dev_t *
 {
     hal_valgo_status_t ret = kStatus_HAL_ValgoSuccess;
     tflite_model_param_t *tflite_model_param;
+    mpp_inference_inp_cb_params inf_inp_cb_param;
     HAL_LOGD("++HAL_VisionAlgoDev_TFLite_Run\n");
 
     if (dev == NULL || dev->priv_data == NULL) {
@@ -254,26 +277,30 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Run(const vision_algo_dev_t *
         return kStatus_HAL_ValgoError;
     }
 
+    inf_inp_cb_param.in_tensors[0] = (void *) &tflite_model_param->input_tensor;
+    inf_inp_cb_param.model_id = tflite_model_param->user_params.model_id;
     tflite_model_param->user_params.evt_callback_f(
-    tflite_model_param->user_params.mpp,
-    MPP_EVENT_INFERENCE_INPUT_READY,
-    (void *)tflite_model_param->input_tensor.data,
-    tflite_model_param->user_params.cb_userdata);
+            tflite_model_param->user_params.mpp,
+            MPP_EVENT_INFERENCE_INPUT_READY,
+            (void *) &inf_inp_cb_param,
+            tflite_model_param->user_params.cb_userdata);
 
     // TODO replace by a generic model->ConvertInput() call
-    MODEL_ConvertInput((uint8_t *) tflite_model_param->input_tensor.data,
+    MODEL_ConvertInput(&tflite_model_param->model_interpreter_data,
+            (uint8_t *) tflite_model_param->input_tensor.data,
             &(tflite_model_param->input_tensor.dims),
             tflite_model_param->input_tensor.type,  /* use type returned by model interpreter */
             tflite_model_param->user_params.model_input_mean,
             tflite_model_param->user_params.model_input_std); /* use tensor normalization pamaeters for LUT implementation*/
 
     uint32_t startTime = hal_get_exec_time();
-    if (kStatus_Success != MODEL_RunInference()) {
+    if (kStatus_Success != MODEL_RunInference(&tflite_model_param->model_interpreter_data)) {
         HAL_LOGE("ERROR: MODEL_RunInference() failed\n");
         return kStatus_HAL_ValgoError;
     }
     tflite_model_param->out_param.inference_time_ms = hal_get_exec_time() - startTime;
     tflite_model_param->out_param.inference_type = MPP_INFERENCE_TYPE_TFLITE;
+    tflite_model_param->out_param.model_id = tflite_model_param->user_params.model_id;
 
     tflite_model_param->user_params.evt_callback_f(
             tflite_model_param->user_params.mpp,
@@ -310,13 +337,14 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_getBufDesc(const vision_algo_
      * For now, this is only assuming NHWC order.
      */
     in_buf->alignment = HAL_TFLITE_BUFFER_ALIGN;
-    in_buf->nb_lines = tflite_model_param->input_tensor.dims.data[1]; /* number of lines required is the input height */
+    in_buf->nb_lines = get_model_input_height(tflite_model_param); /* number of lines required is the input height */
 #if (HAL_TENSOR_ARENA_NCACHE == 1)
     in_buf->cacheable = false;
 #else
     in_buf->cacheable = true;
 #endif
-    in_buf->stride = tflite_model_param->input_tensor.dims.data[2] * tflite_model_param->input_tensor.dims.data[3]; /* width * channels */
+    /* width * channels */
+    in_buf->stride = get_model_input_width(tflite_model_param) * get_model_input_channels(tflite_model_param);
     in_buf->addr = (unsigned char *)tflite_model_param->input_tensor.data;
     in_buf->max_image_size = in_buf->nb_lines * in_buf->stride;
 

@@ -53,6 +53,12 @@ char * elem_name(_elem_t *elem)
         case MPP_SINK_DISPLAY:
             str = "DISPLAY";
             break;
+        case MPP_SINK_FILE:
+            str = "FILE SINK";
+            break;
+        case MPP_SINK_RTSP:
+            str = "RTSP SINK";
+            break;
         case MPP_SINK_MC:
             str = "MC SINK";
             break;
@@ -113,6 +119,9 @@ char * elem_name(_elem_t *elem)
             break;
         case MPP_ELEMENT_VIDEO_DECODE:
             str = "VIDEO_DECODE";
+            break;
+        case MPP_ELEMENT_VIDEO_ENCODE:
+            str = "VIDEO_ENCODE";
             break;
         case MPP_ELEMENT_NUM:
         default:

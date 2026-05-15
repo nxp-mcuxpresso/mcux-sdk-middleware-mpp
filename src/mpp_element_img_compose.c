@@ -28,9 +28,9 @@
 #include "hal_utils.h"
 
 static int mpp_compose_create_surface(gfx_surface_t *surface, 
-                                    int width, int height, int stride,
+                                    int width, int height, int stride, int stride_uv,
                                     mpp_pixel_format_t format,
-                                    void *buffer,
+                                    void *buffer, void *buffer_u, void *buffer_v,
                                     const mpp_area_t *area) {
     if (!surface || !buffer) {
         return MPP_INVALID_PARAM;
@@ -39,8 +39,11 @@ static int mpp_compose_create_surface(gfx_surface_t *surface,
     surface->width = width;
     surface->height = height;
     surface->pitch = stride;
+    surface->pitch_uv = stride_uv;
     surface->format = format;
     surface->buf = buffer;
+    surface->buf_u = buffer_u;
+    surface->buf_v = buffer_v;
     surface->swapByte = 0;
     surface->lock = NULL;
 
@@ -81,8 +84,11 @@ static int compose_func(_elem_t *elem)
                                    elem->io.in_buf[0]->width,
                                    elem->io.in_buf[0]->height,
                                    elem->io.in_buf[0]->hw->stride,
+                                   elem->io.in_buf[0]->hw->stride_uv,
                                    elem->io.in_buf[0]->format,
                                    elem->io.in_buf[0]->hw->addr,
+                                   elem->io.in_buf[0]->hw->addr_u,
+                                   elem->io.in_buf[0]->hw->addr_v,
                                    NULL);   /* no crop area for input surface */
     if (ret != MPP_SUCCESS) {
         MPP_LOGE("Compose: Failed to create input surface\r\n");
@@ -94,8 +100,11 @@ static int compose_func(_elem_t *elem)
                                    elem->io.out_buf[0]->width,
                                    elem->io.out_buf[0]->height,
                                    elem->io.out_buf[0]->hw->stride,
+                                   elem->io.out_buf[0]->hw->stride_uv,
                                    elem->io.out_buf[0]->format,
                                    elem->io.out_buf[0]->hw->addr,
+                                   elem->io.out_buf[0]->hw->addr_u,
+                                   elem->io.out_buf[0]->hw->addr_v,
                                    &params->compose.input_area);
     if (ret != MPP_SUCCESS) {
         MPP_LOGE("Compose: Failed to create output surface\r\n");
@@ -103,7 +112,7 @@ static int compose_func(_elem_t *elem)
     }
 
     /* configure rotation */
-    gfx_rotate_config_t rot = { .degree = params->compose.out_angle, .target = kGFXRotate_DSTSurface};
+    gfx_rotate_config_t rot = { .degree = params->compose.out_angle, .custom_angle = 0.0f, .target = kGFXRotate_DSTSurface};
 
     /* Copy input to output as base layer using blit operation */
     if (can_blit) {
@@ -140,8 +149,11 @@ static int compose_func(_elem_t *elem)
                                        img->width,
                                        img->height,
                                        img->width * get_bitpp(img->format) / 8,
+                                       img->width * get_bitpp(img->format) / 8,
                                        img->format,
                                        img->buffer,
+                                       NULL,
+                                       NULL,
                                        NULL);
         if (ret != MPP_SUCCESS) {
             MPP_LOGE("Compose: Failed to create surface for image %d\r\n", i);

@@ -12,6 +12,8 @@ mcux_add_source(
             cifarnet10_executorch/cifar10_output_postproc.cpp
             cifarnet10_executorch/*.h
             get_top_n.h
+            cifarnet10_executorch/NativeFunctions.h
+            cifarnet10_executorch/RegisterKernels.cpp
 )
 
 

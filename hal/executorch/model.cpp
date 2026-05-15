@@ -18,26 +18,35 @@
 #include "hal_valgo_dev.h"
 
 /* ExecuTorch core includes */
+#if (HAL_EXECUTORCH_BACKEND_NEUTRON == 1)
+#include <executorch/backends/nxp/runtime/NeutronDriver.h>
+#endif
+
 #include <executorch/extension/data_loader/buffer_data_loader.h>
+#include <executorch/extension/evalue_util/print_evalue.h>
+#include <executorch/extension/runner_util/inputs.h>
 #include <executorch/runtime/executor/method.h>
 #include <executorch/runtime/executor/program.h>
+#include <executorch/runtime/platform/platform.h>
 #include <executorch/runtime/platform/runtime.h>
-#include <executorch/runtime/core/exec_aten/exec_aten.h>
-#include <executorch/runtime/core/memory_allocator.h>
 
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
+using executorch::aten::TensorImpl;
+using executorch::extension::BufferCleanup;
 using executorch::extension::BufferDataLoader;
 using executorch::runtime::Error;
 using executorch::runtime::EValue;
 using executorch::runtime::HierarchicalAllocator;
-using executorch::runtime::Method;
-using executorch::runtime::MethodMeta;
 using executorch::runtime::MemoryAllocator;
 using executorch::runtime::MemoryManager;
+using executorch::runtime::Method;
+using executorch::runtime::MethodMeta;
 using executorch::runtime::Program;
 using executorch::runtime::Result;
 using executorch::runtime::Span;
-using executorch::aten::ScalarType;
-using executorch::aten::Tensor;
+using executorch::runtime::Tag;
+using executorch::runtime::TensorInfo;
 
 /* Memory arenas */
 constexpr size_t kMethodArenaSize = HAL_EXECUTORCH_METHOD_ARENA_SIZE_KB * 1024;
@@ -57,16 +66,154 @@ static uint8_t s_tempArena[kTempArenaSize]
     __ALIGNED(HAL_EXECUTORCH_BUFFER_ALIGN);
 #endif
 
-/* Runtime objects */
-static std::unique_ptr<BufferDataLoader> s_loader;
-static std::unique_ptr<Program> s_program;
-static std::unique_ptr<MemoryAllocator> s_method_allocator;
-static std::unique_ptr<MemoryAllocator> s_temp_allocator;
-static Method *s_method = nullptr;
+static int s_neutronRefCount = 0;
 
-/* Planned memory buffers */
-static std::vector<uint8_t *> s_planned_buffers;
-static std::vector<Span<uint8_t>> s_planned_spans;
+// ============================================================
+// ✅ Memory Allocator with size tracking
+// ============================================================
+class CustomMemoryAllocator : public executorch::runtime::MemoryAllocator {
+    public:
+        CustomMemoryAllocator(uint32_t size, uint8_t* base_address)
+            : MemoryAllocator(size, base_address), used_(0) {}
+
+        void* allocate(size_t size, size_t alignment = kDefaultAlignment) override {
+            void* ret = executorch::runtime::MemoryAllocator::allocate(size, alignment);
+            if (ret != nullptr) {
+                size_t allocator_size = executorch::runtime::MemoryAllocator::size();
+                if ((size & (alignment - 1)) == 0) {
+                    if (used_ > allocator_size - size) {
+                        HAL_LOGE("Executorh MemoryAllocator failed(size %d, align %d, used %d)\r\n", size, alignment, used_);
+                        return nullptr;
+                    }
+                    used_ += size;
+                } else {
+                    size_t aligned = (used_ | (alignment - 1)) + 1;
+                    if (aligned > allocator_size - size) {
+                        HAL_LOGE("Executorh MemoryAllocator failed(size %d, align %d, used %d)\r\n", size, alignment, used_);
+                        return nullptr;
+                    }
+                    used_ = aligned + size;
+                }
+            }
+            else {
+                HAL_LOGE("Executorh MemoryAllocator failed(size %d, align %d, used %d)\r\n", size, alignment, used_);
+            }
+            return ret;
+        }
+
+        void reset () override {
+            executorch::runtime::MemoryAllocator::reset();
+            used_ = 0;
+        }
+
+        // Returns the used size of the allocator's memory buffer.
+        size_t used_size() const {
+            return used_;
+        }
+
+        // Returns the free size of the allocator's memory buffer.
+        size_t free_size() const {
+            size_t allocator_size = executorch::runtime::MemoryAllocator::size();
+
+            if (used_ > allocator_size) {
+                return 0;
+            }
+            return allocator_size - used_;
+        }
+
+    private:
+        size_t used_;
+};
+
+
+/* Maximum number of models that can be initialized simultaneously */
+#ifndef MAX_EXECUTORCH_MODEL_DATABASE_SIZE
+#define MAX_EXECUTORCH_MODEL_DATABASE_SIZE 8
+#endif
+
+/* Database entry structure to track each initialized model */
+typedef struct {
+    bool in_use;
+    std::unique_ptr<BufferDataLoader> loader;
+    std::unique_ptr<Program> program;
+    std::unique_ptr<CustomMemoryAllocator> method_allocator;
+    std::unique_ptr<CustomMemoryAllocator> temp_allocator;
+    Method *method;
+    std::vector<uint8_t *> planned_buffers;
+    std::vector<Span<uint8_t>> planned_spans;
+    size_t method_arena_start;          // Start offset in s_methodArena for this model
+    size_t method_arena_size;           // Size used by this model in s_methodArena
+} executorch_model_database_entry_t;
+
+/* Global database to track all initialized models */
+static executorch_model_database_entry_t s_modelDatabase[MAX_EXECUTORCH_MODEL_DATABASE_SIZE] = {0};
+static size_t s_nextMethodArenaOffset = 0;      // Next available offset in s_methodArena
+static size_t s_highestMethodArenaEnd = 0;      // Highest end address used in s_methodArena
+
+/* Helper function to find a free slot in the database */
+static int ExecutorchFindFreeDatabaseSlot()
+{
+    for (int i = 0; i < MAX_EXECUTORCH_MODEL_DATABASE_SIZE; i++)
+    {
+        if (!s_modelDatabase[i].in_use)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/* Helper function to find the database entry for a given method pointer */
+static int ExecutorchFindDatabaseEntry(Method* method)
+{
+    for (int i = 0; i < MAX_EXECUTORCH_MODEL_DATABASE_SIZE; i++)
+    {
+        if (s_modelDatabase[i].in_use && s_modelDatabase[i].method == method)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/* Helper function to recalculate method arena usage after deinitialization */
+static void RecalculateMethodArenaUsage()
+{
+    size_t highest_end = 0;
+    bool has_active_models = false;
+
+    /* Find the highest end address of all active models */
+    for (int i = 0; i < MAX_EXECUTORCH_MODEL_DATABASE_SIZE; i++)
+    {
+        if (s_modelDatabase[i].in_use)
+        {
+            has_active_models = true;
+            size_t model_end = s_modelDatabase[i].method_arena_start + s_modelDatabase[i].method_arena_size;
+            
+            if (model_end > highest_end)
+            {
+                highest_end = model_end;
+            }
+        }
+    }
+
+    /* Update global tracking */
+    if (has_active_models)
+    {
+        s_highestMethodArenaEnd = highest_end;
+        s_nextMethodArenaOffset = highest_end;
+    }
+    else
+    {
+        /* No active models, reset everything */
+        s_nextMethodArenaOffset = 0;
+        s_highestMethodArenaEnd = 0;
+    }
+
+    HAL_LOGI("Method arena recalculated: next_offset=%d, highest_end=%d, available=%d\r\n",
+              s_nextMethodArenaOffset, s_highestMethodArenaEnd,
+              kMethodArenaSize - s_nextMethodArenaOffset);
+}
 
 /*
  * Map ExecuTorch ScalarType to MPP tensor type
@@ -100,134 +247,178 @@ static void extract_dims(const Tensor &tensor, mpp_tensor_dims_t *dims)
     }
 }
 
-/*
+ /*
  * Called on error paths and from MODEL_EXECUTORCH_DeInit.
  */
-static void cleanup_runtime_objects(void)
+static void cleanup_runtime_objects(int slot)
 {
-    if (s_method) {
-        delete s_method;
-        s_method = nullptr;
+    if (slot < 0 || slot >= MAX_EXECUTORCH_MODEL_DATABASE_SIZE)
+    {
+        return;
     }
-    s_planned_buffers.clear();
-    s_planned_spans.clear();
-    s_program.reset();
-    s_loader.reset();
-    s_temp_allocator.reset();
-    s_method_allocator.reset();
+
+    if (s_modelDatabase[slot].method)
+    {
+        delete s_modelDatabase[slot].method;
+        s_modelDatabase[slot].method = nullptr;
+    }
+    s_modelDatabase[slot].planned_buffers.clear();
+    s_modelDatabase[slot].planned_spans.clear();
+    s_modelDatabase[slot].program.reset();
+    s_modelDatabase[slot].loader.reset();
+    s_modelDatabase[slot].temp_allocator.reset();
+    s_modelDatabase[slot].method_allocator.reset();
+    s_modelDatabase[slot].in_use = false;
 }
 
 status_t MODEL_EXECUTORCH_Init(
     const void *pte_data,
     size_t pte_size,
+    model_executorch_interpreter_data_t *interpreter_data,
     mpp_inference_tensor_params_t *inputTensor,
     mpp_inference_tensor_params_t *outputTensor[],
     int mean,
     int std,
     int nb_out_tensor)
 {
-    HAL_LOGD("++MODEL_EXECUTORCH_Init");
+    /* Find a free slot in the database */
+    int slot = ExecutorchFindFreeDatabaseSlot();
+    if (slot < 0)
+    {
+        HAL_LOGE("Model database is full. Maximum %d models can be initialized simultaneously\r\n", MAX_EXECUTORCH_MODEL_DATABASE_SIZE);
+        return kStatus_Fail;
+    }
+
+    #if (HAL_EXECUTORCH_BACKEND_NEUTRON == 1)
+    if (s_neutronRefCount == 0) {
+        NeutronError error = ENONE;
+        error = neutronInit();
+        if (error != ENONE) {
+            HAL_LOGE("Internal Neutron NPU driver error %x in init!\n", error);
+            return kStatus_Fail;
+        }
+    }
+    s_neutronRefCount++;
+    #endif
+
+    HAL_LOGD("++MODEL_EXECUTORCH_Init (slot %d)\r\n", slot);
 
     /* Initialize ExecuTorch runtime */
     executorch::runtime::runtime_init();
 
+    /* Allocate method arena slice for this model */
+    size_t method_arena_start = s_nextMethodArenaOffset;
+    size_t method_arena_size = kMethodArenaSize - s_nextMethodArenaOffset;
+
     /* Create memory allocators */
-    s_method_allocator = std::make_unique<MemoryAllocator>(
-        kMethodArenaSize, s_methodArena);
-    s_temp_allocator = std::make_unique<MemoryAllocator>(
+    s_modelDatabase[slot].method_allocator = std::make_unique<CustomMemoryAllocator>(
+        method_arena_size, &s_methodArena[method_arena_start]);
+    s_modelDatabase[slot].temp_allocator = std::make_unique<CustomMemoryAllocator>(
         kTempArenaSize, s_tempArena);
 
-    if (!s_method_allocator || !s_temp_allocator) {
+    if (!s_modelDatabase[slot].method_allocator || !s_modelDatabase[slot].temp_allocator) {
         HAL_LOGE("Failed to create allocators");
+        cleanup_runtime_objects(slot);
         return kStatus_Fail;
     }
 
-    HAL_LOGD("Memory allocators created:");
-    HAL_LOGD("  Method arena: %zu KB at 0x%p", kMethodArenaSize / 1024, s_methodArena);
-    HAL_LOGD("  Temp arena: %zu KB at 0x%p", kTempArenaSize / 1024, s_tempArena);
+    HAL_LOGD("Memory allocators created:\r\n");
+    HAL_LOGD("  Method arena: %u bytes at offset %d ( start 0x%x)\r\n", 
+             method_arena_size, method_arena_start, &s_methodArena[method_arena_start]);
+    HAL_LOGD("  Temp arena: %u bytes at 0x%x (shared)\r\n", kTempArenaSize, s_tempArena);
 
     /* Create data loader from PTE buffer */
-    s_loader = std::make_unique<BufferDataLoader>(pte_data, pte_size);
-    if (!s_loader) {
-        HAL_LOGE("Failed to create BufferDataLoader");
+    s_modelDatabase[slot].loader = std::make_unique<BufferDataLoader>(pte_data, pte_size);
+    if (!s_modelDatabase[slot].loader) {
+        HAL_LOGE("Failed to create BufferDataLoader\r\n");
         return kStatus_Fail;
     }
 
     /* Load program */
-    Result<Program> program_res = Program::load(s_loader.get());
+    Result<Program> program_res = Program::load(s_modelDatabase[slot].loader.get());
     if (!program_res.ok()) {
-        HAL_LOGE("Program load failed: %d",
+        HAL_LOGE("Program load failed: %d\r\n",
                  static_cast<int>(program_res.error()));
         return kStatus_Fail;
     }
-    s_program = std::make_unique<Program>(std::move(program_res.get()));
+    s_modelDatabase[slot].program = std::make_unique<Program>(std::move(program_res.get()));
 
-    HAL_LOGI("Model buffer loaded, has %d methods", s_program->num_methods());
+    HAL_LOGI("Model buffer loaded, has %d methods\r\n", s_modelDatabase[slot].program->num_methods());
 
     /* Get method name and metadata for memory planning */
     const char *method_name = nullptr;
     {
-        const auto method_name_result = s_program->get_method_name(0);
+        const auto method_name_result = s_modelDatabase[slot].program->get_method_name(0);
         if (!method_name_result.ok()) {
-            HAL_LOGE("Program has no methods");
-            cleanup_runtime_objects();
+            HAL_LOGE("Program has no methods\r\n");
+            cleanup_runtime_objects(slot);
             return kStatus_Fail;
         }
         method_name = *method_name_result;
     }
-    HAL_LOGI("Using method: %s", method_name);
+    HAL_LOGI("Using method: %s\r\n", method_name);
 
-    Result<MethodMeta> method_meta = s_program->method_meta(method_name);
+    Result<MethodMeta> method_meta = s_modelDatabase[slot].program->method_meta(method_name);
     if (!method_meta.ok()) {
-        HAL_LOGE("Failed to get method_meta for %s: 0x%x",
+        HAL_LOGE("Failed to get method_meta for %s: 0x%x\r\n",
                  method_name, static_cast<unsigned int>(method_meta.error()));
-        cleanup_runtime_objects();
+        cleanup_runtime_objects(slot);
         return kStatus_Fail;
     }
 
     /* Setup planned memory buffers */
-    size_t num_memory_planned_buffers = method_meta->num_memory_planned_buffers();
-    HAL_LOGI("Method requires %zu planned memory buffers", num_memory_planned_buffers);
+    size_t num_planned_buffers = method_meta->num_memory_planned_buffers();
+    HAL_LOGI("Method requires %u planned memory buffers\r\n", num_planned_buffers);
 
-    s_planned_buffers.clear();
-    s_planned_spans.clear();
+    // Reserve capacity to prevent vector reallocation
+    s_modelDatabase[slot].planned_buffers.reserve(num_planned_buffers);
+    s_modelDatabase[slot].planned_spans.reserve(num_planned_buffers);
 
-    for (size_t id = 0; id < num_memory_planned_buffers; ++id) {
+    for (size_t id = 0; id < num_planned_buffers; ++id) {
         size_t buffer_size = static_cast<size_t>(
             method_meta->memory_planned_buffer_size(id).get());
-        HAL_LOGI("Setting up planned buffer %zu, size %zu", id, buffer_size);
+        HAL_LOGI("Setting up planned buffer %u, size %u\r\n", id, buffer_size);
 
+        // Allocate with proper alignment
         uint8_t *buffer = reinterpret_cast<uint8_t *>(
-            s_method_allocator->allocate(buffer_size, HAL_EXECUTORCH_BUFFER_ALIGN));
+            s_modelDatabase[slot].method_allocator->allocate(buffer_size, HAL_EXECUTORCH_BUFFER_ALIGN));
 
         if (buffer == nullptr) {
-            HAL_LOGE("Failed to allocate planned buffer %zu", id);
-            cleanup_runtime_objects();
+            HAL_LOGE("Failed to allocate planned buffer %u\r\n", id);
+            cleanup_runtime_objects(slot);
             return kStatus_Fail;
         }
 
-        s_planned_buffers.push_back(buffer);
-        s_planned_spans.push_back({s_planned_buffers.back(), buffer_size});
+        // Verify alignment
+        if (((uintptr_t)buffer & (HAL_EXECUTORCH_BUFFER_ALIGN - 1)) != 0) {
+            HAL_LOGE("Planned buffer %u not properly aligned (addr=0x%x)\r\n",
+                     id, (unsigned int)buffer);
+            cleanup_runtime_objects(slot);
+            return kStatus_Fail;
+        }
+
+        s_modelDatabase[slot].planned_buffers.push_back(buffer);
+        s_modelDatabase[slot].planned_spans.push_back({s_modelDatabase[slot].planned_buffers.back(), buffer_size});
     }
 
     /* Create HierarchicalAllocator and MemoryManager */
     HierarchicalAllocator planned_memory(
-        {s_planned_spans.data(), s_planned_spans.size()});
+        {s_modelDatabase[slot].planned_spans.data(), s_modelDatabase[slot].planned_spans.size()});
     MemoryManager memory_manager(
-        s_method_allocator.get(), &planned_memory, s_temp_allocator.get());
+        s_modelDatabase[slot].method_allocator.get(), &planned_memory, s_modelDatabase[slot].temp_allocator.get());
 
     /* 8. Load method */
     Result<Method> method_res =
-        s_program->load_method(method_name, &memory_manager);
+        s_modelDatabase[slot].program->load_method(method_name, &memory_manager);
     if (!method_res.ok()) {
-        HAL_LOGE("Loading of method %s failed with status 0x%x",
+        HAL_LOGE("Loading of method %s failed with status 0x%x\r\n",
                  method_name, static_cast<unsigned int>(method_res.error()));
-        cleanup_runtime_objects();
+        cleanup_runtime_objects(slot);
         return kStatus_Fail;
     }
-    s_method = new Method(std::move(method_res.get()));
+    s_modelDatabase[slot].method = new Method(std::move(method_res.get()));
 
-    HAL_LOGI("Method loaded successfully");
+    HAL_LOGI("Method loaded successfully\r\n");
 
     /*
      * ExecuTorch marks mutable_input/mutable_output as deprecated but they are
@@ -240,18 +431,18 @@ status_t MODEL_EXECUTORCH_Init(
 #endif
 
     /* Get input tensor metadata */
-    size_t num_inputs = s_method->inputs_size();
+    size_t num_inputs = s_modelDatabase[slot].method->inputs_size();
     if (num_inputs == 0) {
-        HAL_LOGE("No input tensors found");
-        cleanup_runtime_objects();
+        HAL_LOGE("No input tensors found\r\n");
+        cleanup_runtime_objects(slot);
         return kStatus_Fail;
     }
-    HAL_LOGI("%zu input tensors found", num_inputs);
+    HAL_LOGI("%u input tensors found\r\n", num_inputs);
 
-    EValue &input_evalue = s_method->mutable_input(0);
+    EValue &input_evalue = s_modelDatabase[slot].method->mutable_input(0);
     if (!input_evalue.isTensor()) {
-        HAL_LOGE("Input 0 is not a tensor");
-        cleanup_runtime_objects();
+        HAL_LOGE("Input 0 is not a tensor\r\n");
+        cleanup_runtime_objects(slot);
         return kStatus_Fail;
     }
     Tensor input_tensor = input_evalue.toTensor();
@@ -260,7 +451,7 @@ status_t MODEL_EXECUTORCH_Init(
     inputTensor->type = map_scalar_type(input_tensor.scalar_type());
     extract_dims(input_tensor, &inputTensor->dims);
 
-    HAL_LOGI("Input tensor: type=%d, dims=[%d,%d,%d,%d] (NCHW)",
+    HAL_LOGI("Input tensor: type=%d, dims=[%d,%d,%d,%d] (NCHW)\r\n",
              inputTensor->type,
              inputTensor->dims.data[0],
              inputTensor->dims.data[1],
@@ -268,21 +459,21 @@ status_t MODEL_EXECUTORCH_Init(
              inputTensor->dims.data[3]);
 
     /* Get output tensor metadata */
-    size_t num_outputs = s_method->outputs_size();
-    HAL_LOGI("%zu output tensors found", num_outputs);
+    size_t num_outputs = s_modelDatabase[slot].method->outputs_size();
+    HAL_LOGI("%u output tensors found\r\n", num_outputs);
 
     if ((int)num_outputs < nb_out_tensor) {
-        HAL_LOGE("Model has %zu outputs, but %d requested",
+        HAL_LOGE("Model has %u outputs, but %d requested\r\n",
                  num_outputs, nb_out_tensor);
-        cleanup_runtime_objects();
+        cleanup_runtime_objects(slot);
         return kStatus_Fail;
     }
 
     for (int i = 0; i < nb_out_tensor; i++) {
-        EValue &output_evalue = s_method->mutable_output(i);
+        EValue &output_evalue = s_modelDatabase[slot].method->mutable_output(i);
         if (!output_evalue.isTensor()) {
-            HAL_LOGE("Output %d is not a tensor", i);
-            cleanup_runtime_objects();
+            HAL_LOGE("Output %d is not a tensor\r\n", i);
+            cleanup_runtime_objects(slot);
             return kStatus_Fail;
         }
         Tensor output_tensor = output_evalue.toTensor();
@@ -291,7 +482,7 @@ status_t MODEL_EXECUTORCH_Init(
         outputTensor[i]->type = map_scalar_type(output_tensor.scalar_type());
         extract_dims(output_tensor, &outputTensor[i]->dims);
 
-        HAL_LOGI("Output[%d] tensor: type=%d, dims=[%d,%d,%d,%d]",
+        HAL_LOGI("Output[%d] tensor: type=%d, dims=[%d,%d,%d,%d]\r\n",
                  i,
                  outputTensor[i]->type,
                  outputTensor[i]->dims.data[0],
@@ -304,30 +495,99 @@ status_t MODEL_EXECUTORCH_Init(
 #pragma GCC diagnostic pop
 #endif
 
-    HAL_LOGD("--MODEL_EXECUTORCH_Init");
+    size_t total_method_arena_used = s_modelDatabase[slot].method_allocator->used_size();
+
+    /* Align the used size to HAL_EXECUTORCH_BUFFER_ALIGN */
+    total_method_arena_used = (total_method_arena_used + HAL_EXECUTORCH_BUFFER_ALIGN - 1) 
+                                & ~(HAL_EXECUTORCH_BUFFER_ALIGN - 1);
+
+    HAL_LOGI("Method arena used: %u bytes (aligned to %u)\r\n", total_method_arena_used, HAL_EXECUTORCH_BUFFER_ALIGN);
+
+    /* Update database entry with memory tracking info */
+    s_modelDatabase[slot].method_arena_start = method_arena_start;
+    s_modelDatabase[slot].method_arena_size = total_method_arena_used;
+
+    /* Update global method arena tracking */
+    s_nextMethodArenaOffset = method_arena_start + total_method_arena_used;
+    if (s_nextMethodArenaOffset > s_highestMethodArenaEnd) {
+        s_highestMethodArenaEnd = s_nextMethodArenaOffset;
+    }
+
+    /* Mark database entry as in use and store interpreter data */
+    s_modelDatabase[slot].in_use = true;
+    interpreter_data->s_method = (void*)s_modelDatabase[slot].method;
+
+    HAL_LOGI("Model initialized successfully at slot %d\r\n", slot);
+    HAL_LOGI("  Method arena state:\r\n    next_offset=%d,\r\n    highest_end=%d,\r\n    available=%d\r\n",
+             s_nextMethodArenaOffset, s_highestMethodArenaEnd,
+             kMethodArenaSize - s_nextMethodArenaOffset);
+
+    HAL_LOGD("--MODEL_EXECUTORCH_Init\r\n");
     return kStatus_Success;
 }
 
-status_t MODEL_EXECUTORCH_DeInit(void)
+status_t MODEL_EXECUTORCH_DeInit(model_executorch_interpreter_data_t *interpreter_data)
 {
     HAL_LOGD("++MODEL_EXECUTORCH_DeInit");
 
-    cleanup_runtime_objects();
+    Method* method = static_cast<Method*>(interpreter_data->s_method);
+    
+    /* Find the database entry for this method */
+    int slot = ExecutorchFindDatabaseEntry(method);
+    if (slot < 0)
+    {
+        HAL_LOGE("Method not found in database\r\n");
+        return kStatus_Fail;
+    }
+
+    HAL_LOGI("Deinitializing model from slot %d\r\n", slot);
+    HAL_LOGI("  Method arena: start=%d, size=%d\r\n",
+             s_modelDatabase[slot].method_arena_start,
+             s_modelDatabase[slot].method_arena_size);
+
+    /* Check if this model has the highest end address */
+    size_t model_end = s_modelDatabase[slot].method_arena_start + s_modelDatabase[slot].method_arena_size;
+    bool is_highest_end = (model_end == s_highestMethodArenaEnd);
+
+    #if (HAL_EXECUTORCH_BACKEND_NEUTRON == 1)
+        s_neutronRefCount--;
+        if (s_neutronRefCount == 0) {
+            neutronDeinit();
+        }
+    #endif
+
+    cleanup_runtime_objects(slot);
+
+    /* Clear interpreter data */
+    interpreter_data->s_method = nullptr;
+
+    if (is_highest_end)
+    {
+        HAL_LOGI("Freed model had the highest end address, reclaiming space\r\n");
+    }
+    else
+    {
+        HAL_LOGI("Freed model's method arena creates a gap (will be reclaimed when all models are freed)\r\n");
+    }
+
+    /* Recalculate method arena usage based on remaining active models */
+    RecalculateMethodArenaUsage();
 
     HAL_LOGD("--MODEL_EXECUTORCH_DeInit");
     return kStatus_Success;
 }
 
-status_t MODEL_EXECUTORCH_RunInference(void)
+status_t MODEL_EXECUTORCH_RunInference(model_executorch_interpreter_data_t *interpreter_data)
 {
     HAL_LOGD("++MODEL_EXECUTORCH_RunInference");
 
-    if (s_method == nullptr) {
+    Method* method = static_cast<Method*>(interpreter_data->s_method);
+    if (method == nullptr) {
         HAL_LOGE("Method not initialized");
         return kStatus_Fail;
     }
 
-    Error err = s_method->execute();
+    Error err = method->execute();
     if (err != Error::Ok) {
         HAL_LOGE("Execution failed: %d", static_cast<int>(err));
         return kStatus_Fail;
@@ -341,8 +601,10 @@ status_t MODEL_EXECUTORCH_RunInference(void)
  * Unlike TFLite, ExecuTorch models handle quantization/dequantization
  * internally through quantized_decomposed operators in the PTE file.
  *
- * Tensor dimensions are expected in NCHW order:
+ * Tensor dimensions are expected in NHWC, input is NCHW order:
  *   dims[0]=N, dims[1]=C, dims[2]=H, dims[3]=W
+ *      ------->
+ *   dims[0]=N, dims[1]=H, dims[2]=W, dims[3]=C
  */
 void MODEL_EXECUTORCH_ConvertInput(
     uint8_t *data,
@@ -400,14 +662,11 @@ void MODEL_EXECUTORCH_ConvertInput(
             break;
 
         case MPP_TENSOR_TYPE_FLOAT32:
-        {
-            for (int i = size - 1; i >= 0; i--)
             {
-                reinterpret_cast<float *>(data)[i] =
-                    (static_cast<float>(data[i]) - mean) / std;
+                HAL_LOGD("FLOAT32 input already normalized.");
             }
-        }
             break;
+
         default:
             assert("Unknown input tensor data type");
     }

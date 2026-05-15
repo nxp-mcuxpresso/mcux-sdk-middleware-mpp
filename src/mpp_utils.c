@@ -20,9 +20,16 @@
 #include <string.h>
 
 #include "app.h"
+#include "pin_mux.h"
 #include "mpp_debug.h"
 #include "hal_camera_shared.h"
 #include "mpp_config.h"
+
+#ifdef ENABLE_ETHERNET_PHY
+#include "board.h"
+#include "lwip/opt.h"
+#include "lwip/sockets.h"
+#endif /* ENABLE_ETHERNET_PHY */
 
 #ifdef RPMSG_USED
 #include "rpmsg_lite.h"
@@ -196,9 +203,170 @@ int mpp_storage_init(void)
 
     if (hal_storage_init() != 0)
     {
-        MPP_LOGE("Storage initialization failed\r\n");
+        MPP_LOGE("Failed to initialize storage\r\n");
         return MPP_ERROR;
     }
 
     return MPP_SUCCESS;
 }
+
+int mpp_storage_get_free_space(uint64_t *free_bytes, uint64_t *total_bytes)
+{
+    if (free_bytes == NULL || total_bytes == NULL)
+    {
+        MPP_LOGE("Invalid parameters: free_bytes and total_bytes cannot be NULL\r\n");
+        return MPP_ERROR;
+    }
+
+    if (!hal_storage_is_mounted())
+    {
+        MPP_LOGE("Storage is not mounted. Call mpp_storage_init() first\r\n");
+        return MPP_ERROR;
+    }
+
+    hal_storage_status_t status = hal_storage_get_free_space(free_bytes, total_bytes);
+    if (status != kStatus_HAL_StorageSuccess)
+    {
+        MPP_LOGE("Failed to get storage space information (status=%d)\r\n", status);
+        return MPP_ERROR;
+    }
+
+    return MPP_SUCCESS;
+}
+
+#if ENABLE_ETHERNET_PHY && LWIP_IPV4 && LWIP_RAW && LWIP_SOCKET
+#include "ping.h"
+#include "lwip/netifapi.h"
+#include "lwip/tcpip.h"
+#include "netif/ethernet.h"
+#include "ethernetif.h"
+
+#if ETH_USE_GPIO_ADAPTER
+#include "fsl_adapter_gpio.h"
+#endif /* ETH_USE_GPIO_ADAPTER */
+
+/*! @brief Selection of GPIO perihperal and its pin for the reception of PHY interrupts. */
+#if ETH_LINK_POLLING_INTERVAL_MS == 0
+#if ETH_USE_GPIO_ADAPTER == 0
+#error "Interrupt-based link-state detection is enabled but GPIO adapter is not used."
+#endif /* ETH_USE_GPIO_ADAPTER */
+#ifndef EXAMPLE_PHY_INT_PORT
+#if (!defined(BOARD_NETWORK_USE_100M_ENET_PORT) || !BOARD_NETWORK_USE_100M_ENET_PORT) && \
+    defined(BOARD_INITENET1GPINS_PHY_INTR_PERIPHERAL)
+#define EXAMPLE_PHY_INT_PORT BOARD_INITENET1GPINS_PHY_INTR_PERIPHERAL
+#elif defined(BOARD_INITENETPINS_PHY_INTR_PERIPHERAL)
+#define EXAMPLE_PHY_INT_PORT BOARD_INITENETPINS_PHY_INTR_PERIPHERAL
+#elif defined(BOARD_INITPINS_PHY_INTR_PERIPHERAL)
+#define EXAMPLE_PHY_INT_PORT BOARD_INITPINS_PHY_INTR_PERIPHERAL
+#else
+#error "Interrupt-based link-state detection was enabled on an unsupported board."
+#endif
+#endif // #ifndef EXAMPLE_PHY_INT_PORT
+
+#ifndef EXAMPLE_PHY_INT_PIN
+#if (!defined(BOARD_NETWORK_USE_100M_ENET_PORT) || !BOARD_NETWORK_USE_100M_ENET_PORT) && \
+    defined(BOARD_INITENET1GPINS_PHY_INTR_CHANNEL)
+#define EXAMPLE_PHY_INT_PIN BOARD_INITENET1GPINS_PHY_INTR_CHANNEL
+#elif defined(BOARD_INITENETPINS_PHY_INTR_CHANNEL)
+#define EXAMPLE_PHY_INT_PIN BOARD_INITENETPINS_PHY_INTR_CHANNEL
+#elif defined(BOARD_INITPINS_PHY_INTR_CHANNEL)
+#define EXAMPLE_PHY_INT_PIN BOARD_INITPINS_PHY_INTR_CHANNEL
+#else
+#error "Interrupt-based link-state detection was enabled on an unsupported board."
+#endif
+#endif // #ifndef EXAMPLE_PHY_INT_PIN
+#endif // #if ETH_LINK_POLLING_INTERVAL_MS == 0
+
+static phy_handle_t phyHandle;
+static struct netif netif;
+
+int mpp_eth_netif_init(uint8_t ip_addr[4], uint8_t netmask[4], uint8_t gateway[4])
+{
+    ip4_addr_t netif_ipaddr, netif_netmask, netif_gw;
+    ethernetif_config_t enet_config = {
+        .phyHandle   = &phyHandle,
+        .phyAddr     = EXAMPLE_PHY_ADDRESS,
+        .phyOps      = EXAMPLE_PHY_OPS,
+        .phyResource = EXAMPLE_PHY_RESOURCE,
+        .srcClockHz  = EXAMPLE_CLOCK_FREQ,
+
+#if ETH_USE_GPIO_ADAPTER && (ETH_LINK_POLLING_INTERVAL_MS == 0)
+        .phyIntGpio    = EXAMPLE_PHY_INT_PORT,
+        .phyIntGpioPin = EXAMPLE_PHY_INT_PIN
+#endif
+    };
+    err_t err;
+    int retry_count = 0;
+    const int MAX_LINK_RETRIES = 10;
+
+    /* Validate input parameters */
+    if (ip_addr == NULL || netmask == NULL || gateway == NULL)
+    {
+        PRINTF("ERROR: Invalid parameters (NULL pointer)\r\n");
+        return -1;
+    }
+
+    IP4_ADDR(&netif_ipaddr, ip_addr[0], ip_addr[1], ip_addr[2], ip_addr[3]);
+    IP4_ADDR(&netif_netmask, netmask[0], netmask[1], netmask[2], netmask[3]);
+    IP4_ADDR(&netif_gw, gateway[0], gateway[1], gateway[2], gateway[3]);
+
+    tcpip_init(NULL, NULL);
+
+#if ETH_USE_GPIO_ADAPTER
+    HAL_GpioPreInit();
+#endif /* ETH_USE_GPIO_ADAPTER */
+
+    err = netifapi_netif_add(&netif, &netif_ipaddr, &netif_netmask, &netif_gw, &enet_config, 
+                             EXAMPLE_NETIF_INIT_FN, tcpip_input);
+    if (err != ERR_OK)
+    {
+        PRINTF("ERROR: Failed to add network interface (err=%d)\r\n", err);
+        return -3;
+    }
+
+    err = netifapi_netif_set_default(&netif);
+    if (err != ERR_OK)
+    {
+        PRINTF("ERROR: Failed to set default network interface (err=%d)\r\n", err);
+        /* Cleanup: remove the network interface */
+        netifapi_netif_remove(&netif);
+        return -4;
+    }
+
+    err = netifapi_netif_set_up(&netif);
+    if (err != ERR_OK)
+    {
+        PRINTF("ERROR: Failed to bring up network interface (err=%d)\r\n", err);
+        /* Cleanup: remove the network interface */
+        netifapi_netif_remove(&netif);
+        return -5;
+    }
+
+    /* Wait for link with timeout and retry mechanism */
+    while (ethernetif_wait_linkup(&netif, 5000) != ERR_OK)
+    {
+        PRINTF("PHY Auto-negotiation failed. Please check the cable connection and link partner setting.\r\n");
+        PRINTF("Retry %d/%d\r\n", retry_count + 1, MAX_LINK_RETRIES);
+        
+        if (++retry_count >= MAX_LINK_RETRIES)
+        {
+            PRINTF("ERROR: Failed to establish link after %d attempts\r\n", MAX_LINK_RETRIES);
+            /* Cleanup: bring down and remove the network interface */
+            netifapi_netif_set_down(&netif);
+            netifapi_netif_remove(&netif);
+            return -6;
+        }
+    }
+
+    PRINTF("************************************************\r\n");
+    PRINTF(" IPv4 Address     : %u.%u.%u.%u\r\n", ((u8_t *)&netif_ipaddr)[0], ((u8_t *)&netif_ipaddr)[1],
+            ((u8_t *)&netif_ipaddr)[2], ((u8_t *)&netif_ipaddr)[3]);
+    PRINTF(" IPv4 Subnet mask : %u.%u.%u.%u\r\n", ((u8_t *)&netif_netmask)[0], ((u8_t *)&netif_netmask)[1],
+            ((u8_t *)&netif_netmask)[2], ((u8_t *)&netif_netmask)[3]);
+    PRINTF(" IPv4 Gateway     : %u.%u.%u.%u\r\n", ((u8_t *)&netif_gw)[0], ((u8_t *)&netif_gw)[1],
+            ((u8_t *)&netif_gw)[2], ((u8_t *)&netif_gw)[3]);
+    PRINTF("************************************************\r\n");
+
+    return 0;
+}
+#endif /* ENABLE_ETHERNET_PHY && ENABLE_ETHERNET_PHY && LWIP_IPV4 && LWIP_RAW && LWIP_SOCKET */

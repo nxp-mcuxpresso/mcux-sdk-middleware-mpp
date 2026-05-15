@@ -16,6 +16,8 @@
  *  limitations under the License.
  */
 
+#include <math.h>
+
 #include "mpp_api.h"
 #include "mpp_api_types_internal.h"
 #include "mpp_heap.h"
@@ -133,7 +135,18 @@ static int convert_func(_elem_t *elem)
     }
     gfx->dst.pitch = obuf->hw->stride;
 
-    gfx_rotate_config_t rot = { .degree = elem->params.convert.angle, .target = kGFXRotate_DSTSurface};
+    if (obuf->format == MPP_PIXEL_YUV420P)
+    {
+        gfx->dst.buf_u = obuf->hw->addr_u;
+        gfx->dst.buf_v = obuf->hw->addr_v;
+        gfx->dst.pitch_uv = obuf->hw->stride_uv;
+    }
+
+    gfx_rotate_config_t rot = { 
+        .degree = elem->params.convert.angle, 
+        .target = kGFXRotate_DSTSurface,
+        .custom_angle = elem->params.convert.custom_angle
+    };
 
     ret = gfx->ops->blit(gfx, &gfx->src, &gfx->dst, &rot, elem->params.convert.flip);
     if (ret != 0) {
@@ -147,6 +160,12 @@ static int convert_func(_elem_t *elem)
         return MPP_ERROR;
     }
     return MPP_SUCCESS;
+}
+
+static inline bool is_custom_rotation(mpp_rotate_degree_t angle, float custom_angle)
+{
+    return (angle == ROTATE_CUSTOM && custom_angle != 0.0f && custom_angle != 90.0f
+                                   && custom_angle != 180.0f && custom_angle != 270.0f);
 }
 
 /* check parameters and complete missing fields */
@@ -219,22 +238,51 @@ static int check_convert_params(_elem_t *elem)
      * - dims of input window
      */
     if(!(elem->params.convert.ops & MPP_CONVERT_SCALE))
-    {   /* keep source dimensions */
+    {
+        /* keep source dimensions */
         if(elem->params.convert.ops & MPP_CONVERT_ROTATE)
-        {   /* rotate swaps dimensions */
-            switch(elem->params.convert.angle)
+        {
+            /* rotate swaps dimensions */
+            /* Check for custom rotation */
+            if (is_custom_rotation(elem->params.convert.angle, elem->params.convert.custom_angle))
             {
-            case ROTATE_90:
-            case ROTATE_270:
-                elem->params.convert.scale.width = input_height;
-                elem->params.convert.scale.height = input_width;
-                break;
-            case ROTATE_0:
-            case ROTATE_180:
-            default:
-                elem->params.convert.scale.width = input_width;
-                elem->params.convert.scale.height = input_height;
-                break;
+                /* For custom angles, calculate bounding box */
+                float angle_rad = elem->params.convert.custom_angle * 3.14159265f / 180.0f;
+                float cos_val = fabsf(cosf(angle_rad));
+                float sin_val = fabsf(sinf(angle_rad));
+                
+                elem->params.convert.scale.width = (unsigned int)((input_width * cos_val) + (input_height * sin_val));
+                elem->params.convert.scale.height = (unsigned int)((input_height * cos_val) + (input_width * sin_val));
+            }
+            else
+            {
+                /* Fixed angle rotation */
+                switch(elem->params.convert.angle)
+                {
+                case ROTATE_90:
+                case ROTATE_270:
+                    elem->params.convert.scale.width = input_height;
+                    elem->params.convert.scale.height = input_width;
+                    break;
+                case ROTATE_CUSTOM:
+                    if (elem->params.convert.custom_angle == 0.0f || elem->params.convert.custom_angle == 180.0f)
+                    {
+                        elem->params.convert.scale.width = input_width;
+                        elem->params.convert.scale.height = input_height;
+                    }
+                    else
+                    {
+                        elem->params.convert.scale.width = input_height;
+                        elem->params.convert.scale.height = input_width;
+                    }
+                    break;
+                case ROTATE_0:
+                case ROTATE_180:
+                default:
+                    elem->params.convert.scale.width = input_width;
+                    elem->params.convert.scale.height = input_height;
+                    break;
+                }
             }
         } else {
             elem->params.convert.scale.width = input_width;
@@ -388,7 +436,8 @@ unsigned int elem_convert_setup(_elem_t *elem)
         }
 
         if (((elem->io.in_buf[0]->stripe_num > 0) || (elem->io.out_buf[0]->stripe_num > 0))
-                && elem->params.convert.angle != ROTATE_0)
+            && (elem->params.convert.angle != ROTATE_0 || 
+            is_custom_rotation(elem->params.convert.angle, elem->params.convert.custom_angle)))
         {
             MPP_LOGE("\nStripe mode not supported with rotation.\n");
             ret = MPP_INVALID_PARAM;
@@ -403,7 +452,9 @@ unsigned int elem_convert_setup(_elem_t *elem)
         }
 
         gfx->callback  = mpp->params.evt_callback_f;
-        gfx->user_data = mpp->params.cb_userdata;
+        gfx->cb_user_data = mpp->params.cb_userdata;
+        gfx->mpp = (mpp_t) mpp;
+        gfx->id = elem->params.convert.elem_id;
 
         /* setup HAL gfx structure */
         ret  = hal_gfx_setup(elem->params.convert.dev_name, gfx);
@@ -481,8 +532,9 @@ unsigned int mpp_convert_update(_elem_t *elem, mpp_element_params_t *params)
         /* do not change resolution in buffer descriptor */
 
         if (((elem->io.in_buf[0]->stripe_num > 0) || (elem->io.out_buf[0]->stripe_num > 0))
-                && elem->params.convert.angle != ROTATE_0)
-        {
+            && (elem->params.convert.angle != ROTATE_0 ||
+            is_custom_rotation(elem->params.convert.angle, elem->params.convert.custom_angle)))
+        {   
             MPP_LOGE("\nStripe mode not supported with rotation.\n");
             ret = MPP_INVALID_PARAM;
             break;

@@ -319,8 +319,27 @@ static void main_task(void *params) {
 
     /* Initialize storage (SD card + filesystem) */
     ret = mpp_storage_init();
-    if (ret)
+    if (ret == MPP_SUCCESS)
+    {
+        uint64_t free_space, total_space;
+        ret = mpp_storage_get_free_space(&free_space, &total_space);
+        if (ret == MPP_SUCCESS)
+        {
+            /* in MB */
+            uint32_t free_mb = (uint32_t)(free_space >> 20);
+            uint32_t total_mb = (uint32_t)(total_space >> 20);
+            PRINTF("SD Card - Free: %u MB, Total: %u MB\r\n", free_mb, total_mb);
+        }
+        else
+        {
+            PRINTF("SD Card - Failed to get storage space information\r\n");
+        }
+    }
+    else
+    {
+        PRINTF("SD Card initialization failed\r\n");
         goto err;
+    }
 
     mpp_t mp;
     mpp_params_t mpp_params;

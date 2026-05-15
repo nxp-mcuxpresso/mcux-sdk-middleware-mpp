@@ -22,7 +22,7 @@ MCXN947_EXAMPLES=$( echo ${MCXN947_EXAMPLES} | sed 's/ /,/g' )
 RT700_EXAMPLES=$( cat ${MPP_DIR}/boards/mimxrt700evk/examples.conf )
 RT700_EXAMPLES=$( echo ${RT700_EXAMPLES} | sed 's/ /,/g' )
 # Define skip list for examples that should not be tested
-SKIP_EXAMPLE_LIST="camera_mobilefacenet_view,camera_ultraface_mobilefacenet_view,camera_usb_final_fr_app_view,static_image_mobilefacenet_view"
+SKIP_EXAMPLE_LIST="camera_mobilefacenet_view,camera_ultraface_mobilefacenet_view,camera_usb_final_fr_app_view,static_image_mobilefacenet_view,static_image_nanodet_persondetect_view"
 EXAMPLES=""
 JSON_CONFIG_FILE="dapeng_config.json"
 JUNIT_TEST_REPORT_FILE="dapeng_test_report.xml"

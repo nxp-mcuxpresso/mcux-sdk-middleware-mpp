@@ -22,6 +22,17 @@
 #include <stdbool.h>
 
 /**
+ * @brief Storage operation status codes
+ */
+typedef enum _hal_storage_status
+{
+    kStatus_HAL_StorageSuccess = 0,      /*!< Operation successful */
+    kStatus_HAL_StorageNotMounted = -1,  /*!< Storage not mounted */
+    kStatus_HAL_StorageError = -2,       /*!< General storage error */
+    kStatus_HAL_StorageFSError = -3,     /*!< Filesystem operation error */
+} hal_storage_status_t;
+
+/**
  * @brief Initialize the storage backend (SD card + FAT filesystem).
  *
  * This function handles SD card detection, power cycling,
@@ -38,5 +49,17 @@ int hal_storage_init(void);
  * @return true if storage is mounted, false otherwise
  */
 bool hal_storage_is_mounted(void);
+
+/**
+ * @brief Get free and total space on mounted SD card
+ *
+ * @param free_bytes Pointer to store free space in bytes (can be NULL)
+ * @param total_bytes Pointer to store total space in bytes (can be NULL)
+ * @return hal_storage_status_t
+ *         kStatus_HAL_StorageSuccess: Operation successful
+ *         kStatus_HAL_StorageNotMounted: Storage not mounted
+ *         kStatus_HAL_StorageFSError: Failed to get free space
+ */
+hal_storage_status_t hal_storage_get_free_space(uint64_t *free_bytes, uint64_t *total_bytes);
 
 #endif /* _HAL_STORAGE_H_ */

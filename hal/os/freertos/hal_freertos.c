@@ -148,12 +148,12 @@ int hal_mutex_unlock (hal_mutex_t mutex)
 /* Warning: FreeRTOS requires enabling configGENERATE_RUN_TIME_STATS */
 uint32_t hal_get_exec_time()
 {
-    memset(taskStatus, 0, sizeof(taskStatus));
-    configRUN_TIME_COUNTER_TYPE runtime = 0;
+    static int cached_index = -1;
+
     TaskHandle_t cur_task = xTaskGetCurrentTaskHandle();
-    uint32_t runtime_ms = 0, tasks_time = 0;
 
     UBaseType_t number_of_tasks = uxTaskGetNumberOfTasks();
+
     if (number_of_tasks > HAL_MAX_TASKS)
     {
         HAL_LOGE("Number of tasks in the system (%d) is higher than HAL_MAX_TASKS (%d)\r\n", number_of_tasks, HAL_MAX_TASKS);
@@ -161,26 +161,30 @@ uint32_t hal_get_exec_time()
         return 0;
     }
 
-    uxTaskGetSystemState(taskStatus, HAL_MAX_TASKS, &runtime);
-    for(int i= 0; i < number_of_tasks; i++)
-    {
-        if (taskStatus[i].xHandle == NULL) break;
-        if (taskStatus[i].xHandle == cur_task) continue;
-        /* INT30-C: Prevent multiplication and addition overflow */
-        uint32_t task_runtime = taskStatus[i].ulRunTimeCounter * HAL_EXEC_TIMER_US / 1000;
-        assert(taskStatus[i].ulRunTimeCounter == 0 ||
-               (HAL_EXEC_TIMER_US / 1000) <= UINT32_MAX / taskStatus[i].ulRunTimeCounter);
-        assert(tasks_time <= UINT32_MAX - task_runtime);
-        tasks_time += task_runtime;
-    }
-    /* convert to ms */
-    runtime_ms = runtime * HAL_EXEC_TIMER_US / 1000;
+    uxTaskGetSystemState(taskStatus, number_of_tasks, NULL);
 
-    /* INT30-C: Prevent unsigned integer underflow */
-    if (runtime_ms >= tasks_time)
-        return runtime_ms - tasks_time;
+    uint32_t runtime_ticks = 0;
+
+    /* Fast path */
+    if (cached_index >= 0 &&
+        taskStatus[cached_index].xHandle == cur_task)
+    {
+        runtime_ticks = taskStatus[cached_index].ulRunTimeCounter;
+    }
     else
-        return 0;
+    {
+        for (UBaseType_t i = 0; i < number_of_tasks; i++)
+        {
+            if (taskStatus[i].xHandle == cur_task)
+            {
+                cached_index = i;
+                runtime_ticks = taskStatus[i].ulRunTimeCounter;
+                break;
+            }
+        }
+    }
+
+    return (runtime_ticks * HAL_EXEC_TIMER_US) / 1000;
 }
 
 /* Warning: FreeRTOS requires enabling configGENERATE_RUN_TIME_STATS */

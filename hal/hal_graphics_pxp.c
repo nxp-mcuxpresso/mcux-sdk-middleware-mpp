@@ -457,6 +457,10 @@ static void init_surface(mpp_flip_mode_t flip, gfx_rotate_config_t *pRotate, gfx
             bottom = pDst->top;
         } else  /* 0 degree */
         {
+            if (pRotate->degree == ROTATE_CUSTOM)
+            {
+                HAL_LOGE("Custom rotate not implemented for PXP. No rotation will be performed\r\n");
+            }
             left = pDst->left;
             top = pDst->top;
             right = pDst->right;
@@ -734,43 +738,6 @@ static int HAL_GfxDev_Pxp_BuildGray888XFromDepth16(gfx_surface_t *pSrc, gfx_surf
     return error;
 }
 
-static int HAL_GfxDev_Pxp_YUYV1P422ToYUV420P(gfx_surface_t *pSrc, gfx_surface_t *pDst)
-{
-    unsigned char *pUYVY    = (unsigned char *)pSrc->buf;
-    unsigned char *pYUV420P = (unsigned char *)pDst->buf;
-    int w                   = pSrc->width;
-    int h                   = pSrc->height;
-
-    unsigned int *pY = (unsigned int *)pYUV420P;
-    unsigned int *pU = (unsigned int *)(pYUV420P + w * h);
-    unsigned int *pV = (unsigned int *)(pYUV420P + w * h + w * h / 4);
-
-    for (int i = 0; i < h; i++)
-    {
-        for (int j = 0; j < w / 16; j++)
-        {
-            /* fill the Y */
-            *pY++ = (pUYVY[0] | (pUYVY[2] << 8) | (pUYVY[4] << 16) | (pUYVY[6] << 24));
-            *pY++ = (pUYVY[8] | (pUYVY[10] << 8) | (pUYVY[12] << 16) | (pUYVY[14] << 24));
-
-            *pY++ = (pUYVY[16] | (pUYVY[18] << 8) | (pUYVY[20] << 16) | (pUYVY[22] << 24));
-            *pY++ = (pUYVY[24] | (pUYVY[26] << 8) | (pUYVY[28] << 16) | (pUYVY[30] << 24));
-
-            /* sample the UV with only even row */
-            if ((i & 0x1) == 0)
-            {
-                *pU++ = (pUYVY[1] | (pUYVY[5] << 8) | (pUYVY[9] << 16) | (pUYVY[13] << 24));
-                *pU++ = (pUYVY[17] | (pUYVY[21] << 8) | (pUYVY[25] << 16) | (pUYVY[29] << 24));
-                *pV++ = (pUYVY[3] | (pUYVY[7] << 8) | (pUYVY[11] << 16) | (pUYVY[15] << 24));
-                *pV++ = (pUYVY[19] | (pUYVY[23] << 8) | (pUYVY[27] << 16) | (pUYVY[31] << 24));
-            }
-            pUYVY += 32;
-        }
-    }
-
-    return 0;
-}
-
 #if (HAL_PXP_WORKAROUND_OUT_RGB == 1)
 /*
  * software conversion from BGR24 to RGB24
@@ -829,26 +796,12 @@ int HAL_GfxDev_Pxp_Blit(
     memcpy(&dst, pDst, sizeof(gfx_surface_t));
     memcpy(&rotate, pRotate, sizeof(gfx_rotate_config_t));
 
+    /* PXP does not support YUV420P as destination format - use SW conversion instead */
     if (dst.format == MPP_PIXEL_YUV420P)
     {
-        // tmp swap back for testing
-        if ((pRotate->target == kGFXRotate_SRCSurface) &&
-            ((pRotate->degree == ROTATE_90) || (pRotate->degree == ROTATE_270)))
-        {
-            rotate.target = kGFXRotate_DSTSurface;
-            //
-            // need to swap the width and height as we force the rotate on DST surface
-            // src
-            src.height = pSrc->width;
-            src.width  = pSrc->height;
-            src.left   = pSrc->top;
-            src.top    = pSrc->left;
-            src.right  = pSrc->bottom;
-            src.bottom = pSrc->right;
-        }
-
-        error = HAL_GfxDev_Pxp_YUYV1P422ToYUV420P(&src, &dst);
-        return error;
+        HAL_LOGE("PXP does not support conversion to YUV420P format (src=%d, dst=%d)\n",
+                 src.format, dst.format);
+        return -1;
     }
 
     // WR for PXP limitation: PXP can not do PS rotate and scale at the same time
@@ -1261,9 +1214,12 @@ static int HAL_GfxDev_Pxp_ComposeSurfaceAdaptForScaleAndPsRotate(const gfx_dev_t
     src_surface.right    = pSrc->bottom;
     src_surface.bottom   = pSrc->right;
     src_surface.pitch    = pSrc->pitch;
+    src_surface.pitch_uv = pSrc->pitch_uv;
     src_surface.format   = pSrc->format;
     src_surface.swapByte = pSrc->swapByte;
     src_surface.buf      = pSrc->buf;
+    src_surface.buf_u    = pSrc->buf_u;
+    src_surface.buf_v    = pSrc->buf_v;
     src_surface.lock     = NULL;
 
     pSrc_adapt->height   = pDst->width;
@@ -1273,14 +1229,18 @@ static int HAL_GfxDev_Pxp_ComposeSurfaceAdaptForScaleAndPsRotate(const gfx_dev_t
     pSrc_adapt->right    = pDst->bottom;
     pSrc_adapt->bottom   = pDst->right;
     pSrc_adapt->pitch    = pDst->pitch * pDst->height / pDst->width;
+    pSrc_adapt->pitch_uv = pDst->pitch_uv * pDst->height / pDst->width;
     pSrc_adapt->format   = pDst->format;
     pSrc_adapt->swapByte = 0;
     pSrc_adapt->buf      = ptmp_buffer;
+    pSrc_adapt->buf_u    = NULL;
+    pSrc_adapt->buf_v    = NULL;
     pSrc_adapt->lock     = NULL;
 
     gfx_rotate_config_t rotate;
     rotate.target = kGFXRotate_SRCSurface;
     rotate.degree = ROTATE_0;
+    rotate.custom_angle = 0.0f;
     error         = HAL_GfxDev_Pxp_Blit(dev, &src_surface, pSrc_adapt, &rotate, FLIP_NONE);
 
     // prepare for rotate

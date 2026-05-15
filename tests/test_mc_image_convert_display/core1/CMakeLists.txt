@@ -25,4 +25,4 @@ include(${SdkRootDirPath}/CMakeLists.txt)
 include(${SdkRootDirPath}/middleware/eiq/mpp/boards/${board}/tests/test_mc_image_convert_display/reconfig.cmake OPTIONAL)
 include(${SdkRootDirPath}/middleware/eiq/mpp/boards/${board}/tests/test_mc_image_convert_display/${core_id}/reconfig.cmake OPTIONAL)
 
-mcux_convert_binary(BINARY ${SdkRootDirPath}/middleware/eiq/mpp/tests/test_mc_image_convert_display/core1_image.bin)
+mcux_convert_binary(BINARY ${APPLICATION_BINARY_DIR}/../test_mc_image_convert_display/${CONFIG_TOOLCHAIN}/core1_image.bin)

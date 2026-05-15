@@ -80,7 +80,7 @@ __ALIGNED(64) uint8_t  g_inf_img[INFPVW_WIDTH * INFPVW_HEIGHT * INFPVW_BPP];
 #endif
 
 /* logo image array */
-#include "images/NXP_Logo_RGB_Colour_320.h"
+#include "NXP_Logo_RGB_Colour_320.h"
 
 #ifndef APP_STRIPE_MODE
 #define APP_STRIPE_MODE 0

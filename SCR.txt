@@ -2,7 +2,7 @@ NXP Software Content Register
 
 Package:                   eIQ Media Processing Pipelines library
 
-Version:                   4.2.0
+Version:                   4.3.0
 Outgoing License:          Apache-2.0
 License File:              LICENSE
 Type of content:           Source code, TFLite Machine Learning models
@@ -10,7 +10,7 @@ Description and comments:  Media Processing Pipelines library for NXP MCUs
                            Contains SW from different origins and licenses.
                            See details below, and refer to individual files headers.
 Release Location:          https://github.com/nxp-mcuxpresso/mcux-sdk-middleware-mpp/
-Origin:                	   NXP (Apache-2.0)
+Origin:                    NXP (Apache-2.0)
                            NXP MCUxpresso (BSD-3-Clause) - https://github.com/nxp-mcuxpresso/mcuxsdk-manifests
                            FreeRTOS (MIT) - https://github.com/FreeRTOS
                            TensorFlow (Apache-2.0) - https://github.com/tensorflow/tensorflow
@@ -22,3 +22,4 @@ Origin:                	   NXP (Apache-2.0)
                            AntiSpoofing (MIT) - https://github.com/oarriaga/face_classification/tree/master/trained_models/emotion_models 
                            MobileFaceNet (Apache 2.0) - https://www.kaggle.com/code/jasonhcwong/mobilefacenet/
                            SCRFD (Apache 2.0) - https://github.com/deepinsight/insightface/blob/master/detection/scrfd/README.md
+                           Hand Gesture Recognition (Apache-2.0) - https://developers.google.com/edge/mediapipe/solutions/vision/gesture_recognizer

@@ -22,6 +22,12 @@ mcux_add_include(
               examples/eiq_examples/mpp/camera_usb_final_fr_app_view/
 )
 
+# Add include path for the core1_image.bin
+mcux_add_include(
+    BASE_PATH ${APPLICATION_BINARY_DIR}
+    INCLUDES ${CONFIG_TOOLCHAIN}/
+)
+
 # board files
 include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 
@@ -32,7 +38,8 @@ mcux_add_include(
                 models/mobilefacenet
                 models/antispoofing
                 models/scrfd_kps_500m_full_integer_quant
-                middleware/eiq/mpp/common/
+                common
+                images
 )
 
 mcux_add_source(
@@ -61,10 +68,9 @@ include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/examples/camer
 # When sysbuild is not enabled, use pre-built core1 image that drives the USB camera
 if(NOT SYSBUILD)
    file(COPY ${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/examples/camera_usb_final_fr_app_view/${core_id}/core1_image_QVGA_VGA.bin
-        DESTINATION ${SdkRootDirPath}/examples/eiq_examples/mpp/camera_usb_final_fr_app_view/)
-   file(RENAME ${SdkRootDirPath}/examples/eiq_examples/mpp/camera_usb_final_fr_app_view/core1_image_QVGA_VGA.bin
-               ${SdkRootDirPath}/examples/eiq_examples/mpp/camera_usb_final_fr_app_view/core1_image.bin)
+        DESTINATION ${APPLICATION_BINARY_DIR}/${CONFIG_TOOLCHAIN}/)
+   file(RENAME ${APPLICATION_BINARY_DIR}/${CONFIG_TOOLCHAIN}/core1_image_QVGA_VGA.bin
+               ${APPLICATION_BINARY_DIR}/${CONFIG_TOOLCHAIN}/core1_image.bin)
 endif()
 
 mcux_convert_binary(BINARY ${APPLICATION_BINARY_DIR}/${MCUX_SDK_PROJECT_NAME}.bin)
-

@@ -795,7 +795,7 @@ Examples:
 %(prog)s -b frdmmcxn947 --direction sdk-to-mpp -s /path/to/mcuxsdk
 %(prog)s -b frdmmcxn947 --no-git-sync -s /path/to/mcuxsdk
 %(prog)s -b frdmmcxn947 --mpp-root /path/to/mpp -s /path/to/mcuxsdk
-%(prog)s -s /path/to/mcuxsdk  # Uses default boards: mimxrt700evk, evkbmimxrt1170, frdmmcxn947
+%(prog)s -s /path/to/mcuxsdk  # Uses default boards: mimxrt700evk, evkbmimxrt1170, frdmmcxn947, frdmimxrt700, frdmimxrt1152
 %(prog)s -s /path/to/mcuxsdk --log-level 3  # Enable info level logging
         """
     )
@@ -804,8 +804,8 @@ Examples:
         '-b', '--boards',
         nargs='*',
         type=str,
-        default=['mimxrt700evk', 'evkbmimxrt1170', 'frdmmcxn947'],
-        help='List of board names to sync (e.g., frdmmcxn947, evkbmimxrt1170). Default: mimxrt700evk, evkbmimxrt1170, frdmmcxn947'
+        default=['mimxrt700evk', 'evkbmimxrt1170', 'frdmmcxn947', 'frdmimxrt700', 'frdmimxrt1152'],
+        help='List of board names to sync (e.g., frdmmcxn947, evkbmimxrt1170). Default: mimxrt700evk, evkbmimxrt1170, frdmmcxn947, frdmimxrt700, frdmimxrt1152'
     )
 
     parser.add_argument(

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2022-2024 NXP
+ * Copyright 2020, 2022-2024, 2026 NXP
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -35,13 +35,23 @@ extern "C" {
 #define HAL_TFLITE_BUFFER_ALIGN 16
 #endif
 
+typedef struct model_interpreter_data_s 
+{
+    void *s_model;
+    void *s_interpreter;
+    void *s_micro_op_resolver;
+    int8_t conversion_lut_int8[256];
+    bool lut_int8_initialized;
+} model_interpreter_data_t;
+
 status_t MODEL_Init(const void *model_data,
+        model_interpreter_data_t *interpreter_data,
         mpp_inference_tensor_params_t *inputTensor,
         mpp_inference_tensor_params_t *outputTensor[],
         int mean, int std, int nb_out_tensor);
-status_t MODEL_DeInit(void);
-void MODEL_ConvertInput(uint8_t* data, mpp_tensor_dims_t* dims, mpp_tensor_type_t type, int mean, int std);
-status_t MODEL_RunInference(void);
+status_t MODEL_DeInit(model_interpreter_data_t *interpreter_data);
+void MODEL_ConvertInput(model_interpreter_data_t *interpreter_data, uint8_t* data, mpp_tensor_dims_t* dims, mpp_tensor_type_t type, int mean, int std);
+status_t MODEL_RunInference(model_interpreter_data_t *interpreter_data);
 
 #if defined(__cplusplus)
 }

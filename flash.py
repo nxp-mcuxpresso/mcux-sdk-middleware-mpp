@@ -29,7 +29,7 @@ def parse_args():
         "-b", "--board",
         type=str,
         required=True,
-        choices=['frdmmcxn947', 'mimxrt700evk', 'evkbmimxrt1170'],
+        choices=['frdmmcxn947', 'mimxrt700evk', 'evkbmimxrt1170', 'frdmimxrt1152', 'frdmimxrt700'],
         help="Board type"
     )
     parser.add_argument(

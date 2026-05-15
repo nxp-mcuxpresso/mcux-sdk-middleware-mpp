@@ -974,6 +974,163 @@ static int HAL_GfxDev_Cpu_YUVToGRAY(gfx_surface_t *pSrc, gfx_surface_t *pDst,
     return 0;
 }
 
+static int HAL_GfxDev_Cpu_YUYV1P422ToYUV420P(gfx_surface_t *pSrc, gfx_surface_t *pDst)
+{
+    unsigned char *pUYVY    = (unsigned char *)pSrc->buf;
+    unsigned char *pYUV420P = (unsigned char *)pDst->buf;
+    int w                   = pSrc->width;
+    int h                   = pSrc->height;
+
+    unsigned int *pY = (unsigned int *)pYUV420P;
+    unsigned int *pU = (unsigned int *)(pYUV420P + w * h);
+    unsigned int *pV = (unsigned int *)(pYUV420P + w * h + w * h / 4);
+
+    for (int i = 0; i < h; i++)
+    {
+        for (int j = 0; j < w / 16; j++)
+        {
+            /* fill the Y */
+            *pY++ = (pUYVY[0] | (pUYVY[2] << 8) | (pUYVY[4] << 16) | (pUYVY[6] << 24));
+            *pY++ = (pUYVY[8] | (pUYVY[10] << 8) | (pUYVY[12] << 16) | (pUYVY[14] << 24));
+
+            *pY++ = (pUYVY[16] | (pUYVY[18] << 8) | (pUYVY[20] << 16) | (pUYVY[22] << 24));
+            *pY++ = (pUYVY[24] | (pUYVY[26] << 8) | (pUYVY[28] << 16) | (pUYVY[30] << 24));
+
+            /* sample the UV with only even row */
+            if ((i & 0x1) == 0)
+            {
+                *pU++ = (pUYVY[1] | (pUYVY[5] << 8) | (pUYVY[9] << 16) | (pUYVY[13] << 24));
+                *pU++ = (pUYVY[17] | (pUYVY[21] << 8) | (pUYVY[25] << 16) | (pUYVY[29] << 24));
+                *pV++ = (pUYVY[3] | (pUYVY[7] << 8) | (pUYVY[11] << 16) | (pUYVY[15] << 24));
+                *pV++ = (pUYVY[19] | (pUYVY[23] << 8) | (pUYVY[27] << 16) | (pUYVY[31] << 24));
+            }
+            pUYVY += 32;
+        }
+    }
+
+    return 0;
+}
+
+static int HAL_GfxDev_Cpu_YUV1P444ToYUV420P(gfx_surface_t *pSrc, gfx_surface_t *pDst)
+{
+    unsigned char *pVUYX_base = (unsigned char *)pSrc->buf;
+    int src_pitch = pSrc->pitch;
+
+    int width = pDst->width;
+    int height = pDst->height;
+
+    int dst_pitch = pDst->pitch;
+    int dst_pitch_uv = pDst->pitch_uv;
+
+    unsigned char *pY_base = (unsigned char *)pDst->buf;
+    unsigned char *pU_base = (unsigned char *)pDst->buf_u;
+    unsigned char *pV_base = (unsigned char *)pDst->buf_v;
+
+    if ((pDst->width != pSrc->width) || (pDst->height != pSrc->height))
+    {
+        HAL_LOGE("HAL_GfxDev_Cpu_YUV1P444ToYUV420P cannot do scaling\n");
+        return -1;
+    }
+
+    for (int i = 0; i < height; i++)
+    {
+        unsigned char *pVUYX = pVUYX_base + i * src_pitch;
+        unsigned char *pY_out = pY_base + i * dst_pitch;
+
+        unsigned char *pU_out = NULL;
+        unsigned char *pV_out = NULL;
+        if ((i & 0x1) == 0) {
+            int uv_row = i / 2;
+            pU_out = pU_base + uv_row * dst_pitch_uv;
+            pV_out = pV_base + uv_row * dst_pitch_uv;
+        }
+
+        for (int j = 0; j < width; j++)
+        {
+            // YUV1P444 actual format: VUYX (4 bytes per pixel, not 3!)
+            // Byte 0: V (chroma red)
+            // Byte 1: U (chroma blue)
+            // Byte 2: Y (luma)
+            // Byte 3: X (padding/unused)
+            pY_out[j] = pVUYX[2];
+
+            // Subsample U and V: average 2x2 block for better quality
+            if ((i & 0x1) == 0 && (j & 0x1) == 0)
+            {
+                int uv_col = j / 2;
+
+                // Average the 2x2 block of chroma values
+                unsigned char *pVUYX_next_row = (i + 1 < height) ? (pVUYX_base + (i + 1) * src_pitch + j * 4) : pVUYX;
+                unsigned char *pVUYX_next_col = (j + 1 < width) ? (pVUYX + 4) : pVUYX;
+                unsigned char *pVUYX_diag = ((i + 1 < height) && (j + 1 < width)) ? (pVUYX_base + (i + 1) * src_pitch + (j + 1) * 4) : pVUYX;
+
+                int v_sum = pVUYX[0] + pVUYX_next_col[0] + pVUYX_next_row[0] + pVUYX_diag[0];
+                int u_sum = pVUYX[1] + pVUYX_next_col[1] + pVUYX_next_row[1] + pVUYX_diag[1];
+
+                pV_out[uv_col] = (unsigned char)((v_sum + 2) >> 2);
+                pU_out[uv_col] = (unsigned char)((u_sum + 2) >> 2);
+            }
+
+            pVUYX += 4; // Move by 4 bytes (not 3!)
+        }
+    }
+
+    return 0;
+}
+
+static int HAL_GfxDev_Cpu_YUYVToYUV420P(gfx_surface_t *pSrc, gfx_surface_t *pDst)
+{
+    unsigned char *pYUYV_base = (unsigned char *)pSrc->buf;
+    int src_pitch = pSrc->pitch;
+
+    int width = pDst->width;
+    int height = pDst->height;
+
+    int dst_pitch = pDst->pitch;
+    int dst_pitch_uv = pDst->pitch_uv;
+
+    unsigned char *pY_base = (unsigned char *)pDst->buf;
+    unsigned char *pU_base = (unsigned char *)pDst->buf_u;
+    unsigned char *pV_base = (unsigned char *)pDst->buf_v;
+
+    if ((pDst->width != pSrc->width) || (pDst->height != pSrc->height))
+    {
+        HAL_LOGE("HAL_GfxDev_Cpu_YUYVToYUV420P cannot do scaling\n");
+        return -1;
+    }
+
+    for (int i = 0; i < height; i++)
+    {
+        unsigned char *pYUYV = pYUYV_base + i * src_pitch;
+        unsigned char *pY_out = pY_base + i * dst_pitch;
+
+        unsigned char *pU_out = NULL;
+        unsigned char *pV_out = NULL;
+        if ((i & 0x1) == 0) {
+            int uv_row = i / 2;
+            pU_out = pU_base + uv_row * dst_pitch_uv;
+            pV_out = pV_base + uv_row * dst_pitch_uv;
+        }
+
+        for (int j = 0; j < width; j += 2)
+        {
+            pY_out[j]     = pYUYV[0]; // Y0
+            pY_out[j + 1] = pYUYV[2]; // Y1
+
+            if ((i & 0x1) == 0)
+            {
+                int uv_col = j / 2;
+                pU_out[uv_col] = pYUYV[1]; // U0
+                pV_out[uv_col] = pYUYV[3]; // V0
+            }
+
+            pYUYV += 4;
+        }
+    }
+
+    return 0;
+}
+
 /*
  * Image rotation using CPU backend:
  */
@@ -1540,6 +1697,47 @@ int HAL_GfxDev_Cpu_Blit(
     const gfx_dev_t *dev, const gfx_surface_t *pSrc, const gfx_surface_t *pDst, const gfx_rotate_config_t *pRotate, mpp_flip_mode_t flip)
 {
     int ret;
+
+    if (pDst->format == MPP_PIXEL_YUV420P)
+    {
+        if (pSrc->format == MPP_PIXEL_YUYV1P422)
+        {
+            gfx_surface_t src, dst;
+            memcpy(&src, pSrc, sizeof(gfx_surface_t));
+            memcpy(&dst, pDst, sizeof(gfx_surface_t));
+
+            /* Handle rotation by swapping dimensions if needed */
+            if ((pRotate->target == kGFXRotate_SRCSurface) &&
+                ((pRotate->degree == ROTATE_90) || (pRotate->degree == ROTATE_270)))
+            {
+                src.height = pSrc->width;
+                src.width  = pSrc->height;
+                src.left   = pSrc->top;
+                src.top    = pSrc->left;
+                src.right  = pSrc->bottom;
+                src.bottom = pSrc->right;
+            }
+
+            return HAL_GfxDev_Cpu_YUYV1P422ToYUV420P(&src, &dst);
+        }
+        else if (pSrc->format == MPP_PIXEL_YUV1P444)
+        {
+            gfx_surface_t src, dst;
+            memcpy(&src, pSrc, sizeof(gfx_surface_t));
+            memcpy(&dst, pDst, sizeof(gfx_surface_t));
+
+            return HAL_GfxDev_Cpu_YUV1P444ToYUV420P(&src, &dst);
+        }
+        else if (pSrc->format == MPP_PIXEL_YUYV)
+        {
+            gfx_surface_t src, dst;
+            memcpy(&src, pSrc, sizeof(gfx_surface_t));
+            memcpy(&dst, pDst, sizeof(gfx_surface_t));
+
+            return HAL_GfxDev_Cpu_YUYVToYUV420P(&src, &dst);
+        }
+    }
+
     if ( (pSrc->format == MPP_PIXEL_RGB565)
             && (pDst->format == MPP_PIXEL_RGB)
             && (pRotate->degree == ROTATE_0)

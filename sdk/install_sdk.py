@@ -68,21 +68,22 @@ Dependencies:
 Author: NXP Semiconductors
 """
 
-import os
 import sys
+import os
 import argparse
 import subprocess
 import re
 import shutil
 import time
 from pathlib import Path
-from datetime import datetime
 from typing import Tuple, List, Optional
+from datetime import datetime
 
 
 def get_mpp_dir() -> Path:
     """Get the MPP_DIR path, independent of the location from which the script is called."""
     return Path(__file__).resolve().parent.parent
+
 
 def is_in_mpp_sdk_path(mpp_dir: Path) -> bool:
     """Check if MPP directory is inside an SDK path structure."""
@@ -90,12 +91,13 @@ def is_in_mpp_sdk_path(mpp_dir: Path) -> bool:
     mpp_parts = mpp_dir.parts
     if len(mpp_parts) >= 4:
         # Check if path ends with mcuxsdk/middleware/eiq/mpp
-        if (mpp_parts[-4] == "mcuxsdk" and 
-            mpp_parts[-3] == "middleware" and 
-            mpp_parts[-2] == "eiq" and 
-            mpp_parts[-1] == "mpp"):
+        if (mpp_parts[-4] == "mcuxsdk" and
+            mpp_parts[-3] == "middleware" and
+            mpp_parts[-2] == "eiq" and
+                mpp_parts[-1] == "mpp"):
             return True
     return False
+
 
 def get_sdk_root_path(mpp_dir: Path) -> Path:
     """Get SDK root path from MPP directory if MPP is inside SDK."""
@@ -103,6 +105,7 @@ def get_sdk_root_path(mpp_dir: Path) -> Path:
     if is_in_mpp_sdk_path(mpp_dir):
         return mpp_dir.parent.parent.parent.parent
     return mpp_dir
+
 
 def run_command(cmd: str | List[str], cwd: Optional[Path] = None, check: bool = True, shell: bool = False, get_output: bool = False) -> Tuple[int, str, str]:
     """Run a command and return the result."""
@@ -128,6 +131,7 @@ def run_command(cmd: str | List[str], cwd: Optional[Path] = None, check: bool = 
     except subprocess.CalledProcessError as e:
         return e.returncode, e.stdout, e.stderr
 
+
 def git_show_ref(ref: str, cwd: Path) -> bool:
     """Check if a git reference exists."""
     returncode, stdout, _ = run_command(
@@ -138,6 +142,7 @@ def git_show_ref(ref: str, cwd: Path) -> bool:
     )
     return returncode == 0 and stdout.strip() != ""
 
+
 def git_rev_parse(rev: str, cwd: Path) -> bool:
     """Check if a git revision exists."""
     returncode, stdout, _ = run_command(
@@ -147,6 +152,7 @@ def git_rev_parse(rev: str, cwd: Path) -> bool:
         get_output=True
     )
     return returncode == 0
+
 
 def checkout_revision(sdk_version: str, cwd: Path) -> None:
     """Checkout the specified SDK revision."""
@@ -169,6 +175,7 @@ def checkout_revision(sdk_version: str, cwd: Path) -> None:
         print(f"Could not find revision {sdk_version}")
         sys.exit(1)
 
+
 def set_components_list(mpp_dir: Path, sdk_comp_file: str, sdk_exclude: str, sdk_include: str, mpp_include: bool, sym_links_flag: bool, mpp_in_sdk: bool) -> Tuple[List[str], bool]:
     """Set the components list for west update command."""
     if not mpp_in_sdk and not sym_links_flag:
@@ -187,8 +194,10 @@ def set_components_list(mpp_dir: Path, sdk_comp_file: str, sdk_exclude: str, sdk
     # Filter components
     if exclude_list:
         exclude_pattern = '|'.join(exclude_list)
-        components_to_update = [c for c in all_components if not re.search(exclude_pattern, c)]
-        excluded_components = [c for c in all_components if re.search(exclude_pattern, c)]
+        components_to_update = [
+            c for c in all_components if not re.search(exclude_pattern, c)]
+        excluded_components = [
+            c for c in all_components if re.search(exclude_pattern, c)]
 
         if excluded_components:
             print("Components to be excluded from west update command:")
@@ -208,23 +217,28 @@ def set_components_list(mpp_dir: Path, sdk_comp_file: str, sdk_exclude: str, sdk
 
     return components_to_update, mpp_include
 
+
 def create_symbolic_links(mpp_dir: Path, sdk_install_dir: Path) -> None:
     """Create symbolic links in SDK directory to MPP boards and examples."""
     print("Creating symbolic links...")
 
     boards_dir = mpp_dir / "boards"
-    excluded_boards = ["evkmimxrt1170", "mcxn9xxbrk", "mcxn9xxevk", "evkbimxrt1050"]
+    excluded_boards = ["evkmimxrt1170",
+                       "mcxn9xxbrk", "mcxn9xxevk", "evkbimxrt1050"]
 
     for board in os.listdir(boards_dir):
         if board in excluded_boards:
             continue
+        else:
+            print(f"CREATED SL 4 {board}")
 
         board_path = boards_dir / board
         if not board_path.is_dir():
             continue
 
         # Create symbolic link for board
-        link_path = sdk_install_dir / "mcuxsdk" / "examples" / "_boards" / board / "eiq_examples" / "mpp"
+        link_path = sdk_install_dir / "mcuxsdk" / "examples" / \
+            "_boards" / board / "eiq_examples" / "mpp"
         if link_path.exists() or link_path.is_symlink():
             if link_path.is_symlink():
                 link_path.unlink()
@@ -238,7 +252,8 @@ def create_symbolic_links(mpp_dir: Path, sdk_install_dir: Path) -> None:
             link_path.symlink_to(board_path, target_is_directory=True)
         except OSError as e:
             print(f"Warning: Could not create symlink for {board}: {e}")
-            print("On Windows, you may need to run as Administrator or enable Developer Mode")
+            print(
+                "On Windows, you may need to run as Administrator or enable Developer Mode")
 
     # Create symbolic link to examples folder
     examples_link = sdk_install_dir / "mcuxsdk" / "examples" / "eiq_examples" / "mpp"
@@ -250,7 +265,8 @@ def create_symbolic_links(mpp_dir: Path, sdk_install_dir: Path) -> None:
 
     examples_link.parent.mkdir(parents=True, exist_ok=True)
     try:
-        examples_link.symlink_to(mpp_dir / "examples", target_is_directory=True)
+        examples_link.symlink_to(mpp_dir / "examples",
+                                 target_is_directory=True)
     except OSError as e:
         print(f"Warning: Could not create symlink for examples: {e}")
 
@@ -270,18 +286,21 @@ def create_symbolic_links(mpp_dir: Path, sdk_install_dir: Path) -> None:
 
     print("Symbolic links created")
 
+
 def remove_symbolic_links(mpp_dir: Path, sdk_install_dir: Path) -> None:
     """Remove symbolic links before running west update command."""
     print("Removing symbolic links...")
 
     boards_dir = mpp_dir / "boards"
-    excluded_boards = ["evkmimxrt1170", "mcxn9xxbrk", "mcxn9xxevk", "evkbimxrt1050"]
+    excluded_boards = ["evkmimxrt1170",
+                       "mcxn9xxbrk", "mcxn9xxevk", "evkbimxrt1050"]
 
     for board in os.listdir(boards_dir):
         if board in excluded_boards:
             continue
 
-        link_path = sdk_install_dir / "mcuxsdk" / "examples" / "_boards" / board / "eiq_examples" / "mpp"
+        link_path = sdk_install_dir / "mcuxsdk" / "examples" / \
+            "_boards" / board / "eiq_examples" / "mpp"
         if link_path.exists() and link_path.is_symlink():
             link_path.unlink()
 
@@ -297,16 +316,19 @@ def remove_symbolic_links(mpp_dir: Path, sdk_install_dir: Path) -> None:
 
     print("Symbolic links removed")
 
+
 def check_symlinks_exist(mpp_dir: Path, sdk_install_dir: Path) -> bool:
     """Check if symbolic links exist."""
     boards_dir = mpp_dir / "boards"
-    excluded_boards = ["evkmimxrt1170", "mcxn9xxbrk", "mcxn9xxevk", "evkbimxrt1050"]
+    excluded_boards = ["evkmimxrt1170",
+                       "mcxn9xxbrk", "mcxn9xxevk", "evkbimxrt1050"]
 
     for board in os.listdir(boards_dir):
         if board in excluded_boards:
             continue
 
-        link_path = sdk_install_dir / "mcuxsdk" / "examples" / "_boards" / board / "eiq_examples" / "mpp"
+        link_path = sdk_install_dir / "mcuxsdk" / "examples" / \
+            "_boards" / board / "eiq_examples" / "mpp"
         if link_path.is_symlink():
             return True
 
@@ -314,6 +336,7 @@ def check_symlinks_exist(mpp_dir: Path, sdk_install_dir: Path) -> bool:
     mpp_link = sdk_install_dir / "mcuxsdk" / "middleware" / "eiq" / "mpp"
 
     return examples_link.is_symlink() or mpp_link.is_symlink()
+
 
 def west_update(components: List[str], sdk_install_dir: Path, disable_fast_update: bool = False) -> int:
     """Run west update command with the provided components."""
@@ -329,6 +352,7 @@ def west_update(components: List[str], sdk_install_dir: Path, disable_fast_updat
     print(f"West update completed in {time.time() - start_time:.2f} seconds")
 
     return returncode
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -367,8 +391,8 @@ def main() -> None:
     parser.add_argument("-f", "--full-sdk-update", action="store_true",
                         help="Perform a full SDK update including all components. -i, -e and -m flags are ignored")
     parser.add_argument("-n", "--no-symlinks", action="store_true",
-                        help="Disable creation of symbolic links\n" \
-                        "This flag is ignored when sdk dir already exists\n" \
+                        help="Disable creation of symbolic links\n"
+                        "This flag is ignored when sdk dir already exists\n"
                         "In this case, the previous state of the symbolic links will be preserved")
     parser.add_argument("-u", "--unlink", action="store_true",
                         help="Only remove symbolic links and update examples and mpp without updating entire SDK")
@@ -397,7 +421,8 @@ def main() -> None:
     # Handle -l option (only create symbolic links)
     if only_symlinks:
         if mpp_in_sdk:
-            print("Error: MPP directory is already inside SDK path. Cannot create or remove symbolic links.")
+            print(
+                "Error: MPP directory is already inside SDK path. Cannot create or remove symbolic links.")
             print(f"MPP_DIR: {mpp_dir}")
             print(f"SDK path: {sdk_install_dirname}")
             sys.exit(1)
@@ -409,7 +434,8 @@ def main() -> None:
         # Check if SDK directory exists
         if not sdk_install_dir.exists():
             print(f"Error: SDK directory does not exist: {sdk_install_dir}")
-            print("Please install SDK first or provide correct SDK directory with -s option")
+            print(
+                "Please install SDK first or provide correct SDK directory with -s option")
             sys.exit(1)
 
         if args.link:
@@ -418,17 +444,22 @@ def main() -> None:
         if args.unlink:
             print(f"Removing symbolic links from SDK at: {sdk_install_dir}")
             remove_symbolic_links(mpp_dir, sdk_install_dir)
-            print("Updating mcu-sdk-examples and mpp middleware after removing the symbolic links")
+            print(
+                "Updating mcu-sdk-examples and mpp middleware after removing the symbolic links")
             stash_timestamp = datetime.now().strftime("%H_%M_%S")
-            print(f"Stashing changes in examples directory with timestamp: {stash_timestamp}")
+            print(
+                f"Stashing changes in examples directory with timestamp: {stash_timestamp}")
             run_command(
                 f"git stash push -m 'sdk_update_backup_stash_{stash_timestamp}' || true",
                 cwd=sdk_install_dir / "mcuxsdk" / "examples",
                 shell=True
             )
-            print(f"Warning: Stash sdk_update_backup_stash_{stash_timestamp} will not be applied automatically. You can apply it later")
-            print("Updating examples and mpp to the current manifest version using west update")
-            west_update(["mcu-sdk-examples", "mcux-sdk-middleware-mpp"], sdk_install_dir, args.disable_fast_update)
+            print(
+                f"Warning: Stash sdk_update_backup_stash_{stash_timestamp} will not be applied automatically. You can apply it later")
+            print(
+                "Updating examples and mpp to the current manifest version using west update")
+            west_update(["mcu-sdk-examples", "mcux-sdk-middleware-mpp"],
+                        sdk_install_dir, args.disable_fast_update)
 
         os.chdir(crt_dir)
         sys.exit(0)
@@ -443,14 +474,16 @@ def main() -> None:
         sdk_remove = False
 
     os.chdir(sdk_install_path)
-    print(f"Installing SDK at location {sdk_install_dir}, version {sdk_version}")
+    print(
+        f"Installing SDK at location {sdk_install_dir}, version {sdk_version}")
 
     if sdk_install_dir.exists():
         if sdk_remove:
             print(f"Directory {sdk_install_dir} already exists. Removing it..")
             shutil.rmtree(sdk_install_dir)
         else:
-            print(f"Directory {sdk_install_dir} already exists. Updating already installed sdk to the selected version")
+            print(
+                f"Directory {sdk_install_dir} already exists. Updating already installed sdk to the selected version")
 
             # Check if symbolic links exist before removing them
             symlinks_exist = check_symlinks_exist(mpp_dir, sdk_install_dir)
@@ -480,12 +513,15 @@ def main() -> None:
                 cwd=sdk_install_dir,
                 shell=True
             )
-            run_command("west forall -c \"git reset --hard\"", cwd=sdk_install_dir, shell=True)
+            run_command("west forall -c \"git reset --hard\"",
+                        cwd=sdk_install_dir, shell=True)
 
             # Run git clean -fdx if enabled
             if git_clean:
-                print("Running git clean -fdx to remove all untracked files and directories...")
-                run_command("west forall -c \"git clean -fdx\"", cwd=sdk_install_dir, shell=True)
+                print(
+                    "Running git clean -fdx to remove all untracked files and directories...")
+                run_command("west forall -c \"git clean -fdx\"",
+                            cwd=sdk_install_dir, shell=True)
 
             # Update manifests repo to the configured version
             manifests_dir = sdk_install_dir / "manifests"
@@ -495,7 +531,8 @@ def main() -> None:
 
             # Run west update
             os.chdir(sdk_install_dir)
-            west_status = west_update(components_to_update, sdk_install_dir, args.disable_fast_update)
+            west_status = west_update(
+                components_to_update, sdk_install_dir, args.disable_fast_update)
 
             # Apply and drop the stash with the timestamp if it exists
             stash_script = sdk_install_dir / "apply_stash.py"
@@ -544,7 +581,8 @@ for line in result.stdout.splitlines():
         run_command("west update bifrost", cwd=sdk_install_dir)
     else:
         run_command("west update -n -o=--depth=1 bifrost", cwd=sdk_install_dir)
-    run_command("west config commands.allow_extensions true", cwd=sdk_install_dir)
+    run_command("west config commands.allow_extensions true",
+                cwd=sdk_install_dir)
     run_command("west sdk_init", cwd=sdk_install_dir)
 
     # Set the components to be updated via west update command
@@ -557,7 +595,8 @@ for line in result.stdout.splitlines():
         components_to_update = [""]
 
     # Run west update
-    west_status = west_update(components_to_update, sdk_install_dir, args.disable_fast_update)
+    west_status = west_update(components_to_update,
+                              sdk_install_dir, args.disable_fast_update)
 
     os.chdir(mpp_dir)
 
@@ -568,6 +607,7 @@ for line in result.stdout.splitlines():
 
     os.chdir(crt_dir)
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

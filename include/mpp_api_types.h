@@ -37,6 +37,9 @@
 #define MPP_INFERENCE_MAX_OUTPUTS 9 /*!< Maximum number of outputs supported by the pipeline */
 #define MPP_INFERENCE_MAX_INPUTS 1 /*!< Maximum number of inputs supported by the pipeline */
 
+/** Maximum IP address length (IPv4: 4 octets) */
+#define MPP_IP_ADDR_LEN 4
+
 /** Pipeline handle type */
 typedef void* mpp_t ;
 /** Element handle type */
@@ -50,6 +53,7 @@ typedef enum {
     MPP_EVENT_INFERENCE_INPUT_READY,    /*!< RGB image for inference is ready */
     MPP_EVENT_INFERENCE_OUTPUT_READY,   /*!< inference out is ready */
     MPP_EVENT_QUALITY_CHECK_READY,      /*!< Quality check measurements are ready */
+    MPP_EVENT_CONVERT_PARAMS_READY,     /*!< VGLite roate matrix and input crop parameters ready */
     MPP_EVENT_INTERNAL_TEST_RESERVED,   /*!< INTERNAL: DO NOT USE */
     MPP_EVENT_NUM   /*!< DO NOT USE */
 } mpp_evt_t;
@@ -127,10 +131,11 @@ typedef struct {
 
 /** Rotation value */
 typedef enum {
-    ROTATE_0 = 0,   /*!< 0 degree */
-    ROTATE_90,      /*!< 90 degrees */
-    ROTATE_180,     /*!< 180 degrees */
-    ROTATE_270      /*!< 270 degrees */
+    ROTATE_0 = 0,       /*!< 0 degree */
+    ROTATE_90,     /*!< 90 degrees */
+    ROTATE_180,   /*!< 180 degrees */
+    ROTATE_270,   /*!< 270 degrees */
+    ROTATE_CUSTOM /*!< Indicates custom angle will be used */
 } mpp_rotate_degree_t;
 
 /** Flip type */
@@ -167,6 +172,7 @@ typedef enum {
     MPP_PIXEL_GRAY,         /*!< gray 8 bits */
     MPP_PIXEL_GRAY16,       /*!< gray 16 bits */
     MPP_PIXEL_YUV1P444,     /*!< YUVX interleaved 4:4:4 */
+    MPP_PIXEL_YUYV1P422,    /*!< YUYV interleaved 4:2:2 */
     MPP_PIXEL_VYUY1P422,    /*!< VYUY interleaved 4:2:2 */
     MPP_PIXEL_UYVY1P422,    /*!< UYVY interleaved 4:2:2 */
     MPP_PIXEL_YUYV,         /*!< YUYV interleaved 4:2:2 */
@@ -176,7 +182,7 @@ typedef enum {
     MPP_PIXEL_DEPTH8,       /*!< depth 8 bits */
 
     MPP_PIXEL_YUV420P,      /*!< YUV planar 4:2:0 */
-    
+
     /* compressed format */
     MPP_PIXEL_JPEG,         /*!< JPEG */
 
@@ -205,6 +211,18 @@ typedef enum {
     MPP_MCMGR_EVENT_DATA_START,       /*!< mcmgr event data start */
     MPP_MCMGR_EVENT_DATA_STOP = MPP_MCMGR_EVENT_DATA_START + (MPP_MAX_RPMSG_EPT_PER_CORE - 1)  /*!< mcmgr event data stop */ 
 } mpp_mcmgr_event_data_e;
+
+/** RTP payload types */
+typedef enum {
+    RTP_PAYLOAD_TYPE_JPEG = 26,     /*!< JPEG video */
+    RTP_PAYLOAD_TYPE_H264 = 96,     /*!< H.264 video (dynamic) */
+} rtp_payload_type_t;
+
+/** RTP JPEG frame types */
+typedef enum {
+    RTP_JPEG_FRAME_TYPE_YUV422 = 0, /*!< YUV 4:2:2 format */
+    RTP_JPEG_FRAME_TYPE_YUV420 = 1  /*!< YUV 4:2:0 format */
+} rtp_frame_type_t;
 
 /** Camera stream configuration for multi-stream cameras */
 typedef struct {
@@ -237,6 +255,20 @@ typedef struct {
     int compressed_size;   /*!< size in bytes for compressed format */
 } mpp_img_params_t;
 
+typedef struct {
+    /* Convert element id */
+    uint32_t id;
+    /* Crop parameters */
+    uint32_t left;
+    uint32_t right;
+    uint32_t top;
+    uint32_t bottom;
+    /* Custom rotation angle */
+    float rotation;
+    /* vglite matrix pointer */
+    void *vg_lite_m;
+} mpp_convert_cb_param_t;
+
 /** File slice search function type */
 typedef int (*slice_search_func_t)(const uint8_t *data, int32_t len);
 
@@ -247,6 +279,23 @@ typedef struct {
     int file_buffer_size;                  /*!< size in bytes for compressed format */
     slice_search_func_t slice_search_func; /*!< Optional: function to search for slices/chunks of data */
 } mpp_filesrc_params_t;
+
+/** File sink parameters */
+typedef struct {
+    const char *filepath;                  /*!< Path to file on SD card */
+    bool append_mode;                      /*!< Flag to enable append mode (false = overwrite) */
+    uint64_t max_file_size;                /*!< Maximum file size in bytes */
+} mpp_filesink_params_t;
+
+/** RTSP sink parameters */
+typedef struct _mpp_rtspsink_params {
+    uint16_t port;                     /*!< RTSP server port (default: 8554) */
+    uint8_t ip_addr[MPP_IP_ADDR_LEN];  /*!< IP address as array of bytes */
+    uint32_t frame_width;              /*!< Frame width in pixels */
+    uint32_t frame_height;              /*!< Frame height in pixels */
+    rtp_payload_type_t payload_type;   /*!< RTP payload type */
+    rtp_frame_type_t frame_type;       /*!< RTP JPEG frame type (YUV422 or YUV420) */
+} mpp_rtspsink_params_t;
 
 /** MC element parameters */
 typedef struct {
@@ -282,6 +331,7 @@ typedef enum {
     MPP_ELEMENT_IMG_COMPOSE,    /*!< compose a simple GUI: logo and text area with the input stream */
     MPP_ELEMENT_IMG_QUALITY_CHECK,  /*!< Image quality check */
     MPP_ELEMENT_VIDEO_DECODE,   /*!< Video decode */
+    MPP_ELEMENT_VIDEO_ENCODE,   /*!< Video encode */
     MPP_ELEMENT_NUM         /*!< DO NOT USE */
 } mpp_element_id_t;
 
@@ -322,7 +372,15 @@ typedef struct{
     const uint8_t* data;  /*!< data address */
     mpp_tensor_dims_t dims; /*!< tensor data dimensions */
     mpp_tensor_type_t type; /*!< tensor data type */
+    float scale; /*! < quantization scale factor */
+    int32_t zero_point; /*!< quantization zero point */
 } mpp_inference_tensor_params_t;
+
+/** Inference input ready callback parameters */
+typedef struct {
+    mpp_inference_tensor_params_t *in_tensors[MPP_INFERENCE_MAX_INPUTS];  /*!< input tensors parameters */
+    uint32_t model_id;  /*!< model identifier */
+} mpp_inference_inp_cb_params;
 
 /** Inference callback parameters */
 typedef struct {
@@ -330,6 +388,7 @@ typedef struct {
     mpp_inference_tensor_params_t *out_tensors[MPP_INFERENCE_MAX_OUTPUTS]; /*!< output tensors parameters */
     uint32_t inference_time_ms;  /*!< inference run time measurement - output to user */
     mpp_inference_type_t inference_type; /*!< type of the inference */
+    uint32_t model_id; /*! < model identifier */
 } mpp_inference_cb_param_t;
 
 /* Image quality metrics */
@@ -459,12 +518,14 @@ union {
         mpp_dims_t out_buf;                 /*!< output buffer dimensions */
         mpp_pixel_format_t pixel_format;    /*!< new pixel format */
         mpp_rotate_degree_t angle;          /*!< rotation angle */
+        float custom_angle;                 /*!< custom value of rotation angle */
         mpp_flip_mode_t flip;               /*!< flip mode */
         mpp_area_t crop;                    /*!< input crop area */
         mpp_position_t out_window;          /*!< output window position */
         mpp_dims_t scale;                   /*!< scaling dimensions */
         mpp_convert_ops_t ops;              /*!< operation selector mask */
         const char* dev_name;               /*!< device name used for graphics */
+        uint32_t elem_id;                   /*!< element id used for callback parameters */
         bool stripe_in;                     /*!< input stripe mode */
         bool stripe_out;                    /*!< output stripe mode */
     } convert;
@@ -497,11 +558,34 @@ union {
         unsigned int height;
         mpp_pixel_format_t out_format;
     } decode;
+    /** Encoder element's parameters */
+    struct {
+        const char* dev_name;               /*!< device name used for encoder */
+        unsigned int width;                 /*!< frame width */
+        unsigned int height;                /*!< frame height */
+        unsigned int fps;                   /*!< frame rate */
+        mpp_pixel_format_t format;          /*!< pixel format */
+        bool intraframe;                    /*!< only intraframe encoding */
+        /* H.264 encoder configuration parameters */
+        uint32_t intra_period;              /*!< I-frame period (GOP size) */
+        int32_t num_ref_frame;              /*!< Number of reference frames */
+        int32_t rc_mode;                    /*!< Rate control mode */
+        int32_t target_bitrate;             /*!< Target bitrate in bps */
+        int32_t max_bitrate;                /*!< Maximum bitrate in bps */
+        bool enable_frame_skip;             /*!< Enable/disable frame skipping */
+        int32_t temporal_layer_num;         /*!< Number of temporal layers */
+        int32_t profile_idc;                /*!< Profile (e.g., baseline, main, high) */
+        int32_t level_idc;                  /*!< Level (e.g., 3.0, 3.1, 4.0) */
+        int32_t spatial_bitrate;            /*!< Spatial layer bitrate */
+        int32_t max_spatial_bitrate;        /*!< Maximum spatial layer bitrate */
+        int32_t entropy_coding_mode;        /*!< 0: CAVLC, 1: CABAC */
+    } encode;
     /** ML inference element's parameters */
     struct {
         const void *model_data; /*!< pointer to model binary */
         mpp_inference_type_t type; /*!< inference type */
         int model_size;         /*!< model binary size */
+        uint32_t model_id;      /*! model identifier */
         float model_input_mean; /*!< model 'mean' of input values, used for normalization */
         float model_input_std;  /*!< model 'standard deviation' of input values, used for normalization */
         mpp_tensor_order_t tensor_order; /*!< model input tensor component order */

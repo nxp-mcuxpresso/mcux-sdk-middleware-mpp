@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 NXP.
+ * Copyright 2024-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -21,6 +21,8 @@
  * @brief GPU HAL gfx driver implementation using VGLite. Used to perform image data conversion
  * from different color formats, scaling, rotation and flip.
  */
+
+#include <math.h>
 
 #include "mpp_config.h"
 #include "hal_graphics_dev.h"
@@ -47,6 +49,20 @@
 /* Tessellation buffer is not needed for blit operations */
 #define HAL_VGLITE_TESSELLATION_BUFF_WIDTH  0
 #define HAL_VGLITE_TESSELLATION_BUFF_HEIGHT 0
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#ifndef ABS
+#define ABS(x) (((x) < 0) ? -(x) : (x))
+#endif
+#ifndef MAX
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
@@ -82,7 +98,7 @@ int HAL_GfxDev_VGLite_Init(gfx_dev_t *dev, void *param)
 {
     status_t status = kStatus_Success;
     int error = 0;
-        
+
     /* initialize vglite controller */
     status = BOARD_PrepareVGLiteController();
     if (status != kStatus_Success)
@@ -139,7 +155,7 @@ int HAL_GfxDev_VGLite_Deinit(gfx_dev_t *dev)
         hal_free(vglite_ctx);
         dev->user_data = NULL;
     }
-        
+
     return error;
 }
 
@@ -490,8 +506,8 @@ static int hal_vglite_init_input_buffer(vg_lite_buffer_t *vg_input_buffer, gfx_s
 }
 
 /**
- * This function returns the rotation degree.
- */
+  * This function returns the rotation degree for fixed angles.
+  */
 static vg_lite_float_t hal_vglite_set_surface_rotate(gfx_rotate_config_t *gRotate)
 {
     vg_lite_float_t rotateDegree = 0.0;
@@ -510,6 +526,11 @@ static vg_lite_float_t hal_vglite_set_surface_rotate(gfx_rotate_config_t *gRotat
 
         case ROTATE_270:
             rotateDegree = 270.0;
+            break;
+
+        case ROTATE_CUSTOM:
+            /* Custom angle will be handled separately */
+            rotateDegree = 0.0;
             break;
 
         default:
@@ -547,8 +568,8 @@ static int hal_vglite_scale(vg_lite_buffer_t *input_buffer,
 }
 
 /**
- * This function returns the product of two matrices matrix_1 and matrix2.
- */
+  * This function multiplies two 3x3 matrices
+  */
 static vg_lite_matrix_t hal_vglite_multiply_matrix(vg_lite_matrix_t *matrix_1, vg_lite_matrix_t *matrix2)
 {
     /* matrix that will store the product of matrix_1 & matrix_2 */
@@ -574,8 +595,8 @@ static vg_lite_matrix_t hal_vglite_multiply_matrix(vg_lite_matrix_t *matrix_1, v
 }
 
 /**
- * This function sets the flip transformation matrix
- * */
+  * This function sets the flip transformation matrix
+  * */
 static int hal_vglite_flip(vg_lite_matrix_t *vglite_matrix, mpp_flip_mode_t flip_mode,
         int output_width, int output_height)
 {
@@ -626,8 +647,8 @@ static int hal_vglite_flip(vg_lite_matrix_t *vglite_matrix, mpp_flip_mode_t flip
     /* Multiply with current matrix. */
     mult_matrix = hal_vglite_multiply_matrix(vglite_matrix, &vg_reflection_matrix);
     /* copy the result of the multiplication of vglite_matrix and vg_reflection_matrix
-     * in vglite_matrix.
-     */
+      * in vglite_matrix.
+      */
     memcpy(vglite_matrix, &mult_matrix, sizeof(mult_matrix));
 
     vg_lite_translate(translate_x, translate_y, vglite_matrix);
@@ -636,8 +657,8 @@ static int hal_vglite_flip(vg_lite_matrix_t *vglite_matrix, mpp_flip_mode_t flip
 }
 
 /**
- *  This function sets the rotation/scaling/flip transformation matrix
- *  */
+  *  This function sets the rotation/scaling/flip transformation matrix
+  *  */
 static int hal_vglite_init_surface(gfx_rotate_config_t rotate, vg_lite_matrix_t *vglite_matrix,
         vg_lite_buffer_t *output_buffer, vg_lite_buffer_t *input_buffer, gfx_surface_t *gDst,
         mpp_flip_mode_t flip_mode)
@@ -655,34 +676,124 @@ static int hal_vglite_init_surface(gfx_rotate_config_t rotate, vg_lite_matrix_t 
     /* initialize transformation matrix */
     vg_lite_identity(vglite_matrix);
 
-    /* set output position */
-    if (rotate.target == kGFXRotate_DSTSurface)
+    /* Check if using custom rotation */
+    if (rotate.degree == ROTATE_CUSTOM && rotate.custom_angle != 0.0f 
+                                       && rotate.custom_angle != 90.0f
+                                       && rotate.custom_angle != 180.0f
+                                       && rotate.custom_angle != 270.0f
+                                       )
     {
-        if (rotate.degree == ROTATE_90)
+        /* Apply custom rotation with auto-fit scaling */
+        /* Get the cropped input dimensions */
+        int input_width = input_buffer->width;
+        int input_height = input_buffer->height;
+
+        /* Get output window dimensions */
+        int output_width = gDst->right - gDst->left + 1;
+        int output_height = gDst->bottom - gDst->top + 1;
+
+        /* Convert angle to radians */
+        float angle_rad = rotate.custom_angle * M_PI / 180.0f;
+        float cos_val = ABS(cosf(angle_rad));
+        float sin_val = ABS(sinf(angle_rad));
+
+        /* Calculate bounding box after rotation */
+        float rotated_width = (input_height * sin_val) + (input_width * cos_val);
+        float rotated_height = (input_height * cos_val) + (input_width * sin_val);
+
+        /* Calculate scale factor to fit rotated image into output window */
+        float scale_x = (float)output_width / rotated_width;
+        float scale_y = (float)output_height / rotated_height;
+        float scale = MIN(scale_x, scale_y);  /* Use minimum to ensure it fits */
+
+        /* Calculate final dimensions after scaling */
+        image_scaled_width = (int)(rotated_width * scale);
+        image_scaled_height = (int)(rotated_height * scale);
+
+        /* Build transformation matrix step by step */
+        /* Step 1: Translate to output window position */
+        vg_lite_translate(gDst->left, gDst->top, vglite_matrix);
+
+        /* Step 2: Translate to center of output window for rotation */
+        vg_lite_translate(output_width / 2.0f, output_height / 2.0f, vglite_matrix);
+
+        /* Step 3: Apply rotation */
+        vg_lite_rotate(rotate.custom_angle, vglite_matrix);
+
+        /* Step 4: Apply scaling */
+        vg_lite_scale(scale, scale, vglite_matrix);
+
+        /* Step 5: Apply flip (if enabled) */
+        if (flip_mode != FLIP_NONE)
         {
-            /* swap output dims */
-            image_scaled_width = gDst->bottom - gDst->top + 1;
-            image_scaled_height = gDst->right - gDst->left + 1;
-            /* translate on x-axix in order to rotate the Left point by 90 degrees.*/
-            translate_x = gDst->right;
-            translate_y = gDst->top;
+            float fx, fy;
+            switch(flip_mode)
+            {
+            case FLIP_HORIZONTAL:
+                fx = -1.0f;
+                fy = 1.0f;
+            break;
+            case FLIP_VERTICAL:
+                fx = 1.0f;
+                fy = -1.0f;
+            break;
+            case FLIP_BOTH:
+                fx = -1.0f;
+                fy = -1.0f;
+            break;
+            default:
+                fx = 1.0f;
+                fy = 1.0f;
+            break;
+            }
+            vg_lite_scale(fx, fy, vglite_matrix);
         }
-        else if (rotate.degree == ROTATE_270)
+
+        /* Step 6: Translate back by half of input dimensions (to rotate around center) */
+        vg_lite_translate(-input_width / 2.0f, -input_height / 2.0f, vglite_matrix);
+    }
+    else
+    {
+        /* set output position */
+        if (rotate.target == kGFXRotate_DSTSurface)
         {
-            /* swap output dims */
-            image_scaled_width = gDst->bottom - gDst->top + 1;
-            image_scaled_height = gDst->right - gDst->left + 1;
-            /* translate on x,y-axis in order to rotate the top,Left point by 270 degrees.*/
-            translate_x = gDst->left;
-            translate_y = gDst->bottom;
-        }
-        else if (rotate.degree == ROTATE_180)
-        {
-            image_scaled_width = gDst->right - gDst->left + 1;
-            image_scaled_height = gDst->bottom - gDst->top + 1;
-            /* translate on x,y-axis in order to rotate the top,Left point by 180 degrees.*/
-            translate_x = gDst->right;
-            translate_y = gDst->bottom;
+            if (rotate.degree == ROTATE_90 || (rotate.degree == ROTATE_CUSTOM && rotate.custom_angle == 90.0f))
+            {
+                /* swap output dims */
+                image_scaled_width = gDst->bottom - gDst->top + 1;
+                image_scaled_height = gDst->right - gDst->left + 1;
+                /* translate on x-axix in order to rotate the Left point by 90 degrees.*/
+                translate_x = gDst->right;
+                translate_y = gDst->top;
+                rotate.degree = ROTATE_90;
+            }
+            else if (rotate.degree == ROTATE_270 || (rotate.degree == ROTATE_CUSTOM && rotate.custom_angle == 270.0f))
+            {
+                /* swap output dims */
+                image_scaled_width = gDst->bottom - gDst->top + 1;
+                image_scaled_height = gDst->right - gDst->left + 1;
+                /* translate on x,y-axis in order to rotate the top,Left point by 270 degrees.*/
+                translate_x = gDst->left;
+                translate_y = gDst->bottom;
+                rotate.degree = ROTATE_270;
+            }
+            else if (rotate.degree == ROTATE_180 || (rotate.degree == ROTATE_CUSTOM && rotate.custom_angle == 180.0f))
+            {
+                image_scaled_width = gDst->right - gDst->left + 1;
+                image_scaled_height = gDst->bottom - gDst->top + 1;
+                /* translate on x,y-axis in order to rotate the top,Left point by 180 degrees.*/
+                translate_x = gDst->right;
+                translate_y = gDst->bottom;
+                rotate.degree = ROTATE_180;
+            }
+            else
+            { /* 0 degree */
+                image_scaled_width = gDst->right - gDst->left + 1;
+                image_scaled_height = gDst->bottom - gDst->top + 1;
+                translate_x = gDst->left;
+                translate_y = gDst->top;
+                rotate.degree = ROTATE_0;
+            }
         }
         else
         { /* 0 degree */
@@ -691,43 +802,36 @@ static int hal_vglite_init_surface(gfx_rotate_config_t rotate, vg_lite_matrix_t 
             translate_x = gDst->left;
             translate_y = gDst->top;
         }
-    }
-    else
-    { /* 0 degree */
-        image_scaled_width = gDst->right - gDst->left + 1;
-        image_scaled_height = gDst->bottom - gDst->top + 1;
-        translate_x = gDst->left;
-        translate_y = gDst->top;
-    }
 
-    /* apply translate for output window position */
-    vg_lite_translate(translate_x, translate_y, vglite_matrix);
-    /* apply rotate */
-    if (rotate.degree != ROTATE_0)
-    {
-        rotate_degree = hal_vglite_set_surface_rotate(&rotate);
-        vg_lite_rotate(rotate_degree, vglite_matrix);
-    }
+        /* apply translate for output window position */
+        vg_lite_translate(translate_x, translate_y, vglite_matrix);
+        /* apply rotate */
+        if (rotate.degree != ROTATE_0)
+        {
+            rotate_degree = hal_vglite_set_surface_rotate(&rotate);
+            vg_lite_rotate(rotate_degree, vglite_matrix);
+        }
 
-    /* flip if needed */
-    if (flip_mode != FLIP_NONE)
-    {
-        status = hal_vglite_flip(vglite_matrix, flip_mode, image_scaled_width,
+        /* flip if needed (skip for custom rotation as it's already applied inside) */
+        if (flip_mode != FLIP_NONE)
+        {
+            status = hal_vglite_flip(vglite_matrix, flip_mode, image_scaled_width,
+                    image_scaled_height);
+            if (status != 0)
+            {
+                HAL_LOGE("hal_vglite_flip() failed\r\n");
+                return status;
+            }
+        }
+
+        /* setup scaler configuration */
+        status = hal_vglite_scale(input_buffer, vglite_matrix, image_scaled_width,
                 image_scaled_height);
         if (status != 0)
         {
-            HAL_LOGE("hal_vglite_flip() failed\r\n");
+            HAL_LOGE("hal_vglite_scale() failed.\r\n");
             return status;
         }
-    }
-
-    /* setup scaler configuration */
-    status = hal_vglite_scale(input_buffer, vglite_matrix, image_scaled_width,
-            image_scaled_height);
-    if (status != 0)
-    {
-        HAL_LOGE("hal_vglite_scale() failed.\r\n");
-        return status;
     }
 
     return status;
@@ -819,6 +923,7 @@ static int hal_vglite_init_output_buffer(vg_lite_buffer_t *vg_output_buffer, con
 {
     int error = 0;
     uint32_t output_fbuf;
+    int output_buff_alignment = 0;
 
     error = hal_vglite_set_output_buff_format(vg_output_buffer, dst);
     if (error == -1)
@@ -832,6 +937,18 @@ static int hal_vglite_init_output_buffer(vg_lite_buffer_t *vg_output_buffer, con
     vg_output_buffer->stride    = dst->pitch;
 
     output_fbuf = (uint32_t)dst->buf;
+    output_buff_alignment = hal_vglite_get_dst_buffer_alignment(dst->format);
+    if (output_buff_alignment <= 0)
+    {
+        HAL_LOGE("Failed to get output buffer alignment for format: %d\n", dst->format);
+        return -1;
+    }
+    if (output_fbuf % output_buff_alignment != 0)
+    {
+        HAL_LOGE("Output buffer address 0x%x is not aligned to %d bytes\n", output_fbuf, output_buff_alignment);
+        return -1;
+    }
+
     vg_output_buffer->memory    = (void *)output_fbuf;
     vg_output_buffer->address   = output_fbuf;
     vg_output_buffer->tiled = VG_LITE_LINEAR;
@@ -863,7 +980,6 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
     gfx_surface_t src = {0}, dst = {0};
     gfx_rotate_config_t rotate = {0};
     int input_buff_alignment = 0;
-    
 
     if ( (gfx_src->buf == NULL) || (gfx_dst->buf == NULL) )
     {
@@ -925,6 +1041,37 @@ int HAL_GfxDev_VGLite_Blit(const gfx_dev_t *dev, const gfx_surface_t *gfx_src,
         return error;
     }
 
+    if (dev->callback != NULL)
+    {
+        mpp_convert_cb_param_t cb_params;
+        cb_params.id = dev->id;
+        cb_params.left = gfx_src->left;
+        cb_params.right = gfx_src->right;
+        cb_params.top = gfx_src->top;
+        cb_params.bottom = gfx_src->bottom;
+        cb_params.vg_lite_m = (void *) &vglite_ctx->vglite_matrix.m;
+
+        /* Check if using custom rotation */
+        if (rotate.degree == ROTATE_CUSTOM && rotate.custom_angle != 0.0f 
+                                        && rotate.custom_angle != 90.0f
+                                        && rotate.custom_angle != 180.0f
+                                        && rotate.custom_angle != 270.0f
+                                        )
+        {
+            cb_params.rotation = rotate.custom_angle;
+        }
+        else
+        {
+            cb_params.rotation = 0.0f;
+        }
+
+        dev->callback(
+            dev->mpp,
+            MPP_EVENT_CONVERT_PARAMS_READY,
+            (void *) &cb_params,
+            dev->cb_user_data);
+    }
+
     error = vg_lite_blit(output_buffer_config, input_buffer_config, &vglite_ctx->vglite_matrix,
             VG_LITE_BLEND_NONE, 0, VG_LITE_FILTER_BI_LINEAR);
     if (error != kStatus_Success)
@@ -975,7 +1122,6 @@ const static gfx_dev_operator_t s_GfxDevVGLiteOps = {
 
 int HAL_GfxDev_GPU_Register(gfx_dev_t *dev)
 {
-    dev->id = 0;    /* TODO set unique id */
     dev->ops = &s_GfxDevVGLiteOps;
 
     return 0;

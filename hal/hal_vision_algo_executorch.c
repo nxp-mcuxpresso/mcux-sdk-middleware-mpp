@@ -30,6 +30,7 @@
 typedef struct _executorch_model_param
 {
     model_param_t user_params;
+    model_executorch_interpreter_data_t model_interpreter_data;
     mpp_inference_tensor_params_t input_tensor;
     mpp_inference_cb_param_t out_param;
 } executorch_model_param_t;
@@ -44,12 +45,12 @@ static bool check_model_input_dims(executorch_model_param_t *param)
 {
     if (param == NULL)
     {
-        HAL_LOGE("Model parameters is NULL pointer\n");
+        HAL_LOGE("Model parameters is NULL pointer\r\n");
         return false;
     }
     if (param->input_tensor.dims.size != 4)
     {
-        HAL_LOGE("Input Tensor not supported, expected 4 dimensions, got %d\n",
+        HAL_LOGE("Input Tensor not supported, expected 4 dimensions, got %d\r\n",
                  param->input_tensor.dims.size);
         return false;
     }
@@ -85,10 +86,10 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Init(
     hal_valgo_status_t ret = kStatus_HAL_ValgoSuccess;
     executorch_model_param_t *exec_param;
 
-    HAL_LOGD("++HAL_VisionAlgoDev_ExecuTorch_Init\n");
+    HAL_LOGD("++HAL_VisionAlgoDev_ExecuTorch_Init\r\n");
 
     if (dev == NULL || param == NULL){
-        HAL_LOGE("HAL_VisionAlgoDev_ExecuTorch_Init: dev or param is NULL\n");
+        HAL_LOGE("HAL_VisionAlgoDev_ExecuTorch_Init: dev or param is NULL\r\n");
         return kStatus_HAL_ValgoError;
     }
 
@@ -99,7 +100,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Init(
     exec_param = (executorch_model_param_t *)dev->priv_data;
 
     if (dev->priv_data == NULL) {
-        HAL_LOGE("Failed to allocate memory for ExecuTorch model parameters\n");
+        HAL_LOGE("Failed to allocate memory for ExecuTorch model parameters\r\n");
         return kStatus_HAL_ValgoMallocError;
     }
 
@@ -119,7 +120,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Init(
 
         exec_param->out_param.out_tensors[i] = hal_malloc(sizeof(mpp_inference_tensor_params_t));
         if (exec_param->out_param.out_tensors[i] == NULL) {
-            HAL_LOGE("Failed to allocate memory for output tensor %d\n", i);
+            HAL_LOGE("Failed to allocate memory for output tensor %d\r\n", i);
 
             /* Cleanup previously allocated tensors */
             for (int j = 0; j < i; j++) {
@@ -139,13 +140,14 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Init(
     if (kStatus_Success != MODEL_EXECUTORCH_Init(
             param->model_data,
             param->model_size,
+            &exec_param->model_interpreter_data,
             &exec_param->input_tensor,
             exec_param->out_param.out_tensors,
             param->model_input_mean,
             param->model_input_std,
             param->inference_params.num_outputs))
     {
-        HAL_LOGE("ERROR: MODEL_EXECUTORCH_Init() failed\n");
+        HAL_LOGE("ERROR: MODEL_EXECUTORCH_Init() failed\r\n");
 
         /* Cleanup allocated memory */
         for (i = 0; i < param->inference_params.num_outputs; i++) {
@@ -160,31 +162,31 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Init(
     }
 
     /* Display model input format information */
-    HAL_LOGI("ExecuTorch Model Input Configuration (NCHW):\n");
-    HAL_LOGI("  Expected width    = %d\n", get_model_input_width(exec_param));
-    HAL_LOGI("  Expected height   = %d\n", get_model_input_height(exec_param));
-    HAL_LOGI("  Expected channels = %d\n", get_model_input_channels(exec_param));
+    HAL_LOGI("ExecuTorch Model Input Configuration (NCHW):\r\n");
+    HAL_LOGI("  Expected width    = %d\r\n", get_model_input_width(exec_param));
+    HAL_LOGI("  Expected height   = %d\r\n", get_model_input_height(exec_param));
+    HAL_LOGI("  Expected channels = %d\r\n", get_model_input_channels(exec_param));
 
     /* Validate input tensor format */
     switch (exec_param->input_tensor.type) {
         case MPP_TENSOR_TYPE_UINT8:
         case MPP_TENSOR_TYPE_INT8:
             if (get_model_input_channels(exec_param) == 3) {
-                HAL_LOGI("Expected format = MPP_PIXEL_RGB\n");
+                HAL_LOGI("Expected format = MPP_PIXEL_RGB\r\n");
             } else {
-                HAL_LOGE("Invalid number of channels: %d\n",
+                HAL_LOGE("Invalid number of channels: %d\r\n",
                          get_model_input_channels(exec_param));
                 ret = kStatus_HAL_ValgoError;
             }
             break;
         case MPP_TENSOR_TYPE_FLOAT32:
         default:
-            HAL_LOGE("--HAL_VisionAlgoDev_TFLite_getInput: input tensor format not supported\n");
+            HAL_LOGE("--HAL_VisionAlgoDev_TFLite_getInput: input tensor format not supported\r\n");
             ret = kStatus_HAL_ValgoError;
             break;   
     }
 
-    HAL_LOGD("--HAL_VisionAlgoDev_ExecuTorch_Init\n");
+    HAL_LOGD("--HAL_VisionAlgoDev_ExecuTorch_Init\r\n");
     return ret;
 }
 
@@ -192,22 +194,22 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Deinit(
     vision_algo_dev_t *dev)
 {
     hal_valgo_status_t ret = kStatus_HAL_ValgoSuccess;
-    HAL_LOGD("++HAL_VisionAlgoDev_ExecuTorch_Deinit\n");
+    HAL_LOGD("++HAL_VisionAlgoDev_ExecuTorch_Deinit\r\n");
 
     if (dev == NULL) {
-        HAL_LOGE("HAL_VisionAlgoDev_ExecuTorch_Deinit: dev is NULL\n");
+        HAL_LOGE("HAL_VisionAlgoDev_ExecuTorch_Deinit: dev is NULL\r\n");
         return kStatus_HAL_ValgoError;
     }
 
     executorch_model_param_t *exec_param = (executorch_model_param_t *)dev->priv_data;
 
     if (exec_param == NULL) {
-        HAL_LOGE("dev->priv_data is NULL\n");
+        HAL_LOGE("dev->priv_data is NULL\r\n");
         return kStatus_HAL_ValgoStop;
     }
 
     /* Deinitialize ExecuTorch model */
-    MODEL_EXECUTORCH_DeInit();
+    MODEL_EXECUTORCH_DeInit(&exec_param->model_interpreter_data);
 
     int i;
     for (i = 0; i < exec_param->user_params.inference_params.num_outputs; i++)
@@ -225,7 +227,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Deinit(
         dev->priv_data = NULL;
     }
 
-    HAL_LOGD("--HAL_VisionAlgoDev_ExecuTorch_Deinit\n");
+    HAL_LOGD("--HAL_VisionAlgoDev_ExecuTorch_Deinit\r\n");
     return ret;
 }
 
@@ -235,27 +237,30 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Run(
 {
     hal_valgo_status_t ret = kStatus_HAL_ValgoSuccess;
     executorch_model_param_t *exec_param;
+    mpp_inference_inp_cb_params inf_inp_cb_param;
 
-    HAL_LOGD("++HAL_VisionAlgoDev_ExecuTorch_Run\n");
+    HAL_LOGD("++HAL_VisionAlgoDev_ExecuTorch_Run\r\n");
 
     /* check only dev, data is not used in this implementation */
     if (dev == NULL) 
     {
-        HAL_LOGE("HAL_VisionAlgoDev_ExecuTorch_Run: dev is NULL\n");
+        HAL_LOGE("HAL_VisionAlgoDev_ExecuTorch_Run: dev is NULL\r\n");
         return kStatus_HAL_ValgoError;
     }
 
     exec_param = (executorch_model_param_t *)dev->priv_data;
 
     if (exec_param == NULL) {
-        HAL_LOGE("ExecuTorch model parameters is NULL\n");
+        HAL_LOGE("ExecuTorch model parameters is NULL\r\n");
         return kStatus_HAL_ValgoError;
     }
 
+    inf_inp_cb_param.in_tensors[0] = (void *) &exec_param->input_tensor;
+    inf_inp_cb_param.model_id = exec_param->user_params.model_id;
     exec_param->user_params.evt_callback_f(
         exec_param->user_params.mpp,
         MPP_EVENT_INFERENCE_INPUT_READY,
-        (void *)exec_param->input_tensor.data,
+        (void *) &inf_inp_cb_param,
         exec_param->user_params.cb_userdata);
 
     MODEL_EXECUTORCH_ConvertInput(
@@ -266,14 +271,15 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Run(
         exec_param->user_params.model_input_std);
 
     int startTime = hal_get_exec_time();
-    if (kStatus_Success != MODEL_EXECUTORCH_RunInference()) {
-        HAL_LOGE("ERROR: MODEL_EXECUTORCH_RunInference() failed\n");
+    if (kStatus_Success != MODEL_EXECUTORCH_RunInference(&exec_param->model_interpreter_data)) {
+        HAL_LOGE("ERROR: MODEL_EXECUTORCH_RunInference() failed\r\n");
         return kStatus_HAL_ValgoError;
     }
     exec_param->out_param.inference_time_ms = hal_get_exec_time() - startTime;
     exec_param->out_param.inference_type = MPP_INFERENCE_TYPE_EXECUTORCH;
+    exec_param->out_param.model_id = exec_param->user_params.model_id;
 
-    HAL_LOGD("Inference completed in %d ms\n", exec_param->out_param.inference_time_ms);
+    HAL_LOGD("Inference completed in %d ms\r\n", exec_param->out_param.inference_time_ms);
 
     exec_param->user_params.evt_callback_f(
         exec_param->user_params.mpp,
@@ -281,7 +287,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_Run(
         (void *)&exec_param->out_param,
         exec_param->user_params.cb_userdata);
 
-    HAL_LOGD("--HAL_VisionAlgoDev_ExecuTorch_Run\n");
+    HAL_LOGD("--HAL_VisionAlgoDev_ExecuTorch_Run\r\n");
     return ret;
 }
 
@@ -293,11 +299,11 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_getBufDesc(
     hal_valgo_status_t ret = kStatus_HAL_ValgoSuccess;
     executorch_model_param_t *exec_param;
 
-    HAL_LOGD("++HAL_VisionAlgoDev_ExecuTorch_getBufDesc\n");
+    HAL_LOGD("++HAL_VisionAlgoDev_ExecuTorch_getBufDesc\r\n");
 
     if ((in_buf == NULL) || (policy == NULL) || (dev == NULL))
     {
-        HAL_LOGE("HAL_VisionAlgoDev_ExecuTorch_getBufDesc: in_buf, policy or dev is NULL\n");
+        HAL_LOGE("HAL_VisionAlgoDev_ExecuTorch_getBufDesc: in_buf, policy or dev is NULL\r\n");
         return kStatus_HAL_ValgoError;
     }
 
@@ -307,7 +313,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_getBufDesc(
     exec_param = (executorch_model_param_t *)dev->priv_data;
 
     if (exec_param == NULL) {
-        HAL_LOGE("ExecuTorch model parameters is NULL\n");
+        HAL_LOGE("ExecuTorch model parameters is NULL\r\n");
         return kStatus_HAL_ValgoError;
     }
 
@@ -343,11 +349,11 @@ static hal_valgo_status_t HAL_VisionAlgoDev_ExecuTorch_getBufDesc(
     in_buf->cacheable = true;
 #endif
 
-    HAL_LOGD("Buffer descriptor: alignment=%d, nb_lines=%d, stride=%d, size=%d, cacheable=%d\n",
+    HAL_LOGD("Buffer descriptor: alignment=%d, nb_lines=%d, stride=%d, size=%d, cacheable=%d\r\n",
              in_buf->alignment, in_buf->nb_lines, in_buf->stride,
              in_buf->max_image_size, in_buf->cacheable);
 
-    HAL_LOGD("--HAL_VisionAlgoDev_ExecuTorch_getBufDesc\n");
+    HAL_LOGD("--HAL_VisionAlgoDev_ExecuTorch_getBufDesc\r\n");
     return ret;
 }
 
@@ -363,14 +369,14 @@ const static vision_algo_dev_operator_t s_VisionAlgoDev_ExecuTorchOps = {
 int hal_inference_executorch_setup(vision_algo_dev_t *dev)
 {
     if (dev == NULL) {
-        HAL_LOGE("Device pointer is NULL\n");
+        HAL_LOGE("Device pointer is NULL\r\n");
         return -1;
     }
 
     dev->id = 0;
     dev->ops = &s_VisionAlgoDev_ExecuTorchOps;
 
-    HAL_LOGI("ExecuTorch HAL driver initialized\n");
+    HAL_LOGI("ExecuTorch HAL driver initialized\r\n");
 
     return 0;
 }
@@ -379,7 +385,7 @@ int hal_inference_executorch_setup(vision_algo_dev_t *dev)
 
 int hal_inference_executorch_setup(vision_algo_dev_t *dev)
 {
-    HAL_LOGE("Inference ExecuTorch not enabled\n");
+    HAL_LOGE("Inference ExecuTorch not enabled\r\n");
     return -1;
 }
 

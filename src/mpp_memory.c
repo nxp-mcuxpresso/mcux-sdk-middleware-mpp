@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP.
+ * Copyright 2022-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -49,14 +49,33 @@ static int mpp_alloc_input_buf(_elem_t *elem)
         {
             /* time to set stride */
             if (elem->io.in_buf[i]->hw->stride == 0)
-                elem->io.in_buf[i]->hw->stride = elem->io.in_buf[i]->width * get_bitpp(elem->io.in_buf[i]->format) / 8;
+            {
+                if (elem->io.in_buf[i]->format == MPP_PIXEL_YUV420P)
+                {
+                    elem->io.in_buf[i]->hw->stride = elem->io.in_buf[i]->width;
+                    elem->io.in_buf[i]->hw->stride_uv = elem->io.in_buf[i]->width / 2;
+                }
+                else
+                {
+                    elem->io.in_buf[i]->hw->stride = elem->io.in_buf[i]->width * get_bitpp(elem->io.in_buf[i]->format) / 8;
+                }
+            }
 
             if (elem->io.in_buf[i]->stripe_num > 0)
                 height = elem->io.in_buf[i]->height / MPP_STRIPE_NUM;
             else
                 height = elem->io.in_buf[i]->height;
 
-            buffer_size = height * elem->io.in_buf[i]->hw->stride;
+            if (elem->io.in_buf[i]->format == MPP_PIXEL_YUV420P)
+            {
+                int y_size = elem->io.in_buf[i]->hw->stride * height;
+                int uv_size = elem->io.in_buf[i]->hw->stride_uv * (height / 2);
+                buffer_size = y_size + uv_size + uv_size;
+            }
+            else
+            {
+                buffer_size = height * elem->io.in_buf[i]->hw->stride;
+            }
         }
         else   /* compressed image */
         {
@@ -81,6 +100,21 @@ static int mpp_alloc_input_buf(_elem_t *elem)
         else    /* avoid modulo with 0 */
             elem->io.in_buf[i]->hw->addr = heap_p;
 
+        /* For YUV420P, set also the pointers to U and V planes */
+        if (elem->io.in_buf[i]->format == MPP_PIXEL_YUV420P)
+        {
+            if (elem->io.in_buf[i]->stripe_num > 0)
+                height = elem->io.in_buf[i]->height / MPP_STRIPE_NUM;
+            else
+                height = elem->io.in_buf[i]->height;
+
+            int y_size = elem->io.in_buf[i]->hw->stride * height;
+            int uv_size = elem->io.in_buf[i]->hw->stride_uv * (height / 2);
+
+            elem->io.in_buf[i]->hw->addr_u = elem->io.in_buf[i]->hw->addr + y_size;
+            elem->io.in_buf[i]->hw->addr_v = elem->io.in_buf[i]->hw->addr + y_size + uv_size;
+        }
+
         /* buffer is cacheable */
         elem->io.in_buf[i]->hw->cacheable = true;
     }
@@ -101,7 +135,17 @@ mpp_memory_policy_t get_prev_policy(_elem_t *elem)
             continue;
         }
         else
+        {
+            for (int i = 0; i < MPP_MAX_BRANCH_NUM; i++)
+            {
+                if (prevelem->next[i] != NULL && prevelem->next[i] != elem)
+                {
+                    if (prevelem->next[i]->io.mem_policy == HAL_MEM_ALLOC_INPUT || prevelem->next[i]->io.mem_policy == HAL_MEM_ALLOC_BOTH)
+                        return HAL_MEM_ALLOC_OUTPUT;
+                }
+            }
             return prevelem->io.mem_policy;
+        }
     } while (prevelem != NULL);
     MPP_LOGE("\n\r Ill-formed pipeline: cannot get policy of previous element!");
     return HAL_MEM_ALLOC_NONE;
@@ -111,9 +155,18 @@ mpp_memory_policy_t get_prev_policy(_elem_t *elem)
  * note: those buffers are already allocated
  * in case of equal constraints, take producer's requirements
  **/
-static int solve_buf_req(buf_desc_t *buf)
+static int solve_buf_req(_elem_t *elem, buf_desc_t *buf)
 {
     bool is_prod = true;    /* by default take producer requirement */
+
+    /* If current element is INFERENCE and previous element is also INFERENCE,
+     * take the consumer's requirements */
+    if (elem->type == MPP_TYPE_PROC && elem->proc_typ == MPP_ELEMENT_INFERENCE && 
+        elem->prev->type == MPP_TYPE_PROC && elem->prev->proc_typ == MPP_ELEMENT_INFERENCE)
+    {
+        buf->hw = &buf->hw_req_cons;
+        return MPP_SUCCESS;
+    }
 
     /* check stride compatibility */
     if ( (buf->hw_req_prod.stride > 0) && (buf->hw_req_cons.stride > 0)
@@ -260,7 +313,7 @@ int mpp_memory_alloc(_mpp_t *mpp)
                 MPP_LOGD("Element %s: Buffer conflict between two elements!\n", elem_name(elem));
                 for(i = 0; i < elem->io.nb_in_buf; i++)
                 {
-                    ret = solve_buf_req(elem->io.in_buf[i]);
+                    ret = solve_buf_req(elem, elem->io.in_buf[i]);
                     if (ret != MPP_SUCCESS)
                         return ret;
                 }

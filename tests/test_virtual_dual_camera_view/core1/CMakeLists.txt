@@ -29,4 +29,4 @@ include(${SdkRootDirPath}/CMakeLists.txt)
 # board & app specific cmake
 include(${SdkRootDirPath}/middleware/eiq/mpp/boards/${board}/tests/test_virtual_dual_camera_view/${core_id}/reconfig.cmake OPTIONAL)
 
-mcux_convert_binary(BINARY ${SdkRootDirPath}/middleware/eiq/mpp/tests/test_virtual_dual_camera_view/core1_image.bin)
+mcux_convert_binary(BINARY ${APPLICATION_BINARY_DIR}/../test_virtual_dual_camera_view/${CONFIG_TOOLCHAIN}/core1_image.bin)

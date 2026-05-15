@@ -97,6 +97,28 @@ int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr, mpp_elem
 int mpp_filesrc_add(mpp_t mpp, mpp_filesrc_params_t *params, void *addr, mpp_elem_handle_t *elem_h);
 
 /**
+ * Sink file addition
+ *
+ * @param [in] mpp input pipeline
+ * @param [in] params file parameters
+ * @param [out] elem_h element handle in pipeline
+ * @return \ref return_codes
+ *
+ */
+int mpp_filesink_add(mpp_t mpp, mpp_filesink_params_t *params, mpp_elem_handle_t *elem_h);
+
+/**
+ * Sink RTSP addition
+ *
+ * @param [in] mpp input pipeline
+ * @param [in] params file parameters
+ * @param [out] elem_h element handle in pipeline
+ * @return \ref return_codes
+ *
+ */
+int mpp_rtspsink_add(mpp_t mpp, mpp_rtspsink_params_t *params, mpp_elem_handle_t *elem_h);
+
+/**
  * Multi core source addition
  *
  * This function adds a multi core source to the pipeline.
@@ -142,6 +164,28 @@ int mpp_mc_sink_add(mpp_t mpp, mpp_mc_params_t *params);
  * @return \ref return_codes
  */
 int mpp_nullsink_add(mpp_t mpp);
+
+/**
+ * Get output buffer address
+ *
+ * This function returns the address of an output buffer for a given element.
+ *
+ * @param [in] elem element handle in pipeline
+ * @param [in] index output buffer index (must be less than MAX_OUTPUT_PORTS and element's nb_out_buf)
+ * @return pointer to the output buffer address if successful, NULL if element is invalid or index is out of range
+ */
+void *mpp_get_output_buff_address(mpp_elem_handle_t elem, uint32_t index);
+
+/**
+ * Get input buffer address
+ *
+ * This function returns the address of an input buffer for a given element.
+ *
+ * @param [in] elem element handle in pipeline
+ * @param [in] index input buffer index (must be less than MAX_INPUT_PORTS and element's nb_in_buf)
+ * @return pointer to the input buffer address if successful, NULL if element is invalid or index is out of range
+ */
+void *mpp_get_input_buff_address(mpp_elem_handle_t elem, uint32_t index);
 
 /**
  * Add processing element (single input, single output)
@@ -310,7 +354,35 @@ struct rpmsg_lite_instance *mpp_secondary_core_rpmsg_init(void);
 void *mpp_init_rpmsg(void);
 #endif /* RPMSG_USED */
 
+/* 
+ * Initialize the storage subsystem
+ *
+ * @return: MPP_SUCCESS on success, MPP_ERROR on failure
+ *
+ */
 int mpp_storage_init(void);
+
+/**
+ * Get free and total storage space
+ *
+ * @param[out] free_bytes Pointer to store the free space in bytes
+ * @param[out] total_bytes Pointer to store the total space in bytes
+ * @return MPP_SUCCESS on success, MPP_ERROR on failure
+ */
+int mpp_storage_get_free_space(uint64_t *free_bytes, uint64_t *total_bytes);
+
+/**
+ * Initialize Ethernet network interface
+ *
+ * This function initializes the Ethernet network interface with the specified
+ * IP address, netmask, and gateway configuration.
+ *
+ * @param [in] ip_addr IP address as array of 4 octets (e.g., {192, 168, 0, 102})
+ * @param [in] netmask Network mask as array of 4 octets (e.g., {255, 255, 255, 0})
+ * @param [in] gateway Gateway address as array of 4 octets (e.g., {192, 168, 0, 100})
+ * @return 0 on success, non-zero on error
+ */
+int mpp_eth_netif_init(uint8_t ip_addr[4], uint8_t netmask[4], uint8_t gateway[4]);
 
 /** @}*/
 

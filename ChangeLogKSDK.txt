@@ -2,7 +2,30 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-Current version is 4.2.0
+Current version is 4.3.0
+  - 4.3.0
+    - New features:
+      - Added frdmimxrt700: basic board support
+      - Added frdmimxrt1152 basic board support
+      - Added camera_gesture_recognition_view example for hand gesture recognition on mimxrt700evk
+      - Added new example with two models and two inference elements running in parallel on different pipeline branches
+      - Added RTSP/RTP sink support for H.264 video streaming
+      - Added H.264 video encoder element (OpenH264 on CPU)
+      - Added hand gesture recognition models (hand landmark, gesture embedder, gesture classifier)
+      - Added support for custom rotation angle in VGLite HAL
+    - Bug fixes:
+      - Fixed west export_app and standalone project build for camera_usb_final_fr_app_view (face recognition solution)
+      - Fixed uninitialized pitch_uv, buf_u and buf_v parameters (coverity issues)
+      - Enhanced JPEG HW frame validation
+    - Known issues:
+      - frdmimxrt1152: examples are not fully validated yet
+      - frdmimxrt700: examples are not fully validated yet
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170
+      - mimxrt700evk
+      - frdmimxrt700
+      - frdmimxrt1152
   - 4.2.0
     - New features:
       - N/A

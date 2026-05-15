@@ -885,6 +885,8 @@ INPUT                  = hal/include/hal_camera_dev.h \
                          hal/include/hal_camera_shared.h \
                          hal/include/hal_static_image.h \
                          hal/include/hal_filesrc.h \
+                         hal/include/hal_filesink.h \
+                         hal/include/hal_rtspsink.h \
                          hal/include/hal_graphics_dev.h \
                          hal/include/hal_chgui.h \
                          hal/include/hal_draw.h \

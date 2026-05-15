@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 NXP
+ * Copyright 2022-2024,2026 NXP
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -27,7 +27,7 @@
 
 tflite::MicroOpResolver __attribute__((weak)) &MODEL_GetOpsResolver()
 {
-    static tflite::MicroMutableOpResolver<114> s_microOpResolver;
+    static tflite::MicroMutableOpResolver<115> s_microOpResolver;
     if (s_microOpResolver.FindOp(tflite::BuiltinOperator_ZEROS_LIKE) != nullptr){
         return s_microOpResolver;
     }
@@ -110,6 +110,7 @@ tflite::MicroOpResolver __attribute__((weak)) &MODEL_GetOpsResolver()
     s_microOpResolver.AddQuantize();
     s_microOpResolver.AddReadVariable();
     s_microOpResolver.AddReduceMax();
+    s_microOpResolver.AddReduceMin();
     s_microOpResolver.AddRelu();
     s_microOpResolver.AddRelu6();
     s_microOpResolver.AddReshape();

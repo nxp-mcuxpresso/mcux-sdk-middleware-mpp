@@ -286,7 +286,7 @@ int hal_landmark(uint8_t *frame, int width, int height, mpp_pixel_format_t forma
     if ( (lk->y <= lk->width) || (lk->y >= (height - width_times_2))
         || (lk->x <= lk->width) || (lk->x >= (width - width_times_2)) )
     {
-        HAL_LOGE("invalid landmark size versus image border x:%d y:%d thickness:%d width:%d height:%d\n", lk->x, lk->y, lk->width, width, height);
+        HAL_LOGE("invalid landmark size versus image border \r\nx:%d y:%d thickness:%d width:%d height:%d\n", lk->x, lk->y, lk->width, width, height);
         return MPP_INVALID_PARAM;
     }
     

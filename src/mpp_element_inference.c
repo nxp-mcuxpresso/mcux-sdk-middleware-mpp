@@ -137,6 +137,7 @@ unsigned int elem_inference_setup(_elem_t *elem)
         params.evt_callback_f = mpp->params.evt_callback_f;
         params.cb_userdata = mpp->params.cb_userdata;
         params.tensor_order = elem->params.ml_inference.tensor_order;
+        params.model_id = elem->params.ml_inference.model_id;
         params.mpp = (mpp_t) mpp;
         memcpy(&params.inference_params,
                         &elem->params.ml_inference.inference_params,sizeof(mpp_inference_params_t));

@@ -17,6 +17,7 @@
  *  limitations under the License.
  */
 #include "hal_filesrc.h"
+#include "hal_debug.h"
 #include "mpp_config.h"
 
 #ifdef HAL_ENABLE_STORAGE
@@ -90,6 +91,50 @@ int hal_storage_init(void)
 bool hal_storage_is_mounted(void)
 {
     return s_storage_mounted;
+}
+
+hal_storage_status_t hal_storage_get_free_space(uint64_t *free_bytes, uint64_t *total_bytes)
+{
+    FATFS *fs;
+    DWORD free_clust;
+    FRESULT res;
+    const TCHAR volumePath[3U] = {SDDISK + '0', ':', '/'};
+
+    if (!s_storage_mounted)
+    {
+        HAL_LOGE("Storage not mounted\r\n");
+        return kStatus_HAL_StorageNotMounted;
+    }
+
+    /* Get volume information and free clusters */
+    res = f_getfree(volumePath, &free_clust, &fs);
+    if (res != FR_OK)
+    {
+        HAL_LOGE("Failed to get free space, FRESULT=%d\r\n", res);
+        return kStatus_HAL_StorageFSError;
+    }
+
+    /* Calculate free space in bytes */
+    if (free_bytes != NULL)
+    {
+#if FF_MAX_SS != FF_MIN_SS
+        *free_bytes = (uint64_t)free_clust * fs->csize * fs->ssize;
+#else
+        *free_bytes = (uint64_t)free_clust * fs->csize * FF_MAX_SS;
+#endif
+    }
+
+    /* Calculate total space in bytes */
+    if (total_bytes != NULL)
+    {
+#if FF_MAX_SS != FF_MIN_SS
+        *total_bytes = (uint64_t)(fs->n_fatent - 2) * fs->csize * fs->ssize;
+#else
+        *total_bytes = (uint64_t)(fs->n_fatent - 2) * fs->csize * FF_MAX_SS;
+#endif
+    }
+
+    return kStatus_HAL_StorageSuccess;
 }
 
 #endif /* HAL_ENABLE_STORAGE */

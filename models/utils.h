@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP
+ * Copyright 2022-2026 NXP
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -38,6 +38,7 @@ typedef struct {
     float score;
 #ifdef MODEL_NUM_LANDMARKS
     coord_t landmarks[MODEL_NUM_LANDMARKS];
+    float rotation;
 #endif
 } box_data;
 

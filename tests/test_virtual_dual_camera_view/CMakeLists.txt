@@ -16,6 +16,12 @@ mcux_add_include(
               middleware/eiq/mpp/tests/test_virtual_dual_camera_view/
 )
 
+# Add include path for the core1_image.bin
+mcux_add_include(
+    BASE_PATH ${APPLICATION_BINARY_DIR}
+    INCLUDES ${CONFIG_TOOLCHAIN}/
+)
+
 # board files
 include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 

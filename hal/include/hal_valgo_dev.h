@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 NXP.
+ * Copyright 2020-2024,2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -38,6 +38,7 @@ typedef struct _model_param_t {
     int model_size;                          /*!< model binary size */
     float model_input_mean;                  /*!< model 'mean' of input values, used for normalization */
     float model_input_std;                   /*!< model 'standard deviation' of input values, used for normalization */
+    uint32_t model_id;                       /*<! unique model identifier */
     mpp_inference_params_t inference_params; /*!< inference parameters */
     int height;                              /*!< frame height */
     int width;                               /*!< frame width  */

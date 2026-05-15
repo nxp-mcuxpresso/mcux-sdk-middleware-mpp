@@ -28,8 +28,11 @@
 #include "hal_graphics_dev.h"
 #include "hal_valgo_dev.h"
 #include "hal_vdec_dev.h"
+#include "hal_venc_dev.h"
 #include "hal_static_image.h"
 #include "hal_filesrc.h"
+#include "hal_filesink.h"
+#include "hal_rtspsink.h"
 #include "hal_types.h"
 #include "stddef.h"
 
@@ -84,6 +87,8 @@ _mpp_src_type_t;
 typedef enum
 _mpp_sink_type_e {MPP_SINK_INVALID,
                   MPP_SINK_DISPLAY,
+                  MPP_SINK_FILE,
+                  MPP_SINK_RTSP,
                   MPP_SINK_MC,
                   MPP_SINK_NULL,
                   MPP_SINK_NUM
@@ -259,6 +264,21 @@ typedef struct _filesrc_s {
     filesrc_t dev;
 }_filesrc_t;
 
+/* file sink */
+typedef struct _filesink_s {
+    /* parameters */
+	mpp_filesink_params_t params;
+    /* HAL/FWK type */
+    filesink_t dev;
+}_filesink_t;
+
+/* RTSP sink */
+typedef struct _rtspsink_s {
+    /* parameters */
+	mpp_rtspsink_params_t params;
+    /* HAL/FWK type */
+    rtspsink_t dev;
+}_rtspsink_t;
 
 /* display sink */
 typedef struct _display_dev_s {
@@ -300,9 +320,12 @@ struct _elem_s {
         _display_dev_t *disp;
         _static_image_t *img;
         _filesrc_t *filesrc;
+        _filesink_t *filesink;
+        _rtspsink_t *rtspsink;
         vdec_dev_t *vdec;
         _multicore_dev_t *mc;
         vdec_h264_dev_t *vdec_h264;
+        venc_h264_dev_t *venc_h264;
     } dev;
 
     /* the IO buffers descriptors */
@@ -332,6 +355,7 @@ static inline int can_add(mpp_element_id_t id)
     case MPP_ELEMENT_IMG_COMPOSE:
     case MPP_ELEMENT_IMG_QUALITY_CHECK:
     case MPP_ELEMENT_VIDEO_DECODE:
+    case MPP_ELEMENT_VIDEO_ENCODE:
         return 1;
     default:
         return 0;

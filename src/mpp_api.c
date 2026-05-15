@@ -700,6 +700,26 @@ uint32_t get_in_buff_index(_elem_t *elem, buf_desc_t *buf)
     return MAX_INPUT_PORTS;
 }
 
+void *mpp_get_output_buff_address(mpp_elem_handle_t elem, uint32_t index)
+{
+    _elem_t *_elem = (_elem_t *)elem;
+
+    if (!_elem || index >= MAX_OUTPUT_PORTS || index >= _elem->io.nb_out_buf)
+        return NULL;
+
+    return (void *)_elem->io.out_buf[index]->hw->addr;
+}
+
+void *mpp_get_input_buff_address(mpp_elem_handle_t elem, uint32_t index)
+{
+    _elem_t *_elem = (_elem_t *)elem;
+
+    if (!_elem || index >= MAX_INPUT_PORTS || index >= _elem->io.nb_in_buf)
+        return NULL;
+
+    return (void *)_elem->io.in_buf[index]->hw->addr;
+}
+
 /* allocate the element and link it to the mpp */
 int mpp_create_elem(_mpp_t *mpp, _elem_t **p_elem)
 {
@@ -995,6 +1015,28 @@ int mpp_start(mpp_t mpp, int last, bool force_update)
             }
         }
     }
+    else if ((_mpp->last_elem->type == MPP_TYPE_SINK) && (_mpp->last_elem->sink_typ == MPP_SINK_FILE))
+    {
+        _filesink_t *filesink = _mpp->last_elem->dev.filesink;
+        /* start HAL function */
+        if (filesink->dev.ops->start != NULL) {
+            if (filesink->dev.ops->start(&filesink->dev) != 0) {
+                MPP_LOGE("file sink fails to start\n");
+                return MPP_ERROR;
+            }
+        }
+    }
+    else if ((_mpp->last_elem->type == MPP_TYPE_SINK) && (_mpp->last_elem->sink_typ == MPP_SINK_RTSP))
+    {
+        _rtspsink_t *rtspsink = _mpp->last_elem->dev.rtspsink;
+        /* start HAL function */
+        if (rtspsink->dev.ops->start != NULL) {
+            if (rtspsink->dev.ops->start(&rtspsink->dev) != 0) {
+                MPP_LOGE("RTSP sink fails to start\n");
+                return MPP_ERROR;
+            }
+        }
+    }
     else if ((_mpp->last_elem->type == MPP_TYPE_SINK) && (_mpp->last_elem->sink_typ == MPP_SINK_MC))
     {
         _multicore_dev_t *mc = _mpp->last_elem->dev.mc;
@@ -1149,6 +1191,30 @@ int mpp_stop(mpp_t mpp)
                     if (disp->dev.ops->stop(&disp->dev) != 0)
                     {
                         MPP_LOGE("display fails to stop\n");
+                        ret = MPP_ERROR;
+                    }
+                }
+                break;
+            case MPP_SINK_FILE:
+                _filesink_t *filesink = _mpp->last_elem->dev.filesink;
+                /* stop HAL function */
+                if (filesink->dev.ops->stop != NULL)
+                {
+                    if (filesink->dev.ops->stop(&filesink->dev) != 0)
+                    {
+                        MPP_LOGE("file sink fails to stop\n");
+                        ret = MPP_ERROR;
+                    }
+                }
+                break;
+            case MPP_SINK_RTSP:
+                _rtspsink_t *rtspsink = _mpp->last_elem->dev.rtspsink;
+                /* stop HAL function */
+                if (rtspsink->dev.ops->stop != NULL)
+                {
+                    if (rtspsink->dev.ops->stop(&rtspsink->dev) != 0)
+                    {
+                        MPP_LOGE("RTSP sink fails to stop\n");
                         ret = MPP_ERROR;
                     }
                 }

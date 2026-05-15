@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 NXP.
+ * Copyright 2024-2026 NXP.
  * All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
@@ -54,7 +54,8 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Init(
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     HAL_LOGD("++HAL_CameraDev_EzhV_Ov7670_Init( param[%p]\n", param);
     
-    if ((config->width == 640) && (config->height == 480))
+    if (((config->width == 640) && (config->height == 480)) || 
+            ((config->width == 320) && (config->height == 240)))
     {
         /* keep void for future resolution to be supported */
     }

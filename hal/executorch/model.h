@@ -24,11 +24,17 @@ extern "C" {
 #define HAL_EXECUTORCH_BUFFER_ALIGN 16
 #endif
 
+typedef struct model_executorch_interpreter_data_s 
+{
+    void *s_method;
+} model_executorch_interpreter_data_t;
+
 /**
  * Initialize ExecuTorch model from a PTE file buffer.
  *
  * @param pte_data      pointer to PTE model binary
  * @param pte_size      size of PTE model binary
+ * @param interpreter_data [out] interpreter context data
  * @param inputTensor   [out] input tensor metadata (data pointer, type, dims)
  * @param outputTensor  [out] array of output tensor metadata pointers
  * @param mean          model input normalization mean
@@ -39,6 +45,7 @@ extern "C" {
 status_t MODEL_EXECUTORCH_Init(
     const void *pte_data,
     size_t pte_size,
+    model_executorch_interpreter_data_t *interpreter_data,
     mpp_inference_tensor_params_t *inputTensor,
     mpp_inference_tensor_params_t *outputTensor[],
     int mean,
@@ -48,12 +55,12 @@ status_t MODEL_EXECUTORCH_Init(
 /**
  * Deinitialize ExecuTorch model and free all runtime resources.
  */
-status_t MODEL_EXECUTORCH_DeInit(void);
+status_t MODEL_EXECUTORCH_DeInit(model_executorch_interpreter_data_t *interpreter_data);
 
 /**
  * Run ExecuTorch model inference.
  */
-status_t MODEL_EXECUTORCH_RunInference(void);
+status_t MODEL_EXECUTORCH_RunInference(model_executorch_interpreter_data_t *interpreter_data);
 
 /**
  * Convert unsigned 8-bit image data to model input format in-place.

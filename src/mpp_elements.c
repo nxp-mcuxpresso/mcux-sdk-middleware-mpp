@@ -28,6 +28,7 @@ unsigned int elem_img_decode_setup(_elem_t *elem);
 unsigned int elem_img_compose_setup(_elem_t *elem);
 unsigned int elem_img_quality_check_setup(_elem_t *elem);
 unsigned int elem_video_decode_setup(_elem_t *elem);
+unsigned int elem_video_encode_setup(_elem_t *elem);
 
 typedef struct _elem_func_id_pair {
     mpp_element_id_t id;
@@ -44,6 +45,7 @@ elem_func_id_pair elem_setup_funcs[] =
     {MPP_ELEMENT_IMG_COMPOSE, elem_img_compose_setup},
     {MPP_ELEMENT_IMG_QUALITY_CHECK, elem_img_quality_check_setup},
     {MPP_ELEMENT_VIDEO_DECODE, elem_video_decode_setup},
+    {MPP_ELEMENT_VIDEO_ENCODE, elem_video_encode_setup},
 #ifdef EMULATOR
     {MPP_ELEMENT_TEST, elem_test_setup},
 #endif

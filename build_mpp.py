@@ -36,6 +36,7 @@ DEBUG_CONSOLE_DEFINES = {
     }
 }
 
+
 class MPPBuilder:
     def __init__(self):
         self.w_dir = Path(__file__).resolve().parent
@@ -62,6 +63,13 @@ class MPPBuilder:
                 "1": "cm33_core1"
             },
             "mimxrt700evk": {
+                "0": "cm33_core0",
+                "1": "cm33_core1"
+            },
+            "frdmimxrt1152": {
+                "0": "cm33_core0"
+            },
+            "frdmimxrt700": {
                 "0": "cm33_core0",
                 "1": "cm33_core1"
             },
@@ -114,7 +122,8 @@ class MPPBuilder:
             extensions = ['']
 
         # Split PATH into directories
-        path_dirs = [d.strip() for d in path_env.split(path_separator) if d.strip()]
+        path_dirs = [d.strip()
+                     for d in path_env.split(path_separator) if d.strip()]
 
         # Add common directories that might not be in PATH
         if self.is_windows:
@@ -136,9 +145,11 @@ class MPPBuilder:
                     try:
                         for item in os.listdir(pf):
                             if 'arm' in item.lower() and 'gcc' in item.lower():
-                                common_dirs.append(os.path.join(pf, item, 'bin'))
+                                common_dirs.append(
+                                    os.path.join(pf, item, 'bin'))
                             elif 'gnu' in item.lower() and 'arm' in item.lower():
-                                common_dirs.append(os.path.join(pf, item, 'bin'))
+                                common_dirs.append(
+                                    os.path.join(pf, item, 'bin'))
                     except (PermissionError, OSError):
                         pass
 
@@ -184,6 +195,7 @@ class MPPBuilder:
         except Exception as e:
             print(f"Error running command {cmd}: {e}")
             return None
+
     def _find_arm_gcc_dir(self):
         """Find ARM GCC installation directory"""
         candidates = []
@@ -191,12 +203,14 @@ class MPPBuilder:
         # First, check if ARMGCC_DIR environment variable is set
         env_armgcc_dir = os.environ.get('ARMGCC_DIR')
         if env_armgcc_dir:
-            gcc_executable = os.path.join(env_armgcc_dir, 'bin', 'arm-none-eabi-gcc')
+            gcc_executable = os.path.join(
+                env_armgcc_dir, 'bin', 'arm-none-eabi-gcc')
             if self.is_windows:
                 gcc_executable += '.exe'
 
             if os.path.exists(gcc_executable):
-                print(f"Found ARMGCC_DIR from environment variable: {env_armgcc_dir}")
+                print(
+                    f"Found ARMGCC_DIR from environment variable: {env_armgcc_dir}")
                 return env_armgcc_dir
 
         # Try to find arm-none-eabi-gcc in PATH
@@ -237,7 +251,8 @@ class MPPBuilder:
                     for item in os.listdir(mcuxpresso_tools_dir):
                         item_lower = item.lower()
                         if any(keyword in item_lower for keyword in ['arm', 'gcc', 'gnu']):
-                            common_locations.append(str(mcuxpresso_tools_dir / item))
+                            common_locations.append(
+                                str(mcuxpresso_tools_dir / item))
                 except (PermissionError, OSError):
                     pass
 
@@ -260,12 +275,14 @@ class MPPBuilder:
                         for item in os.listdir(base_path):
                             full_path = os.path.join(base_path, item)
                             if os.path.isdir(full_path):
-                                gcc_bin = os.path.join(full_path, 'bin', 'arm-none-eabi-gcc.exe')
+                                gcc_bin = os.path.join(
+                                    full_path, 'bin', 'arm-none-eabi-gcc.exe')
                                 if os.path.exists(gcc_bin):
                                     candidates.append(full_path)
 
                         # Check if gcc is directly in this directory
-                        gcc_bin = os.path.join(base_path, 'bin', 'arm-none-eabi-gcc.exe')
+                        gcc_bin = os.path.join(
+                            base_path, 'bin', 'arm-none-eabi-gcc.exe')
                         if os.path.exists(gcc_bin):
                             candidates.append(base_path)
                     except (PermissionError, OSError):
@@ -298,7 +315,8 @@ class MPPBuilder:
                     for item in os.listdir(mcuxpresso_tools_dir):
                         item_lower = item.lower()
                         if any(keyword in item_lower for keyword in ['arm', 'gcc', 'gnu']):
-                            common_locations.append(str(mcuxpresso_tools_dir / item))
+                            common_locations.append(
+                                str(mcuxpresso_tools_dir / item))
                 except (PermissionError, OSError):
                     pass
 
@@ -321,12 +339,14 @@ class MPPBuilder:
                         for item in os.listdir(base_path):
                             full_path = os.path.join(base_path, item)
                             if os.path.isdir(full_path):
-                                gcc_bin = os.path.join(full_path, 'bin', 'arm-none-eabi-gcc')
+                                gcc_bin = os.path.join(
+                                    full_path, 'bin', 'arm-none-eabi-gcc')
                                 if os.path.exists(gcc_bin):
                                     candidates.append(full_path)
 
                         # Check if gcc is directly in this directory
-                        gcc_bin = os.path.join(base_path, 'bin', 'arm-none-eabi-gcc')
+                        gcc_bin = os.path.join(
+                            base_path, 'bin', 'arm-none-eabi-gcc')
                         if os.path.exists(gcc_bin):
                             candidates.append(base_path)
                     except (PermissionError, OSError):
@@ -345,19 +365,22 @@ class MPPBuilder:
 
                 # First try to extract from path (e.g., "10 2021.10" or "9-2020-q2")
                 import re
-                version_match = re.search(r'(\d+)[.\-\s]+(\d+)[.\-\s]*(\d*)', candidate)
+                version_match = re.search(
+                    r'(\d+)[.\-\s]+(\d+)[.\-\s]*(\d*)', candidate)
                 if version_match:
                     try:
                         major = int(version_match.group(1))
                         minor = int(version_match.group(2))
-                        patch = int(version_match.group(3)) if version_match.group(3) else 0
+                        patch = int(version_match.group(
+                            3)) if version_match.group(3) else 0
                         version_str = (major, minor, patch)
                     except ValueError:
                         pass
 
                 # If no version in path, try running gcc --version
                 if not version_str:
-                    gcc_executable = os.path.join(candidate, 'bin', 'arm-none-eabi-gcc')
+                    gcc_executable = os.path.join(
+                        candidate, 'bin', 'arm-none-eabi-gcc')
                     if self.is_windows:
                         gcc_executable += '.exe'
 
@@ -371,7 +394,8 @@ class MPPBuilder:
                             )
                             if result.returncode == 0:
                                 # Parse version from output (e.g., "arm-none-eabi-gcc (GNU Arm Embedded Toolchain 10.3-2021.10) 10.3.1")
-                                version_match = re.search(r'(\d+)\.(\d+)\.(\d+)', result.stdout)
+                                version_match = re.search(
+                                    r'(\d+)\.(\d+)\.(\d+)', result.stdout)
                                 if version_match:
                                     major = int(version_match.group(1))
                                     minor = int(version_match.group(2))
@@ -381,7 +405,8 @@ class MPPBuilder:
                             pass
 
                 # Add to list with version (or use 0,0,0 if no version found)
-                versioned_candidates.append((version_str or (0, 0, 0), candidate))
+                versioned_candidates.append(
+                    (version_str or (0, 0, 0), candidate))
 
             # Sort by version (newest first)
             versioned_candidates.sort(reverse=True, key=lambda x: x[0])
@@ -398,10 +423,13 @@ class MPPBuilder:
             self.armgcc_dir = self._find_arm_gcc_dir()
 
         if not self.armgcc_dir:
-            print("Error: ARMGCC_DIR not found and no arm-none-eabi-gcc found in common locations")
-            print("Please set the ARMGCC_DIR environment variable to your ARM GCC installation directory")
+            print(
+                "Error: ARMGCC_DIR not found and no arm-none-eabi-gcc found in common locations")
+            print(
+                "Please set the ARMGCC_DIR environment variable to your ARM GCC installation directory")
             if self.is_windows:
-                print("Example for Windows: ARMGCC_DIR=C:\\Program Files (x86)\\GNU Arm Embedded Toolchain\\10 2021.10")
+                print(
+                    "Example for Windows: ARMGCC_DIR=C:\\Program Files (x86)\\GNU Arm Embedded Toolchain\\10 2021.10")
             else:
                 print("Example for Linux: ARMGCC_DIR=/usr/local/gcc-arm-none-eabi")
             sys.exit(1)
@@ -409,7 +437,8 @@ class MPPBuilder:
         print(f"Using ARMGCC_DIR: {self.armgcc_dir}")
 
         # Verify the toolchain works
-        gcc_executable = os.path.join(self.armgcc_dir, 'bin', 'arm-none-eabi-gcc')
+        gcc_executable = os.path.join(
+            self.armgcc_dir, 'bin', 'arm-none-eabi-gcc')
         if self.is_windows:
             gcc_executable += '.exe'
 
@@ -430,22 +459,26 @@ class MPPBuilder:
         if not self.app_config_index:
             return ""
 
-        config_file = self.w_dir / "boards" / self.board / app_type / app_name / f"{app_name}.conf"
+        config_file = self.w_dir / "boards" / self.board / \
+            app_type / app_name / f"{app_name}.conf"
         parse_script = self.w_dir / "tools" / "mpp_parse_configs.sh"
 
         if not config_file.exists():
-            config_file = self.w_dir / "boards" / self.board / app_type / app_name / self.core_id / f"{app_name}.conf"
+            config_file = self.w_dir / "boards" / self.board / \
+                app_type / app_name / self.core_id / f"{app_name}.conf"
 
         if parse_script.exists() and config_file.exists():
             try:
                 bash_cmd = self._find_executable("bash")
                 if bash_cmd:
-                    cmd = [bash_cmd, str(parse_script), str(config_file), self.app_config_index]
+                    cmd = [bash_cmd, str(parse_script), str(
+                        config_file), self.app_config_index]
                     result = self._run_command(cmd, cwd=self.w_dir)
                     if result and result.returncode == 0:
                         configs = result.stdout.strip()
                         if configs:
-                            print(f"Found app config {self.app_config_index}: {configs}")
+                            print(
+                                f"Found app config {self.app_config_index}: {configs}")
                             return configs
                 else:
                     print("Warning: bash not found, skipping app config parsing")
@@ -482,7 +515,8 @@ class MPPBuilder:
                 try:
                     with open(examples_file, 'r') as f:
                         for line in f:
-                            parsed = parse_config_line(line, exp_to_search, ignore_conf_arguments)
+                            parsed = parse_config_line(
+                                line, exp_to_search, ignore_conf_arguments)
                             if parsed:
                                 examples.append(parsed)
                 except Exception as e:
@@ -493,11 +527,16 @@ class MPPBuilder:
                 try:
                     with open(examples_internal_file, 'r') as f:
                         for line in f:
-                            parsed = parse_config_line(line, exp_to_search, ignore_conf_arguments)
+                            parsed = parse_config_line(
+                                line, exp_to_search, ignore_conf_arguments)
                             if parsed:
                                 examples.append(parsed)
                 except Exception as e:
-                    print(f"Warning: Could not read examples_internal.conf: {e}")
+                    print(
+                        f"Warning: Could not read examples_internal.conf: {e}")
+        elif exp:
+            examples = [[exp, ""]]
+            print(f"Warning: Could not read examples_internal.conf: {e}")
 
             # If example was not found in examples.conf files, try to build it without additional arguments
             if not len(examples) and exp != "all":
@@ -514,7 +553,8 @@ class MPPBuilder:
                 try:
                     with open(tests_file, 'r') as f:
                         for line in f:
-                            parsed = parse_config_line(line, test_to_search, ignore_conf_arguments)
+                            parsed = parse_config_line(
+                                line, test_to_search, ignore_conf_arguments)
                             if parsed:
                                 tests.append(parsed)
                 except Exception as e:
@@ -525,7 +565,8 @@ class MPPBuilder:
                 try:
                     with open(tests_internal_file, 'r') as f:
                         for line in f:
-                            parsed = parse_config_line(line, test_to_search, ignore_conf_arguments)
+                            parsed = parse_config_line(
+                                line, test_to_search, ignore_conf_arguments)
                             if parsed:
                                 tests.append(parsed)
                 except Exception as e:
@@ -542,7 +583,8 @@ class MPPBuilder:
         if board == "frdmmcxn947":
             return ""
 
-        display_support_file = self.sdk_dir / "examples" / "_boards" / board / "display_support.h"
+        display_support_file = self.sdk_dir / "examples" / \
+            "_boards" / board / "display_support.h"
 
         if not display_support_file.exists():
             return ""
@@ -636,8 +678,10 @@ class MPPBuilder:
             if self.code_coverage_enable:
                 west_cmd.append(f"-D{app}_core1_ENABLE_COVERAGE=1")
             if extra_build_flags:
-                west_cmd.append(f"-D{app}_core1_EXTRA_CFLAGS={extra_build_flags}")
-                west_cmd.append(f"-D{app}_core1_EXTRA_CXXFLAGS={extra_build_flags}")
+                west_cmd.append(
+                    f"-D{app}_core1_EXTRA_CFLAGS={extra_build_flags}")
+                west_cmd.append(
+                    f"-D{app}_core1_EXTRA_CXXFLAGS={extra_build_flags}")
 
         print(f"Building {app}...")
         print(f"Command: {' '.join(west_cmd)}")
@@ -653,14 +697,17 @@ class MPPBuilder:
             return False
 
         # Copy built files
-        build_output_dir = self.sdk_dir / f"build_{board}" / self.build_rel_or_dbg
+        build_output_dir = self.sdk_dir / \
+            f"build_{board}" / self.build_rel_or_dbg
         build_output_dir.mkdir(parents=True, exist_ok=True)
 
         if self.app_config_index:
             elf_src = self.sdk_dir / build_path / f"{app}_{core_id}.elf"
             bin_src = self.sdk_dir / build_path / f"{app}_{core_id}.bin"
-            elf_dst = build_output_dir / f"{app}_{core_id}_config{self.app_config_index}.elf"
-            bin_dst = build_output_dir / f"{app}_{core_id}_config{self.app_config_index}.bin"
+            elf_dst = build_output_dir / \
+                f"{app}_{core_id}_config{self.app_config_index}.elf"
+            bin_dst = build_output_dir / \
+                f"{app}_{core_id}_config{self.app_config_index}.bin"
             self.last_built_elf = f"{app}_{core_id}_config{self.app_config_index}.elf"
         else:
             elf_src = self.sdk_dir / build_path / f"{app}_{core_id}.elf"
@@ -684,7 +731,7 @@ class MPPBuilder:
 
     def flash_built_image(self, board):
         try:
-            from auto_test import flash_files, auto_detect_probe # type: ignore
+            from auto_test import flash_files, auto_detect_probe  # type: ignore
         except Exception as e:
             print(f"Could not import auto_test module --> Error: {str(e)}")
             return False
@@ -694,9 +741,10 @@ class MPPBuilder:
             print("Error: No ELF file was built to flash")
             return False
 
-        build_output_dir = self.sdk_dir / f"build_{board}" / self.build_rel_or_dbg
+        build_output_dir = self.sdk_dir / \
+            f"build_{board}" / self.build_rel_or_dbg
         elf_path = build_output_dir / self.last_built_elf
-        
+
         if not elf_path.exists():
             print(f"Error: Built ELF file not found: {elf_path}")
             return False
@@ -707,7 +755,8 @@ class MPPBuilder:
         current_os = platform.system()
         flash_log_file = None  # Use console output for flash logs
 
-        probe_id, probe_type = auto_detect_probe(self.probe_id, board, current_os, flash_log_file)
+        probe_id, probe_type = auto_detect_probe(
+            self.probe_id, board, current_os, flash_log_file)
 
         # Flash the file
         success = flash_files(
@@ -747,7 +796,8 @@ class MPPBuilder:
 
         if self.input_core_id:
             try:
-                self.core_id = self.board_core_map[self.board][str(self.input_core_id)]
+                self.core_id = self.board_core_map[self.board][str(
+                    self.input_core_id)]
             except KeyError:
                 self.core_id = self.board_core_map[self.board["0"]]
             if str(self.input_core_id) == "1":
@@ -755,7 +805,8 @@ class MPPBuilder:
             else:
                 self.app_core_folder = "core0"
 
-        examples, tests = self.get_examples_and_tests(board, exp, test, ignore_conf_arguments)
+        examples, tests = self.get_examples_and_tests(
+            board, exp, test, ignore_conf_arguments)
         panel_config_define = self.get_panel_config_define(board, panel)
 
         original_cwd = os.getcwd()
@@ -772,7 +823,7 @@ class MPPBuilder:
                 )
                 if not success:
                     return False
-                
+
                 # Flash after building if requested
                 if self.flash_after_build:
                     flash_success = self.flash_built_image(board)
@@ -806,7 +857,8 @@ class MPPBuilder:
         if not self.last_built_elf:
             return
 
-        build_output_dir = self.sdk_dir / f"build_{board}" / self.build_rel_or_dbg
+        build_output_dir = self.sdk_dir / \
+            f"build_{board}" / self.build_rel_or_dbg
         elf_path = build_output_dir / self.last_built_elf
 
         if elf_path.exists():
@@ -825,7 +877,8 @@ class MPPBuilder:
                                 print(f"Version extracted: {line}")
                                 break
                 else:
-                    print("Warning: strings command not available, skipping version extraction")
+                    print(
+                        "Warning: strings command not available, skipping version extraction")
             except Exception as e:
                 print(f"Warning: Could not extract version: {e}")
 
@@ -860,7 +913,8 @@ class MPPBuilder:
                 try:
                     with open(header_path, 'r', encoding='utf-8', errors='ignore') as f:
                         content = f.read()
-                    content = content.replace(f"{api_name} VERSION", f"{api_name} VERSION {api_version}")
+                    content = content.replace(
+                        f"{api_name} VERSION", f"{api_name} VERSION {api_version}")
                     with open(header_path, 'w', encoding='utf-8') as f:
                         f.write(content)
                 except Exception as e:
@@ -869,7 +923,8 @@ class MPPBuilder:
             # Run doxygen
             doxyfile_path = self.w_dir / "dox" / doxyfile_name
             if doxyfile_path.exists():
-                result = subprocess.run([doxygen_cmd, str(doxyfile_path)], env=env, cwd=self.w_dir)
+                result = subprocess.run(
+                    [doxygen_cmd, str(doxyfile_path)], env=env, cwd=self.w_dir)
                 if result.returncode != 0:
                     print(f"Warning: doxygen failed for {doxyfile_name}")
 
@@ -898,7 +953,8 @@ class MPPBuilder:
 
     def build_doc(self, board):
         """Build MPP and HAL API documentation"""
-        version_file = self.sdk_dir / f"build_{board}" / self.build_rel_or_dbg / "mpp_version.txt"
+        version_file = self.sdk_dir / \
+            f"build_{board}" / self.build_rel_or_dbg / "mpp_version.txt"
 
         mpp_version = ""
         if version_file.exists():
@@ -915,15 +971,18 @@ class MPPBuilder:
             print("Warning: mpp version not found, using empty version")
 
         # Build MPP documentation
-        self.build_api_doc("MPP", "header.tex", mpp_version, "Doxyfile", "mpp_api")
+        self.build_api_doc("MPP", "header.tex", mpp_version,
+                           "Doxyfile", "mpp_api")
 
         # Build HAL documentation
-        self.build_api_doc("MPP-HAL", "hal_header.tex", mpp_version, "HalDoxyfile", "hal_api")
+        self.build_api_doc("MPP-HAL", "hal_header.tex",
+                           mpp_version, "HalDoxyfile", "hal_api")
 
     def list_panels(self, boards):
         """List supported panels for boards"""
         if boards == ["all"]:
-            temp_boards = ["frdmmcxn947", "evkbmimxrt1170", "mimxrt700evk"]
+            temp_boards = ["frdmmcxn947", "evkbmimxrt1170",
+                           "mimxrt700evk", "frdmimxrt1152", "frdmimxrt700"]
         else:
             temp_boards = boards
 
@@ -932,14 +991,16 @@ class MPPBuilder:
             if board == "frdmmcxn947":
                 continue
 
-            display_support_file = self.sdk_dir / "examples" / "_boards" / board / "display_support.h"
+            display_support_file = self.sdk_dir / "examples" / \
+                "_boards" / board / "display_support.h"
 
             if display_support_file.exists():
                 panel_info.append(f"\nPanel list supported for board {board}")
                 try:
                     with open(display_support_file, 'r', encoding='utf-8', errors='ignore') as f:
                         content = f.read()
-                    panels = re.findall(r'^.*define DEMO_PANEL_(?!(?:HEIGHT|WIDTH)\b)\w+.*', content, re.MULTILINE)
+                    panels = re.findall(
+                        r'^.*define DEMO_PANEL_(?!(?:HEIGHT|WIDTH)\b)\w+.*', content, re.MULTILINE)
                     for panel in panels:
                         panel_info.append(panel)
                 except Exception as e:
@@ -947,6 +1008,7 @@ class MPPBuilder:
                 panel_info.append("")
 
         return "\n".join(panel_info)
+
 
 def get_available_examples_tests(builder, board=None):
     """Get available examples and tests for a given board"""
@@ -975,7 +1037,7 @@ def get_available_examples_tests(builder, board=None):
                 print(f"Warning: Could not read tests directory: {e}")
     else:
         # For "all" boards or no board specified, collect examples and tests from all boards
-        for board_name in ["evkbmimxrt1170", "frdmmcxn947", "mimxrt700evk"]:
+        for board_name in ["evkbmimxrt1170", "frdmmcxn947", "mimxrt700evk", "frdmimxrt1152", "frdmimxrt700"]:
             # Get examples from directory structure
             examples_dir = builder.w_dir / "boards" / board_name / "examples"
             if examples_dir.exists() and examples_dir.is_dir():
@@ -1009,6 +1071,7 @@ def get_available_examples_tests(builder, board=None):
 
 class ExampleCompleter:
     """Custom completer for examples based on board selection"""
+
     def __init__(self, builder):
         self.builder = builder
 
@@ -1020,6 +1083,7 @@ class ExampleCompleter:
 
 class TestCompleter:
     """Custom completer for tests based on board selection"""
+
     def __init__(self, builder):
         self.builder = builder
 
@@ -1040,19 +1104,22 @@ def main():
             with open(cmake_file, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
             import re
-            log_levels = "\n".join(re.findall(r'LOG_LVL_\w+.*', content, re.MULTILINE))
+            log_levels = "\n".join(re.findall(
+                r'LOG_LVL_\w+.*', content, re.MULTILINE))
         except Exception as e:
             print(f"Warning: Could not read CMakeLists.txt: {e}")
 
     # Define supported boards
-    supported_boards = ["evkbmimxrt1170", "frdmmcxn947", "mimxrt700evk", "all"]
+    supported_boards = ["evkbmimxrt1170", "frdmmcxn947",
+                        "mimxrt700evk", "frdmimxrt1152", "frdmimxrt700", "all"]
 
-    parser = argparse.ArgumentParser(description="MPP Build Script", formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="MPP Build Script", formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-a", "--rebuild-tflm", action="store_true",
                         help="rebuild libtflm.a from source")
     parser.add_argument("-b", "--board", default="evkbmimxrt1170",
                         choices=supported_boards,
-                        help="board name: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk, all}")
+                        help="board name: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk, frdmimxrt1152, frdmimxrt700, all}")
     parser.add_argument("-e", "--example", default="",
                         help="build the example app {camera_view, all, ...}").completer = ExampleCompleter(builder)
     parser.add_argument("-i", "--host", action="store_true",
@@ -1088,7 +1155,7 @@ def main():
                         help="use GDB server for flashing (only supported with jlink)")
     parser.add_argument("-J", "--jlinkscript", default=None,
                         help="path to JLink script file for GDB server (valid only when use_gdb is set)")
-    parser.add_argument("--debug_console", default="0", 
+    parser.add_argument("--debug_console", default="0",
                         choices=DEBUG_CONSOLE_DEFINES.keys(),
                         help="\n".join([f'{k}: {v["help"]}' for k, v in DEBUG_CONSOLE_DEFINES.items()]))
     parser.add_argument("-V", "--code-coverage", action="store_true",
@@ -1102,13 +1169,16 @@ def main():
 
     # Validate example and test choices after parsing
     board_for_validation = args.board
-    available_examples, available_tests = get_available_examples_tests(builder, board_for_validation)
+    available_examples, available_tests = get_available_examples_tests(
+        builder, board_for_validation)
 
     if args.example and args.example not in [""] + available_examples:
-        parser.error(f"argument -e/--example: invalid choice: '{args.example}' (choose from {', '.join([''] + available_examples)})")
+        parser.error(
+            f"argument -e/--example: invalid choice: '{args.example}' (choose from {', '.join([''] + available_examples)})")
 
     if args.test and args.test not in [""] + available_tests:
-        parser.error(f"argument -t/--test: invalid choice: '{args.test}' (choose from {', '.join([''] + available_tests)})")
+        parser.error(
+            f"argument -t/--test: invalid choice: '{args.test}' (choose from {', '.join([''] + available_tests)})")
 
     # Set SDK directory if provided
     if args.sdk_path:
@@ -1134,7 +1204,8 @@ def main():
     builder.jlinkscript = args.jlinkscript
 
     # Handle board list
-    boards = args.board.split() if args.board != "all" else ["frdmmcxn947", "evkbmimxrt1170", "mimxrt700evk"]
+    boards = args.board.split() if args.board != "all" else [
+        "frdmmcxn947", "evkbmimxrt1170", "mimxrt700evk", "frdmimxrt1152", "frdmimxrt700"]
 
     # Set default example if neither example nor test specified
     exp = args.example
@@ -1146,7 +1217,8 @@ def main():
 
     if DEBUG_CONSOLE_DEFINES[args.debug_console]["flags"]:
         if args.flags:
-            args.flags = args.flags + " " + DEBUG_CONSOLE_DEFINES[args.debug_console]["flags"]
+            args.flags = args.flags + " " + \
+                DEBUG_CONSOLE_DEFINES[args.debug_console]["flags"]
         else:
             args.flags = DEBUG_CONSOLE_DEFINES[args.debug_console]["flags"]
 
@@ -1154,21 +1226,23 @@ def main():
     for board in boards:
         # Adjust build type based on board
         build_rel_or_dbg = args.config
-        if board  == "mimxrt700evk":
+        if board in ["mimxrt700evk", "frdmimxrt700"]:
             if args.core_id == "1":
                 build_type = build_rel_or_dbg
             else:
                 build_type = f"flash_{build_rel_or_dbg}"
         elif board == "frdmmcxn947":
             build_type = build_rel_or_dbg
+        elif board == "frdmimxrt1152":
+            build_type = f"flexspi_nor_hyperram_{build_rel_or_dbg}"
         else:
-            if args.core_id  == "1":
+            if args.core_id == "1":
                 build_type = build_rel_or_dbg
             else:
                 build_type = f"flexspi_nor_sdram_{build_rel_or_dbg}"
 
         # Set default panel
-        if board in ["evkbmimxrt1170", "mimxrt700evk"]:
+        if board in ["evkbmimxrt1170", "mimxrt700evk", "frdmimxrt700"]:
             default_panel = "2"
         else:
             default_panel = ""
@@ -1187,6 +1261,7 @@ def main():
     # Generate documentation
     if builder.gen_doc:
         builder.build_doc(boards[0])  # Use first board for doc generation
+
 
 if __name__ == "__main__":
     main()

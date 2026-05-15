@@ -1,6 +1,6 @@
 # eIQ MCU Media Processing Pipeline API
 
-MPP VERSION 4.2
+MPP VERSION 4.3
 
 ## 1. MPP API
 

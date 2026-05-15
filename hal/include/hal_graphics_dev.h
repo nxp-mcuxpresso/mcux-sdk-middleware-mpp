@@ -67,6 +67,7 @@ typedef struct _gfx_rotate_config
 {
     gfx_rotate_target_t target;
     mpp_rotate_degree_t degree;
+    float custom_angle;
 } gfx_rotate_config_t;
 
 typedef struct _gfx_dev gfx_dev_t;
@@ -139,7 +140,11 @@ struct _gfx_dev
     /* callback */
     mpp_callback_t callback;
     /* param for the callback */
+    void *cb_user_data;
+    /* stores the vglite context pointer */
     void *user_data;
+    /* mpp handle to be passed to the callback */
+    mpp_t mpp;
 };
 
 /*!

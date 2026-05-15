@@ -54,6 +54,7 @@
 #define SRC_IMAGE_FORMAT          SRC_IMAGE_CAT_32_32_RGB_FORMAT
 #define SRC_IMAGE_HEIGHT          SRC_IMAGE_CAT_32_32_RGB_HEIGHT
 #define SRC_IMAGE_WIDTH           SRC_IMAGE_CAT_32_32_RGB_WIDTH
+void *image_data = (void *)cat_32_32_rgb_data;
 
 #define STATS_PRINT_PERIOD_MS     1000
 
@@ -237,7 +238,7 @@ static void app_task(void *params)
     img_params.width  = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
 
-    ret = mpp_static_img_add(mp, &img_params, (void *)cat_32_32_rgb_data, NULL);
+    ret = mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
     if (ret) {
         PRINTF("Failed to add static image\r\n");
         goto err;

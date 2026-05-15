@@ -1,0 +1,38 @@
+/*
+ * Copyright 2026 NXP
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#ifndef __BLAZE_DETECTOR_PTQ_INT8_TFLITE_INFO_H__
+#define __BLAZE_DETECTOR_PTQ_INT8_TFLITE_INFO_H__
+
+#define BLAZE_DETECTOR_NAME "blaze_detector_ptq"
+/* mean and std will be used to get input values in the model input data range.
+ * for SCRFD data should be between 0 and 1. */
+#define BLAZE_DETECTOR_INPUT_MEAN   0
+#define BLAZE_DETECTOR_INPUT_STD    255
+#define BLAZE_DETECTOR_WIDTH        192
+#define BLAZE_DETECTOR_HEIGHT       192
+#define BLAZE_DETECTOR_PIXEL_FORMAT MPP_PIXEL_RGB
+
+#define BLAZE_DETECTOR_BOXES_SCALE          0.31250256299972534f
+#define BLAZE_DETECTOR_BOXES_ZERO_POINT     4.0f
+#define BLAZE_DETECTOR_SCORE_SCALE          0.00390625f
+#define BLAZE_DETECTOR_SCORE_ZERO_POINT    -128.0f
+
+#define BLAZE_DETECTOR_BOXES_OUTPUT_IDX     0
+#define BLAZE_DETECTOR_SCORE_OUTPUT_IDX     1
+
+#define BLAZE_DETECTOR_NUM_BOXES            2016
+#define BLAZE_DETECTOR_NUM_LANDMARKS        7
+#define BLAZE_DETECTOR_NUM_POINTS_PER_PALM  18
+#define BLAZE_DETECTOR_WRIST_LANDMARK_IDX   0
+#define BLAZE_DETECTOR_MIDDLE_FINGER_IDX    4
+
+#define BLAZE_DETECTOR_PALM_SCORE_THRES     0.75f
+
+#define BLAZE_DETECTOR_VAR_0 (0.1f)
+#define BLAZE_DETECTOR_VAR_1 (0.2f)
+
+#endif /* __BLAZE_DETECTOR_PTQ_INT8_TFLITE_INFO_H__ */

@@ -17,6 +17,12 @@ mcux_add_include(
               middleware/eiq/mpp/tests/test_mc_image_convert_display/
 )
 
+# Add include path for the core1_image.bin
+mcux_add_include(
+    BASE_PATH ${APPLICATION_BINARY_DIR}
+    INCLUDES ${CONFIG_TOOLCHAIN}/
+)
+
 # board and core-specific files
 include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 
