@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 NXP.
+ * Copyright 2020-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -38,9 +38,15 @@ static int convert_func(_elem_t *elem)
      * the pipeline graph has been constructed.
      * Hence those parameters can't be set from the setup function.
      */
-    /* set source buffer */
+    /* set source buffer(s) */
     gfx->src.buf = ibuf->hw->addr;
     gfx->src.pitch = ibuf->hw->stride;
+    if (ibuf->format == MPP_PIXEL_YUV420P)
+    {
+        gfx->src.buf_u = ibuf->hw->addr_u;
+        gfx->src.buf_v = ibuf->hw->addr_v;
+        gfx->src.pitch_uv = ibuf->hw->stride_uv;
+    }
 
     /* in stripe mode: */
     /* update crop source, destination window & address */

@@ -82,7 +82,7 @@ typedef struct _user_data_t {
 	mpp_labeled_rect_t labels[1];
 	recognition_result result;
 	uint32_t accessing; /* boolean protecting access to user data */
-	int inference_time_ms;
+	uint32_t inference_time_ms;
 } user_data_t;
 
 /*******************************************************************************
@@ -193,7 +193,7 @@ void stat_task(void *param)
 				PRINTF("Mobilefacenet : exec_time %u (ms)\r\n", mobilefacenet_stats.elem.elem_exec_time);
 				mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
 				PRINTF("Similarity percentage %d\r\n", user_data->result.similarity_percentage);
-				PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+				PRINTF("inference time %u (ms) \r\n", user_data->inference_time_ms);
 				if (user_data->result.recognized_name[0]=='\0')
 				{
 					PRINTF("face not recognized! \r\n");
@@ -212,7 +212,7 @@ void stat_task(void *param)
 				else
 				{
 					if (user_data->inference_time_ms > EXPECTED_INF_TIME)
-						PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+						PRINTF("Bad inf time %u, expected less than %u\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
 					if (strcmp(user_data->result.recognized_name, EXPECTED_RECO_PERS))
 						PRINTF("Bad reco result %s, expected %s\r\n", user_data->result.recognized_name, EXPECTED_RECO_PERS);
 					if (user_data->result.similarity_percentage < EXPECTED_INF_SCORE)

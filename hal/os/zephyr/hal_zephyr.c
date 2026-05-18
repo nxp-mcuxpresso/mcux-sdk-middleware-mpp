@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-2026
+ * Copyright 2025-2026 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -177,13 +177,14 @@ uint32_t hal_get_exec_time()
 {
     /* TODO: Zephyr doesn't have built-in per-task runtime stats like FreeRTOS
      * This would need to be implemented using thread analyzer or custom
-     * tracking */
-    return hal_get_ostick();
+     * tracking. For now, return system uptime in ms as a proxy. */
+    return k_uptime_get_32();
 }
 
 uint64_t hal_get_crt_time()
 {
-    return hal_get_ostick();
+     /* Return current time in microseconds */
+    return k_cyc_to_us_floor64(k_cycle_get_32());
 }
 
 hal_sema_t hal_sema_create()
@@ -253,7 +254,7 @@ void hal_sched_yield(long HigherPriorityTaskWoken)
 
 uint32_t hal_get_ostick()
 {
-    return k_uptime_get_32();
+    return (uint32_t)(k_uptime_ticks() & 0xFFFFFFFF); // existing HAL API uses 32 bit tick counter
 }
 
 uint32_t hal_get_tick_period_ms()
@@ -297,21 +298,23 @@ int hal_task_create(hal_task_fct_t fct, const char *const name,
                     uint32_t prio, hal_task_t *const ptask)
 {
     hal_zephyr_task_t *ztask = safe_malloc(sizeof(hal_zephyr_task_t));
+    size_t stack_bytes = stackdepth * sizeof(void *);
+
     if (!ztask) {
         HAL_LOGE("%s: Failed to allocate task structure", __func__);
         return MPP_ERROR;
     }
 
     /* Use K_THREAD_STACK_ALLOC for proper stack allocation with guards */
-    ztask->stack_size = stackdepth;
-    ztask->stack = k_thread_stack_alloc(stackdepth, 0);
+    ztask->stack_size = stack_bytes;
+    ztask->stack = k_thread_stack_alloc(stack_bytes, 0);
     if (!ztask->stack) {
         HAL_LOGE("%s: Failed to allocate task stack", __func__);
         safe_free(ztask);
         return MPP_ERROR;
     }
 
-    ztask->tid = k_thread_create(&ztask->thread, ztask->stack, stackdepth,
+    ztask->tid = k_thread_create(&ztask->thread, ztask->stack, ztask->stack_size,
                                  (k_thread_entry_t) fct, pparams, NULL, NULL,
                                  prio, 0, K_NO_WAIT);
 
@@ -322,8 +325,8 @@ int hal_task_create(hal_task_fct_t fct, const char *const name,
         return MPP_ERROR;
     }
 
-    HAL_LOGD("Thread [%s] was created: tid=%p, stack %#x@%#x\n", name,
-             ztask->tid, stackdepth, (unsigned int) (void *) ztask->stack);
+    HAL_LOGD("Thread [%s] was created: tid=%p, stack %#xB@%#x\n", name,
+             ztask->tid, stack_bytes, (unsigned int) (void *) ztask->stack);
 
     if (name) {
         k_thread_name_set(ztask->tid, name);
@@ -352,9 +355,9 @@ void hal_task_resume(hal_task_t task)
     }
 }
 
-void hal_task_delay(uint32_t ms)
+void hal_task_delay(uint32_t ticks)
 {
-    k_msleep(ms);
+    k_sleep(K_TICKS(ticks));
 }
 
 hal_event_group_t hal_eventgrp_create()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 NXP.
+ * Copyright 2021-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -41,6 +41,7 @@ typedef struct _gfx_surface
     int height;                /*!< buffer height */
     int width;                 /*!< buffer width */
     int pitch;                 /*!< buffer pitch */
+    int pitch_uv;              /*!< buffer pitch for chroma planes */
     int left;                  /*!< left position */
     int top;                   /*!< top position */
     int right;                 /*!< right position */
@@ -48,6 +49,8 @@ typedef struct _gfx_surface
     int swapByte;              /*!< swap byte per two bytes */
     mpp_pixel_format_t format; /*!< pixel format */
     void *buf;                 /*!< buffer */
+    void *buf_u;               /*!< buffer for chroma plane U */
+    void *buf_v;               /*!< buffer for chroma plane V */
     void *lock;                /*!< the structure is determined by hal and set to null if not use in hal*/
 } gfx_surface_t;
 

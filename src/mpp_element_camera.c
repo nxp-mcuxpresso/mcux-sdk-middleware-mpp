@@ -303,10 +303,11 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
     elem->type = MPP_TYPE_SOURCE;
     elem->src_typ = MPP_SRC_CAMERA;
 
-    _camera_dev_t *cam = hal_malloc(sizeof(*cam) + CAMERA_MAX_PRIV_SIZE);
+    size_t cam_alloc_size = sizeof(_camera_dev_t) + CAMERA_MAX_PRIV_SIZE;
+    _camera_dev_t *cam = hal_malloc(cam_alloc_size);
     if (!cam)
         return MPP_MALLOC_ERROR;
-    memset(cam, 0, sizeof(_camera_dev_t));
+    memset(cam, 0, cam_alloc_size);
     elem->dev.cam = cam;
 
     if (params->n_streams)
@@ -344,6 +345,10 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
         params->stream[0].active = true;
     }
 
+    /* Force in_advance_enqueue to true for USB cameras */
+    if (strcmp(name, "USB_cam") == 0)
+        params->in_advance_enqueue = true;
+
     /* copy params */
     memcpy(&cam->params, params, sizeof(*params));
 
@@ -367,6 +372,8 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
     buf_enqueue_func_t  camera_enqueue_callback;
     if (strcmp(name, "Virtual_USB_cam") == 0)
         camera_enqueue_callback = camera_enqueue;
+    else if (strcmp(name, "USB_cam") == 0)
+        camera_enqueue_callback = camera_enqueue;
     else
         camera_enqueue_callback = NULL;
 
@@ -388,6 +395,7 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
             MPP_LOGE("\nAllocation failed\n");
             return MPP_MALLOC_ERROR;
         }
+        memset(elem->io.out_buf[i], 0, sizeof(buf_desc_t));
         elem->io.out_buf[i]->format = cam->params.format;
         /* If per stream height and width are provided, use those, else use camera's default */
         if (cam->params.stream[i].height != 0 && cam->params.stream[i].width != 0)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 NXP.
+ * Copyright 2019-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -283,6 +283,12 @@ static int set_input_buffer_format(pxp_ps_buffer_config_t *pPsBufferConfig, gfx_
         }
         break;
 
+        case MPP_PIXEL_YUV420P:
+        {
+            pPsBufferConfig->pixelFormat = kPXP_PsPixelFormatYVU420;
+        }
+        break;
+
         case MPP_PIXEL_GRAY888X:
         {
 #if (!(defined(FSL_FEATURE_PXP_HAS_NO_EXTEND_PIXEL_FORMAT) && FSL_FEATURE_PXP_HAS_NO_EXTEND_PIXEL_FORMAT)) || \
@@ -331,10 +337,22 @@ static int init_input_buffer(pxp_ps_buffer_config_t *pPsBufferConfig, gfx_surfac
     }
 
     pPsBufferConfig->swapByte    = pSrc->swapByte;
-    pPsBufferConfig->bufferAddrU = 0U;
-    pPsBufferConfig->bufferAddrV = 0U;
+    if (pPsBufferConfig->pixelFormat != kPXP_PsPixelFormatYVU420)
+    {
+        pPsBufferConfig->bufferAddrU = 0U;
+        pPsBufferConfig->bufferAddrV = 0U;
+        pPsBufferConfig->bufferAddr  = (uint32_t)pSrc->buf + (pSrc->left * bpp / 8) + (pSrc->top * pSrc->pitch);
+    }
+    else
+    {
+        // YUV420P pixel format
+        pPsBufferConfig->bufferAddr  = (uint32_t)pSrc->buf + pSrc->left + (pSrc->top * pSrc->pitch);
+        // U plane: half resolution (subsampled 2x2)
+        pPsBufferConfig->bufferAddrU = (uint32_t)pSrc->buf_u + (pSrc->left / 2) + ((pSrc->top / 2) * pSrc->pitch_uv);
+        // V plane: half resolution (subsampled 2x2)
+        pPsBufferConfig->bufferAddrV = (uint32_t)pSrc->buf_v + (pSrc->left / 2) + ((pSrc->top / 2) * pSrc->pitch_uv);
+    }
     pPsBufferConfig->pitchBytes  = pSrc->pitch;
-    pPsBufferConfig->bufferAddr  = (uint32_t)pSrc->buf + (pSrc->left * bpp / 8) + (pSrc->top * pSrc->pitch);
     PXP_SetProcessSurfaceBackGroundColor(PXP_DEV, 0U);
     PXP_SetProcessSurfaceBufferConfig(PXP_DEV, pPsBufferConfig);
 

@@ -15,9 +15,12 @@ MPP_DIR=$(dirname $(readlink -f $0 | xargs dirname))
 BIN_DIR="${MPP_DIR}/../sdk-next/mcuxsdk"
 BOARD="evkbmimxrt1170,frdmmcxn947,mimxrt700evk"
 OUTPUT_DIR="test_results"
-RT1170_EXAMPLES="camera_mobilenet_view,camera_persondetect_view,camera_ultraface_view,camera_view,static_image_nanodet_view"
-MCXN947_EXAMPLES="camera_mobilenet_view,camera_persondetect_view,camera_ultraface_view,camera_view"
-RT700_EXAMPLES="camera_view,static_image_nanodet_view,static_image_persondetect_view,static_image_ultraface_view,static_image_mobilenet_view"
+RT1170_EXAMPLES=$( cat ${MPP_DIR}/boards/evkbmimxrt1170/examples.conf )
+RT1170_EXAMPLES=$( echo ${RT1170_EXAMPLES} | sed 's/ /,/g' )
+MCXN947_EXAMPLES=$( cat ${MPP_DIR}/boards/frdmmcxn947/examples.conf )
+MCXN947_EXAMPLES=$( echo ${MCXN947_EXAMPLES} | sed 's/ /,/g' )
+RT700_EXAMPLES=$( cat ${MPP_DIR}/boards/mimxrt700evk/examples.conf )
+RT700_EXAMPLES=$( echo ${RT700_EXAMPLES} | sed 's/ /,/g' )
 EXAMPLES=""
 JSON_CONFIG_FILE="dapeng_config.json"
 JUNIT_TEST_REPORT_FILE="dapeng_test_report.xml"
@@ -478,8 +481,12 @@ fi
 
 # Check which tests failed
 task_output_path="${OUTPUT_DIR}/download_${dapeng_task_id}"
+n_failed_tests=0
 for board_log in ${task_output_path}/*
 do
+    if [ ! -d "${board_log}" ]; then
+        continue
+    fi
     board_output_path="${board_log}/eiq_examples"
     board_name=$(echo "${board_log}" | awk -F '/' '{print $NF}')
     board_total_tests=0
@@ -518,23 +525,39 @@ do
         total_suite_duration=$(echo "${total_suite_duration} + ${crt_duration}" | bc)
 
         # If the file runresult_Fail.txt exists, it means test failed
-        if [ -f "${log_output_path}/runresult_Fail.txt" ]; then
+        if [ -f "${log_output_path}/runresult_failed.txt" ]; then
             echo "    ${test_name} - board ${board_name}" 
             echo "          --> console log: ${log_output_path}/app_test.log"
             board_failed_tests=$(($board_failed_tests+1))
+            n_failed_tests=$(($n_failed_tests+1))
         # If the file runresult_NA.txt exists, it means no board available to run the test
-        elif [ -f "${log_output_path}/runresult_NA.txt" ]; then
+        elif [ -f "${log_output_path}/runresult_na.txt" ]; then
             echo "    ${test_name} - board ${board_name}" 
             echo "          --> No board available for this test"
             board_skipped_tests=$(($board_skipped_tests+1))
         # If the file runresult_Not Support.txt exists, it means no test script was found for this test
-        elif [ -f "${log_output_path}/runresult_Not Support.txt" ]; then
+        elif [ -f "${log_output_path}/runresult_not_support.txt" ]; then
             echo "    ${test_name} - board ${board_name}" 
             echo "          --> No test script found for this example"
             echo "          --> console log: ${log_output_path}/app_test.log"
             board_skipped_tests=$(($board_skipped_tests+1))
-        else
+        # If the file app_test.log does not exists, it means there is a problem with the server
+        # Mark tests as failed in this case
+        elif [ ! -f "${log_output_path}/app_test.log" ]; then
+            echo "    ${test_name} - board ${board_name}"
+            echo "          --> app_test.log not available"
+            board_failed_tests=$(($board_failed_tests+1))
+            n_failed_tests=$(($n_failed_tests+1))
+        # If the file runresult_Pass.txt exists, it means test passed
+        elif [ -f "${log_output_path}/runresult_passed.txt" ]; then
             board_passed_tests=$(($board_passed_tests+1))
+        # Unexpected state of the test. Mark it as failed
+        else
+            echo "    ${test_name} - board ${board_name}"
+            echo "          --> No runresult_* file found. Mark test as failed"
+            echo "          --> console log: ${log_output_path}/app_test.log"
+            board_failed_tests=$(($board_failed_tests+1))
+            n_failed_tests=$(($n_failed_tests+1))
         fi
         board_total_tests=$(($board_total_tests+1))
     done
@@ -555,16 +578,24 @@ do
             crt_duration="0.0"
         fi
         # If the file runresult_Fail.txt exists, it means test failed
-        if [ -f "${log_output_path}/runresult_Fail.txt" ]; then
+        if [ -f "${log_output_path}/runresult_failed.txt" ]; then
             add_new_junit_fail_test ${board_name} ${test_name} "Test failed. Check the log file ${log_output_path}/app_test.log" "generic test failure" ${crt_duration} "${log_output_path}/app_test.log"
-        # If the file runresult_NA.txt exists, it means no board available to run the test
-        elif [ -f "${log_output_path}/runresult_NA.txt" ]; then
+                # If the file runresult_NA.txt exists, it means no board available to run the test
+        elif [ -f "${log_output_path}/runresult_na.txt" ]; then
             add_new_junit_skipped_test ${board_name} ${test_name} ${crt_duration}
         # If the file runresult_Not Support.txt exists, it means no test script was found for this test
-        elif [ -f "${log_output_path}/runresult_Not Support.txt" ]; then
+        elif [ -f "${log_output_path}/runresult_not_support.txt" ]; then
             add_new_junit_skipped_test ${board_name} ${test_name} ${crt_duration}
-        else
+        # If the file app_test.log does not exists, it means there is a problem with the server
+        # Mark tests as failed in this case
+        elif [ ! -f "${log_output_path}/app_test.log" ]; then
+            add_new_junit_fail_test ${board_name} ${test_name} "Test failed. app_test.log file not found" "generic test failure" ${crt_duration} "${log_output_path}/app_test.log"
+        # If the file runresult_Pass.txt exists, it means test passed
+        elif [ -f "${log_output_path}/runresult_passed.txt" ]; then
             add_new_junit_pass_test ${board_name} ${test_name} ${crt_duration}
+        # Unexpected state of the test. Mark it as failed
+        else
+            add_new_junit_fail_test ${board_name} ${test_name} "Test failed. Check the log file ${log_output_path}/app_test.log" "generic test failure" ${crt_duration} "${log_output_path}/app_test.log"
         fi
     done
     # Close the test suite
@@ -577,7 +608,7 @@ close_junit_file
 # Close MD test report file
 close_md_file ${dapeng_job_url}
 
-if [[ "${dapeng_exit_code}" != 0 || "${n_na_tests}" != "0" ]]; then
+if [[ "${dapeng_exit_code}" != 0 || "${n_na_tests}" != "0" || "${n_failed_tests}" != "0" ]]; then
     # Move json config file and output log file to test results directory
     mv ${DAPENG_TMP_LOG_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/
     mv ${JSON_CONFIG_FILE} ${OUTPUT_DIR}/download_${dapeng_task_id}/

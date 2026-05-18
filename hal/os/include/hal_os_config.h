@@ -55,7 +55,7 @@
 #include <zephyr/sys/mutex.h>
 #include <zephyr/sys/printk.h>
 
-#define TICK_PERIOD_MS 1000
+#define TICK_PERIOD_MS 1 /* Zephyr uses 1ms tick period by default */
 #define HAL_EXEC_TIMER_US 1 /* precision 1us */
 
 /* max number of tasks expected in the system */

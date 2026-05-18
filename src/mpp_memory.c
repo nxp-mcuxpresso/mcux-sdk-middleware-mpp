@@ -161,7 +161,7 @@ int mpp_memory_check(_mpp_t *mpp)
             /* set input buffers status */
             elem->io.in_buf[i]->status = MPP_BUFFER_EMPTY;
             /* check address for input buffers */
-            MPP_LOGI("Element %s: input buffer#%d address 0x%x \n", elem_name(elem), i, (unsigned int)elem->io.in_buf[i]->hw->addr);
+            MPP_LOGD("Element %s: input buffer#%d address 0x%x \n", elem_name(elem), i, (unsigned int)elem->io.in_buf[i]->hw->addr);
         }
 
         for(i = 0; i < elem->io.nb_out_buf; i++)
@@ -169,7 +169,7 @@ int mpp_memory_check(_mpp_t *mpp)
             /* set output buffers status */
             elem->io.out_buf[i]->status = MPP_BUFFER_EMPTY;
             /* check address for output buffers */
-            MPP_LOGI("Element %s: output buffer#%d address 0x%x \n", elem_name(elem), i, (unsigned int)elem->io.out_buf[i]->hw->addr);
+            MPP_LOGD("Element %s: output buffer#%d address 0x%x \n", elem_name(elem), i, (unsigned int)elem->io.out_buf[i]->hw->addr);
         }
         elem = elem->next[0];
     }

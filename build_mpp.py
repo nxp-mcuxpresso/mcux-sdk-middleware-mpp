@@ -1057,7 +1057,7 @@ def main():
     parser.add_argument("-c", "--config", default="release",
                         help="build/config type: {debug, release}")
     parser.add_argument("-f", "--flags", default="",
-                        help="extra build flags")
+                        help="extra build flags. Usage: -f=\"-DFLAG1=VALUE1 -DFLAG2 ...\"")
     parser.add_argument("-t", "--test", default="",
                         help="build the test app {test_image_display, all, ...}").completer = TestCompleter(builder)
     parser.add_argument("-s", "--sdk-path", default=None,

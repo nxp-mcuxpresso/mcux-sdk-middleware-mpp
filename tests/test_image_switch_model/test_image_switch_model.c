@@ -104,7 +104,7 @@ typedef struct _user_data_t {
     box_data final_boxes[NUM_BOXES_MAX];
     uint32_t accessing; /* boolean protecting access */
     int detected_count; /* number of detected boxes */
-    int inference_time_ms;
+    uint32_t inference_time_ms;
 } user_data_t;
 
 typedef enum _e_cur_model {
@@ -146,14 +146,18 @@ static void check_model_switch_output(user_data_t *app_priv)
                     && ((app_priv->final_boxes[i].score * 100.0f) < EXPECTED_PERSON_CONFIDENCE_MIN))
             {
                 test_fail = true;
-                PRINTF("MODEL_PERSONDET confidence below expected min\n\r");
+                PRINTF("MODEL_PERSONDET confidence (%d) below expected min (%d)\n\r",
+                        (uint32_t) (app_priv->final_boxes[i].score * 100.0f),
+                        EXPECTED_PERSON_CONFIDENCE_MIN);
             }
 
             if ((g_cur_model == MODEL_ULTRAFACE)
                     && ((app_priv->final_boxes[i].score * 100.0f) < EXPECTED_FACE_CONFIDENCE_MIN))
             {
                 test_fail = true;
-                PRINTF("MODEL_ULTRAFACE confidence below expected min\n\r");
+                PRINTF("MODEL_ULTRAFACE confidence (%d) below expected min (%d)\n\r",
+                       (uint32_t) (app_priv->final_boxes[i].score * 100.0f),
+                       EXPECTED_FACE_CONFIDENCE_MIN);
             }
         }
     }
@@ -167,12 +171,14 @@ static void check_model_switch_output(user_data_t *app_priv)
         }
         else
         {
-            PRINTF("MODEL_PERSONDET unexpected number of detections \n\r");
+            PRINTF("MODEL_PERSONDET unexpected number of detections %d, expected %d \n\r",
+                    app_priv->detected_count, EXPECTED_NUM_DETECTED_PERSONS);
             test_fail = true;
         }
         if (app_priv->inference_time_ms >= EXPECTED_PERSON_MAX_INF_TIME)
         {
-            PRINTF("MODEL_PERSONDET unexpected infernece time \n\r");
+            PRINTF("MODEL_PERSONDET unexpected infernece time %d, expected %d\n\r",
+                    app_priv->inference_time_ms, EXPECTED_PERSON_MAX_INF_TIME);
             test_fail = true;
         }
     }
@@ -184,12 +190,14 @@ static void check_model_switch_output(user_data_t *app_priv)
         }
         else
         {
-            PRINTF("MODEL_ULTRAFACE unexpected number of detections \n\r");
+            PRINTF("MODEL_ULTRAFACE unexpected number of detections %d, expected %d\n\r",
+                    app_priv->detected_count, EXPECTED_NUM_DETECTED_FACES);
             test_fail = true;
         }
         if (app_priv->inference_time_ms >= EXPECTED_ULTRAFACE_MAX_INF_TIME)
         {
-            PRINTF("MODEL_ULTRAFACE unexpected infernece time \n\r");
+            PRINTF("MODEL_ULTRAFACE unexpected infernece time %d, expected %d\n\r",
+                    app_priv->inference_time_ms, EXPECTED_ULTRAFACE_MAX_INF_TIME);
             test_fail = true;
         }
     }
@@ -433,7 +441,7 @@ static void app_task(void *params)
         {
             if (last_inf_frame_num <= (user_data.inference_frame_num - 2))
             {
-                PRINTF("inference time %d ms \r\n", user_data.inference_time_ms);
+                PRINTF("inference time %u ms \r\n", user_data.inference_time_ms);
                 if (user_data.detected_count <= 0)
                 {
                     PRINTF("%s : no detection\r\n", g_model_name);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 NXP.
+ * Copyright 2025-2026 NXP.
  * All rights reserved.
  *
  *  SPDX-License-Identifier: Apache-2.0
@@ -51,25 +51,16 @@
  * Definitions
  ******************************************************************************/
 #define CAMERA_NAME "USB_cam"
-#define CAMERA_USB_MAX_WIDTH  1280 /* maximum supported width */
-#define CAMERA_USB_MAX_HEIGHT 720  /* maximum supported height */
-#define CAMERA_USB_MAX_BPP 2 /* YUYV */
-#define CAMERA_USB_MAX_BUFFERS  1
-#define CAMERA_DEV_BUFFER_ALIGN 16      /* alignment requirement TODO */
-#define CAMERA_USB_RAW_BUFF_SIZE CAMERA_USB_MAX_WIDTH * CAMERA_USB_MAX_HEIGHT * CAMERA_USB_MAX_BPP
-#define CAMERA_USB_JPEG_BUFF_SIZE (CAMERA_USB_RAW_BUFF_SIZE * USB_MJPEG_COMPRESSION_RATIO) / 100
-
-#if ((MATCH_FORMAT == MATCH_FORMAT_MJPEG) || (MATCH_FORMAT == MATCH_FORMAT_ANY))
-#define CAMERA_USB_MAX_BUFF_SIZE CAMERA_USB_JPEG_BUFF_SIZE
-#else /* MATCH_FORMAT_UNCOMPRESSED */
-#define CAMERA_USB_MAX_BUFF_SIZE CAMERA_USB_RAW_BUFF_SIZE
-#endif
-
 #define USB_HOST_TASK_SIZE      2500L / sizeof(portSTACK_TYPE)
 #define USB_HOST_APP_TASK_SIZE  (20000L+5000L) / sizeof(portSTACK_TYPE)
 
-#define USB_HOST_TASK_PRIORITY     3
+#define USB_HOST_TASK_PRIORITY     5
 #define USB_HOST_APP_TASK_PRIORITY 1
+
+typedef struct usb_camera_private_data {
+    uint32_t crt_usb_buffer_index;
+} usb_camera_private_data_t;
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -77,14 +68,6 @@
 /*******************************************************************************
  * Variables
  ******************************************************************************/
-
-/* TODO define static alloc image buffers here */
-AT_NONCACHEABLE_SECTION_ALIGN(
-    static uint8_t s_framebuffers[CAMERA_USB_MAX_BUFFERS][CAMERA_USB_MAX_BUFF_SIZE],
-    CAMERA_DEV_BUFFER_ALIGN);
-
-QueueHandle_t usbcameraqueue_mppin;                    /* When a picture is ready, send to this queue*/
-QueueHandle_t usbcameraqueue_mppdone;                    /* When a picture is ready, send to this queue*/
 
 usb_host_handle g_HostHandle;
 extern usb_host_video_camera_instance_t g_Video;
@@ -243,6 +226,14 @@ hal_camera_status_t HAL_CameraDev_USB_Init(
 
     USB_HostApplicationInit();
 
+    g_Video.mppQueue = xQueueCreate(2, sizeof(usb_frame_ready_msg_t));
+
+    if (g_Video.mppQueue == NULL)
+    {
+        HAL_LOGE("Failed to create frame ready receive queue\r\n");
+        return kStatus_HAL_CameraError;
+    }
+
 
     if (xTaskCreate(USB_HostTask, "usb host task", USB_HOST_TASK_SIZE, g_HostHandle, USB_HOST_TASK_PRIORITY, NULL) != pdPASS)
     {
@@ -254,7 +245,12 @@ hal_camera_status_t HAL_CameraDev_USB_Init(
     	usb_echo("create video task error\r\n");
     }
 
-    /* TODO init camera here */
+    dev->data = hal_malloc(sizeof(usb_camera_private_data_t));
+    if (dev->data == NULL)
+    {
+        HAL_LOGE("Failed to allocate memory for USB camera private data\r\n");
+        return kStatus_HAL_CameraError;
+    }
 
     /* save config */
     dev->config.width = config->width;
@@ -266,21 +262,10 @@ hal_camera_status_t HAL_CameraDev_USB_Init(
     dev->cap.param    = param;
     dev->config.pitch = config->width * get_bitpp(config->format) / 8;
     dev->config.stripe_size = 0;
+    dev->config.n_streams = config->n_streams;
+    dev->config.in_advance_enqueue = config->in_advance_enqueue;
+
     strncpy(dev->name, CAMERA_NAME, HAL_DEVICE_NAME_MAX_LENGTH);
-
-    usbcameraqueue_mppdone = xQueueCreate( 1, sizeof(usb_camera_msg_t));
-    if (!usbcameraqueue_mppdone)
-    {
-        HAL_LOGE("Camera queue done init error\r\n");
-        return kStatus_HAL_CameraError;
-    }
-
-    usbcameraqueue_mppin = xQueueCreate( 1, sizeof(usb_camera_msg_t));
-    if (!usbcameraqueue_mppin)
-    {
-        HAL_LOGE("Camera queue in init error\r\n");
-        return kStatus_HAL_CameraError;
-    }
 
     HAL_LOGD("--HAL_CameraDev_USB_Init\r\n");
     return ret;
@@ -300,10 +285,14 @@ hal_camera_status_t HAL_CameraDev_USB_Getbufdesc(const camera_dev_t *dev, hw_buf
     /* set memory policy */
     *policy = HAL_MEM_ALLOC_OUTPUT;
     out_buf->alignment = CAMERA_DEV_BUFFER_ALIGN;
-    out_buf->cacheable = false; /* TODO check cacheability */
+#if (defined(USB_IMG_BUFFER_DYNALLOC) || (!defined(USE_UNCACHED_JPG_BUFFERS) && !defined(USE_PSRAM_JPG_BUFFERS)))
+    out_buf->cacheable = true; /* TODO check cacheability */
+#else
+    out_buf->cacheable = false;
+#endif
     out_buf->stride = dev->config.pitch;
     out_buf->nb_lines = dev->config.height;
-    out_buf->addr = (uint8_t *)s_framebuffers[0];    /* TODO provide 1st buffer or NULL */
+    out_buf->addr = NULL;    /* TODO provide 1st buffer or NULL */
 
     HAL_LOGD("--HAL_CameraDev_USB_Getbufdesc\r\n");
     return ret;
@@ -313,7 +302,13 @@ hal_camera_status_t HAL_CameraDev_USB_Deinit(camera_dev_t *dev)
 {
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     status_t status = kStatus_Success;
-    
+
+    if (dev->data != NULL)
+    {
+        hal_free(dev->data);
+        dev->data = NULL;
+    }
+
     /* TODO destroy the queues*/
 
     if (status != kStatus_Success) return kStatus_HAL_CameraError;
@@ -347,43 +342,42 @@ hal_camera_status_t HAL_CameraDev_USB_Stop(const camera_dev_t *dev)
 hal_camera_status_t HAL_CameraDev_USB_Dequeue(const camera_dev_t *dev, void **data, int *stripe, int *compressed_size)
 {
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
-    usb_camera_msg_t msg;
-    unsigned char * mpp_buffer = NULL;
+    usb_frame_ready_msg_t msg;
+    void *mpp_buffer = NULL;
+    uint32_t mpp_buffer_size = 0;
+
+    usb_camera_private_data_t *dev_priv = (usb_camera_private_data_t *)dev->data;
+    if (dev_priv == NULL)
+    {
+        HAL_LOGE("USB camera private data is NULL\r\n");
+        return kStatus_HAL_CameraError;
+    }
 
     HAL_LOGD("++HAL_CameraDev_USB_Dequeue\r\n");
 
-	if( xQueueReceive(usbcameraqueue_mppin, &msg, portMAX_DELAY ) == pdPASS )
-	{
-		switch(msg.cmd)
-		{
-		    case USB_CAMERA_FRAME_READY:
-			    mpp_buffer = (unsigned char *)msg.parameter;
-			    break;
-		    default:
-		    {
-			    HAL_LOGE("++HAL_CameraDev_USB_Dequeue: Unexpected camera queue message\r\n");
-			    return kStatus_HAL_CameraError;
-		    }
-		}
-	}
-	else
-	{
-	    HAL_LOGD("++HAL_CameraDev_USB_Dequeue: Unexpected camera queue receive error\r\n");
-	    return kStatus_HAL_CameraError;
-	}
+    if( xQueueReceive(g_Video.mppQueue, &msg, portMAX_DELAY ) == pdPASS )
+    {
+        mpp_buffer = (void *) msg.pictureBuffer;
+        mpp_buffer_size = msg.pictureLength;
+        dev_priv->crt_usb_buffer_index = msg.pictureBufferIndex;
+    }
+    else
+    {
+        HAL_LOGE("++HAL_CameraDev_USB_Dequeue: Unexpected camera queue receive error\r\n");
+        return kStatus_HAL_CameraError;
+    }
 
-	/* copy incoming USB data to the mpp buffer */
-	memcpy(s_framebuffers[0], mpp_buffer, CAMERA_USB_MAX_BUFF_SIZE);
-	*data   = (void *)s_framebuffers[0];
+    if ((mpp_buffer_size == 0) || (mpp_buffer_size > CAMERA_USB_MAX_BUFF_SIZE))
+    {
+        HAL_LOGE("Invalid buffer size\r\n");
+        return kStatus_HAL_CameraError;
+    }
+    *data = mpp_buffer;
 
-	if (dev->config.format == MPP_PIXEL_JPEG)
-		*compressed_size = CAMERA_USB_JPEG_BUFF_SIZE;
-	else
-		*compressed_size = 0;
-
-	msg.cmd = USB_CAMERA_FRAME_DONE;
-	msg.parameter = mpp_buffer;
-	xQueueSend( usbcameraqueue_mppdone, &msg, portMAX_DELAY );
+    if (dev->config.format == MPP_PIXEL_JPEG)
+        *compressed_size = mpp_buffer_size;
+    else
+        *compressed_size = 0;
 
     *stripe = 0;
 
@@ -395,7 +389,20 @@ hal_camera_status_t HAL_CameraDev_USB_Enqueue(const camera_dev_t *dev, void *dat
 {
     int error = 0;
     HAL_LOGD("++HAL_CameraDev_USB_Enqueue\r\n");
-    /* nothing to do, see HAL_CameraDev_USB_Dequeue() */
+
+    hal_ctx_t ctx;
+    usb_camera_private_data_t *dev_priv = (usb_camera_private_data_t *)dev->data;
+
+    if (dev_priv == NULL)
+    {
+        HAL_LOGE("USB camera private data is NULL\r\n");
+        return kStatus_HAL_CameraError;
+    }
+
+    hal_atomic_enter(&ctx);
+    g_Video.pictureBufferState[dev_priv->crt_usb_buffer_index] = 0;
+    hal_atomic_exit(&ctx);
+
     HAL_LOGD("--HAL_CameraDev_USB_Enqueue\r\n");
     return error;
 }

@@ -237,6 +237,17 @@ typedef struct {
     int compressed_size;   /*!< size in bytes for compressed format */
 } mpp_img_params_t;
 
+/** File slice search function type */
+typedef int (*slice_search_func_t)(const uint8_t *data, int32_t len);
+
+/** File source parameters */
+typedef struct {
+    const char *filepath;                  /*!< Path to file on SD card */
+    bool loop;                             /*!< Flag to enable looping the file */
+    int file_buffer_size;                  /*!< size in bytes for compressed format */
+    slice_search_func_t slice_search_func; /*!< Optional: function to search for slices/chunks of data */
+} mpp_filesrc_params_t;
+
 /** MC element parameters */
 typedef struct {
     void *rpmsg_inst; /*!< pointer to rpmsg instance */
@@ -270,6 +281,7 @@ typedef enum {
     MPP_ELEMENT_IMG_DECODE,     /*!< Image decompression: JPEG, PNG */
     MPP_ELEMENT_IMG_COMPOSE,    /*!< compose a simple GUI: logo and text area with the input stream */
     MPP_ELEMENT_IMG_QUALITY_CHECK,  /*!< Image quality check */
+    MPP_ELEMENT_VIDEO_DECODE,   /*!< Video decode */
     MPP_ELEMENT_NUM         /*!< DO NOT USE */
 } mpp_element_id_t;
 
@@ -302,6 +314,7 @@ typedef enum {
 typedef enum
 {
     MPP_INFERENCE_TYPE_TFLITE = 0,      /*!< TensorFlow-Lite */
+    MPP_INFERENCE_TYPE_EXECUTORCH = 1, /*!< ExecuTorch */
 } mpp_inference_type_t;
 
 /** tensor parameters */
@@ -315,7 +328,7 @@ typedef struct{
 typedef struct {
     void *user_data;        /*!< callback will pass this pointer */
     mpp_inference_tensor_params_t *out_tensors[MPP_INFERENCE_MAX_OUTPUTS]; /*!< output tensors parameters */
-    int inference_time_ms;  /*!< inference run time measurement - output to user */
+    uint32_t inference_time_ms;  /*!< inference run time measurement - output to user */
     mpp_inference_type_t inference_type; /*!< type of the inference */
 } mpp_inference_cb_param_t;
 

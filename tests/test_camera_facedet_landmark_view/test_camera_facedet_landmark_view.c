@@ -73,7 +73,7 @@ typedef struct _user_data_t {
     box_data boxes[NUM_BOXES_MAX];
     uint32_t accessing; /* boolean protecting access */
     int detected_count;          /* number of detected boxes */
-    int inference_time_ms;
+    uint32_t inference_time_ms;
     float face_tilt[NUM_BOXES_MAX];  /* face tilt angles */
     float face_yaw[NUM_BOXES_MAX];   /* face yaw angles */
     mpp_landmark_t landmarks[NUM_BOXES_MAX * SCRFD_NUM_LANDMARKS]; /* landmarks for display */
@@ -346,7 +346,7 @@ void print_results(user_data_t *user_data)
 {
     if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
     {
-        PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+        PRINTF("inference time %u (ms) \r\n", user_data->inference_time_ms);
         if (user_data->detected_count == 0)
         {
             PRINTF("No face detected! \r\n");

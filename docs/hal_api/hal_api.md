@@ -1,6 +1,6 @@
 # eIQ MPP Hardware Abstraction Layer API
 
-MPP-HAL VERSION 4.0
+MPP-HAL VERSION 4.1
 
 ## Chapter 1
 

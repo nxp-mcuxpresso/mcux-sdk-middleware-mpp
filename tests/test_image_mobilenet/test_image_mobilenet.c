@@ -60,7 +60,7 @@ typedef struct _args_t {
 typedef struct _user_data_t {
     int inference_frame_num;
     mobilenet_post_proc_data_t inf_out;
-    int inference_time_ms;
+    uint32_t inference_time_ms;
     uint32_t accessing; /* boolean protecting access */
 } user_data_t;
 
@@ -226,7 +226,7 @@ void print_result(mpp_stats_t *mobilenet_stats, user_data_t *user_data) {
 
     if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
     {
-    	PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+        PRINTF("inference time %u (ms) \r\n", user_data->inference_time_ms);
         PRINTF("mobilenet : %s (%d%%)\r\n", user_data->inf_out.label, user_data->inf_out.score);
         if ((user_data->inference_time_ms <= EXPECTED_INF_TIME) && 
              (strcmp(user_data->inf_out.label, EXPECTED_LABEL) == 0) &&
@@ -237,7 +237,7 @@ void print_result(mpp_stats_t *mobilenet_stats, user_data_t *user_data) {
         else
         {
             if (user_data->inference_time_ms > EXPECTED_INF_TIME)
-                PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+                PRINTF("Bad inf time %u, expected less than %u\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
             if (strcmp(user_data->inf_out.label, EXPECTED_LABEL))
                 PRINTF("Bad label %s, expected %s\r\n", user_data->inf_out.label, EXPECTED_LABEL);
             if (user_data->inf_out.score < EXPECTED_INF_SCORE)

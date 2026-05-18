@@ -87,7 +87,7 @@ typedef struct _user_data_t {
 	box_data  final_boxes[NUM_BOXES_MAX];
 	/* detected final_boxes count */
 	int detected_count;
-	int inference_time_ms;
+	uint32_t inference_time_ms;
 	uint32_t accessing; /* boolean protecting access */
 } user_data_t;
 
@@ -222,7 +222,7 @@ void stat_task(void *param)
 
 			if (Atomic_CompareAndSwap_u32(&user_data->accessing, 1, 0))
 			{
-				PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+				PRINTF("inference time %u (ms) \r\n", user_data->inference_time_ms);
 				if (user_data->detected_count == 0)
 				{
 					PRINTF("No person detected\n\r");
@@ -258,7 +258,7 @@ void stat_task(void *param)
 				else
 				{
 					if (user_data->inference_time_ms > EXPECTED_INF_TIME)
-						PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+						PRINTF("Bad inf time %u, expected less than %u\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
 					if (user_data->detected_count != EXPECTED_INF_DETECTION_CNT)
 						PRINTF("Bad number of detections %d, expected %d\r\n", user_data->detected_count, EXPECTED_INF_DETECTION_CNT);
 					if (out_score < EXPECTED_INF_SCORE)

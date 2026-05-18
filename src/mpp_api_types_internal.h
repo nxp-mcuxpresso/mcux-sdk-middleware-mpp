@@ -29,6 +29,7 @@
 #include "hal_valgo_dev.h"
 #include "hal_vdec_dev.h"
 #include "hal_static_image.h"
+#include "hal_filesrc.h"
 #include "hal_types.h"
 #include "stddef.h"
 
@@ -251,10 +252,12 @@ typedef struct _static_image_s {
 }_static_image_t;
 
 /* file source */
-typedef struct _file_dev_s {
-	/* file info */
-	_mpp_t *mpp;
-}_file_dev_t;
+typedef struct _filesrc_s {
+    /* parameters */
+	mpp_filesrc_params_t params;
+    /* HAL/FWK type */
+    filesrc_t dev;
+}_filesrc_t;
 
 
 /* display sink */
@@ -296,8 +299,10 @@ struct _elem_s {
         _camera_dev_t *cam;
         _display_dev_t *disp;
         _static_image_t *img;
+        _filesrc_t *filesrc;
         vdec_dev_t *vdec;
         _multicore_dev_t *mc;
+        vdec_h264_dev_t *vdec_h264;
     } dev;
 
     /* the IO buffers descriptors */
@@ -326,6 +331,7 @@ static inline int can_add(mpp_element_id_t id)
     case MPP_ELEMENT_IMG_DECODE:
     case MPP_ELEMENT_IMG_COMPOSE:
     case MPP_ELEMENT_IMG_QUALITY_CHECK:
+    case MPP_ELEMENT_VIDEO_DECODE:
         return 1;
     default:
         return 0;

@@ -473,7 +473,7 @@ static void app_task(void *params) {
             mpp_stats_disable(MPP_STATS_GRP_ELEMENT);
             txt_info.compose_time = compose_stats.elem.elem_exec_time;
             mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
-            int start_time = hal_get_exec_time();
+            uint32_t start_time = hal_get_exec_time();
             draw_text_area(g_text_img, sizeof(g_text_img), &txt_info);
             txt_info.draw_txt_time = hal_get_exec_time() - start_time;
         }

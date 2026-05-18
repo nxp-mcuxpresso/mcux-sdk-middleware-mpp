@@ -124,12 +124,12 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Init(vision_algo_dev_t *dev, 
     // init the device
     memset(&dev->cap, 0, sizeof(dev->cap));
     dev->priv_data = hal_malloc(sizeof(tflite_model_param_t));
-    tflite_model_param = (tflite_model_param_t *)dev->priv_data;
     if(dev->priv_data == NULL){
         HAL_LOGE("NULL pointer\n");
         return kStatus_HAL_ValgoMallocError ;
     }
-    memset(dev->priv_data, 0, sizeof(tflite_model_param));
+    memset(dev->priv_data, 0, sizeof(tflite_model_param_t));
+    tflite_model_param = (tflite_model_param_t *)dev->priv_data;
     // get parameters from user passed to HAL
     memcpy(&tflite_model_param->user_params, param, sizeof(model_param_t));
 
@@ -159,6 +159,13 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Init(vision_algo_dev_t *dev, 
             param->inference_params.num_outputs))
     {
         HAL_LOGE("ERROR: MODEL_Init() failed\n");
+        for (i = 0; i < MPP_INFERENCE_MAX_OUTPUTS; i++) {
+            if (tflite_model_param->out_param.out_tensors[i] != NULL) {
+                hal_free(tflite_model_param->out_param.out_tensors[i]);
+            }
+        }
+        hal_free(dev->priv_data);
+        dev->priv_data = NULL;
         return kStatus_HAL_ValgoInitError;
     }
 
@@ -195,11 +202,16 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Deinit(vision_algo_dev_t *dev
     hal_valgo_status_t ret = kStatus_HAL_ValgoSuccess;
     HAL_LOGD("++HAL_VisionAlgoDev_TFLite_Deinit\n");
 
+    if (dev == NULL) {
+        HAL_LOGE("--HAL_VisionAlgoDev_TFLite_Deinit: dev is NULL\n");
+        return kStatus_HAL_ValgoError;
+    }
+
     tflite_model_param_t *tflite_model_param = (tflite_model_param_t *)dev->priv_data;
 
     if (tflite_model_param == NULL) {
         HAL_LOGE("--HAL_VisionAlgoDev_TFLite_Deinit: dev->priv_data is NULL\n");
-        return kStatus_HAL_ValgoStop;
+        return kStatus_HAL_ValgoError;
     }
 
     MODEL_DeInit();
@@ -230,7 +242,17 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Run(const vision_algo_dev_t *
     tflite_model_param_t *tflite_model_param;
     HAL_LOGD("++HAL_VisionAlgoDev_TFLite_Run\n");
 
+    if (dev == NULL || dev->priv_data == NULL) {
+        HAL_LOGE("Invalid device or private data\n");
+        return kStatus_HAL_ValgoError;
+    }
+
     tflite_model_param = (tflite_model_param_t *)dev->priv_data;
+
+    if (tflite_model_param->user_params.evt_callback_f == NULL) {
+        HAL_LOGE("Event callback not set\n");
+        return kStatus_HAL_ValgoError;
+    }
 
     tflite_model_param->user_params.evt_callback_f(
     tflite_model_param->user_params.mpp,
@@ -245,7 +267,7 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_Run(const vision_algo_dev_t *
             tflite_model_param->user_params.model_input_mean,
             tflite_model_param->user_params.model_input_std); /* use tensor normalization pamaeters for LUT implementation*/
 
-    int startTime = hal_get_exec_time();
+    uint32_t startTime = hal_get_exec_time();
     if (kStatus_Success != MODEL_RunInference()) {
         HAL_LOGE("ERROR: MODEL_RunInference() failed\n");
         return kStatus_HAL_ValgoError;
@@ -268,6 +290,11 @@ static hal_valgo_status_t HAL_VisionAlgoDev_TFLite_getBufDesc(const vision_algo_
     hal_valgo_status_t ret = kStatus_HAL_ValgoSuccess;
     tflite_model_param_t *tflite_model_param;
     HAL_LOGD("++HAL_VisionAlgoDev_TFLite_getInput\n");
+
+    if (dev == NULL || dev->priv_data == NULL) {
+        HAL_LOGE("Invalid device or private data\n");
+        return kStatus_HAL_ValgoError;
+    }
 
     if ((in_buf == NULL) || (policy == NULL))
     {

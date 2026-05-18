@@ -13,10 +13,12 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES src/mpp_element_img_decode.c
         SOURCES src/mpp_element_labeled_rectangle.c
         SOURCES src/mpp_element_static_img.c
+        SOURCES src/mpp_element_filesrc.c
         SOURCES src/mpp_element_inference.c
         SOURCES src/mpp_element_nullsink.c
         SOURCES src/mpp_element_img_compose.c
         SOURCES src/mpp_element_img_quality_check.c
+        SOURCES src/mpp_element_video_decode.c
         SOURCES src/mpp_heap.c
         SOURCES src/mpp_memory.c
         SOURCES src/mpp_utils.c
@@ -86,11 +88,16 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/hal_graphics_pxp.c
         SOURCES hal/hal_graphics_cpu.c
         SOURCES hal/hal_static_image.c
+        SOURCES hal/hal_filesrc.c
+        SOURCES hal/hal_storage.c
         SOURCES hal/hal_utils.c
         SOURCES hal/os/freertos/hal_freertos.c
         SOURCES hal/hal_vision_algo_tflite.c
+        SOURCES hal/hal_vision_algo_executorch.c
         SOURCES hal/tflite/model.cpp
         SOURCES hal/tflite/model_all_ops_micro.cpp
+        SOURCES hal/executorch/model.cpp
+        SOURCES hal/executorch/syscall.c
         SOURCES hal/hal_display_lcdif_rk043fn.c
         SOURCES hal/hal_camera_csi_mt9m114.c
         SOURCES hal/hal_display_spi_ili9341.c
@@ -105,9 +112,11 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/hal_camera_usb.c
         SOURCES hal/hal_camera_virtual_usb.c
         SOURCES hal/hal_mc.c
+        SOURCES hal/hal_vdec_h264_cpu.c
         SOURCES hal/include/*.h
         SOURCES hal/os/include/*.h
         SOURCES hal/tflite/*.h
+        SOURCES hal/executorch/*.h
     )
 
     mcux_remove_armgcc_configuration(

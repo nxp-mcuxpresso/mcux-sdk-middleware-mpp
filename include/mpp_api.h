@@ -85,6 +85,18 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
 int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr, mpp_elem_handle_t *elem_h);
 
 /**
+ * Source file addition
+ *
+ * @param [in] mpp input pipeline
+ * @param [in] params file parameters
+ * @param [in] addr file buffer
+ * @param [out] elem_h element handle in pipeline
+ * @return \ref return_codes
+ *
+ */
+int mpp_filesrc_add(mpp_t mpp, mpp_filesrc_params_t *params, void *addr, mpp_elem_handle_t *elem_h);
+
+/**
  * Multi core source addition
  *
  * This function adds a multi core source to the pipeline.
@@ -297,6 +309,8 @@ struct rpmsg_lite_instance *mpp_secondary_core_rpmsg_init(void);
  */
 void *mpp_init_rpmsg(void);
 #endif /* RPMSG_USED */
+
+int mpp_storage_init(void);
 
 /** @}*/
 

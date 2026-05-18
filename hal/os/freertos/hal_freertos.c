@@ -188,7 +188,7 @@ uint64_t hal_get_crt_time()
 {
 #if (configGENERATE_RUN_TIME_STATS == 1)
     uint64_t crt_time_us = portGET_RUN_TIME_COUNTER_VALUE();
-    return crt_time_us * HAL_EXEC_TIMER_US;
+    return (crt_time_us * HAL_EXEC_TIMER_US);
 #else
     return 0;
 #endif

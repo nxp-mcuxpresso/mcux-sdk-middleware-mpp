@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP.
+ * Copyright 2022-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -26,6 +26,7 @@
 #include "hal_camera_dev.h"
 #include "hal_display_dev.h"
 #include "hal_static_image.h"
+#include "hal_filesrc.h"
 #include "hal_graphics_dev.h"
 #include "hal_vdec_dev.h"
 
@@ -63,6 +64,7 @@ typedef struct
 } hal_camera_setup_t;
 
 int setup_static_image_elt(static_image_t *elt);
+int setup_filesrc_elt(filesrc_t *elt);
 uint32_t calc_checksum(int size_b, void *pbuf);
 
 /** checksum calculation method */

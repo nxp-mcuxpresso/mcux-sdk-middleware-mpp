@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP
+ * Copyright 2022-2026 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -49,11 +49,14 @@ typedef enum mpp_memory_policy_e {
 /** the hardware specific buffer requirements */
 typedef struct {
     int stride;             /*!< the number of bytes between 2 lines of image */
+    int stride_uv;          /*!< the number of bytes between 2 lines of UV planes (for planar YUV formats) */
     int nb_lines;           /*!< the number of lines required (set to 0 if the element doesn't require a specific number of lines) */
     int alignment;          /*!< alignment requirement in bytes */
     int max_image_size;     /*!< the number of bytes allocated */
     bool cacheable;         /*!< if true, HW will require cache maintenance */
     unsigned char *addr;    /*!< the aligned buffer address */
+    unsigned char *addr_u;  /*!< the aligned buffer address for chroma plane U (for planar YUV formats) */
+    unsigned char *addr_v;  /*!< the aligned buffer address for chroma plane V (for planar YUV formats) */
     unsigned char *heap_p;  /*!< pointer to the heap that should be freed */
 } hw_buf_desc_t;
 

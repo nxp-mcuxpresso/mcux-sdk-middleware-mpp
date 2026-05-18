@@ -62,7 +62,7 @@ int mpp_static_img_add(mpp_t mpp, mpp_img_params_t *params, void *addr, mpp_elem
         return ret;
 
     elem->type = MPP_TYPE_SOURCE;
-    elem->sink_typ = MPP_SRC_STATIC_IMAGE;
+    elem->src_typ = MPP_SRC_STATIC_IMAGE;
 
     /* create static image object */
     _static_image_t *img = hal_malloc(sizeof(*img));

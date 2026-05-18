@@ -8,6 +8,7 @@ mcux-sdk-middleware-sdmmc
 vglite
 vglite_sdk
 freertos-kernel
+freertos-kernel-upstream
 mcux-freertos-drivers
 mcu-sdk-test
 mcu-sdk-examples-int
@@ -24,6 +25,7 @@ cmsis-pack-rev
 tfm
 lvgl
 sgi_pkc
+sgi_pkc_pqc
 libjpeg
 usb
 mcux-sdk-middleware-multicore
@@ -34,3 +36,4 @@ voice_spot
 audio-voice-components
 emwin
 naturedsp
+openh264

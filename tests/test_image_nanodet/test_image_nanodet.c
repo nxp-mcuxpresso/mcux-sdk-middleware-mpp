@@ -323,7 +323,7 @@ static void app_task(void *params)
                 else
                 {
                     if (user_data.inference_time_ms > EXPECTED_INF_TIME)
-                        PRINTF("Bad inf time %d, expected less than %d\r\n", user_data.inference_time_ms, EXPECTED_INF_TIME);
+                        PRINTF("Bad inf time %u, expected less than %u\r\n", user_data.inference_time_ms, EXPECTED_INF_TIME);
                     if (user_data.detected_count != EXPECTED_INF_DETECTION_CNT)
                         PRINTF("Bad number of detections %d, expected %d\r\n", user_data.detected_count, EXPECTED_INF_DETECTION_CNT);
                     if (out_score < EXPECTED_INF_SCORE)

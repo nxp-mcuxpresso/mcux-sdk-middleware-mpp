@@ -40,15 +40,15 @@ config MPP_OS_NAME
 # MPP Task Stack Sizes
 config MPP_RC_TASK_STACK_SIZE
     int "RC (Run to Completion) task stack size"
-    default 16384
+    default 4096
     help
-      Stack size in bytes for the Run to Completion task.
+      Stack size in words for the Run to Completion task.
 
 config MPP_PR_TASK_STACK_SIZE
     int "PR (Preemptible) task stack size"
-    default 16384
+    default 4096
     help
-      Stack size in bytes for the Preemptible task.
+      Stack size in words for the Preemptible task.
       This task might run TensorFlow Lite Micro inference and
       requires a larger stack. Increase this value if you experience
       stack overflow issues during inference, i.e. if you enable

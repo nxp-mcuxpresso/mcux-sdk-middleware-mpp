@@ -71,7 +71,7 @@ typedef struct _user_data_t {
     box_data boxes[NUM_BOXES_MAX];
     uint32_t accessing; /* boolean protecting access */
     int detected_count;          /* number of detected boxes */
-    int inference_time_ms;
+    uint32_t inference_time_ms;
 } user_data_t;
 
 /*******************************************************************************
@@ -210,7 +210,7 @@ void stat_task(void *param)
                 PRINTF("Element stats --------------------------\r\n");
                 PRINTF("ultraface : exec_time %u (ms)\r\n", ultraface_stats.elem.elem_exec_time);
                 mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
-                PRINTF("inference time %d (ms) \r\n", user_data->inference_time_ms);
+                PRINTF("inference time %u (ms) \r\n", user_data->inference_time_ms);
                 out_score_fail = false;
                 last_fail_score = true;
                 if (user_data->detected_count == 0)
@@ -247,7 +247,7 @@ void stat_task(void *param)
                 else
                 {
                     if (user_data->inference_time_ms > EXPECTED_INF_TIME)
-                        PRINTF("Bad inf time %d, expected less than %d\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
+                        PRINTF("Bad inf time %u, expected less than %u\r\n", user_data->inference_time_ms, EXPECTED_INF_TIME);
                     if (user_data->detected_count != EXPECTED_INF_DETECTION_CNT)
                         PRINTF("Bad number of detections %d, expected %d\r\n", user_data->detected_count, EXPECTED_INF_DETECTION_CNT);
                     if (out_score_fail)

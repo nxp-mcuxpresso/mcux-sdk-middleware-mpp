@@ -38,6 +38,8 @@
 #include "hal_mc.h"
 #endif /*(defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1)*/
 
+#include "hal_storage.h"
+
 /* Multicore manager (MCMGR) and RPMSG configurations */
 #define RPMSG_READY_EVENT_DATA (1U)
 #define SH_MEM_TOTAL_SIZE          (6144U)
@@ -186,3 +188,17 @@ void *mpp_init_rpmsg(void)
     return rpmsg_inst;
 }
 #endif /* RPMSG_USED */
+
+int mpp_storage_init(void)
+{
+    if (hal_storage_is_mounted())
+        return MPP_SUCCESS;
+
+    if (hal_storage_init() != 0)
+    {
+        MPP_LOGE("Storage initialization failed\r\n");
+        return MPP_ERROR;
+    }
+
+    return MPP_SUCCESS;
+}

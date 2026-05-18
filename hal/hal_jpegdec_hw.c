@@ -43,7 +43,7 @@ AT_NONCACHEABLE_SECTION(static jpegdec_descpt_t s_decoderDespt);
 #define HAL_JPEGDEC                    (&g_jpegdec)
 #define HAL_JPEG_DEC_BUFF_ALIGN         16      /* JPEG decoder input/output buffers address should be 16B aligned */
 #define HAL_JPEG_DEC_STRIDE_ALIGN       64      /* JPEG decoder output buffer stride should be 64B aligned */
-#define HAL_JPEG_DECODE_TIMEOUT_MS      10      /*  JPEG decode complete timeout in ms */
+#define HAL_JPEG_DECODE_TIMEOUT_MS      10U     /*  JPEG decode complete timeout in ms */
 #define HAL_JPEG_WIDTH_ALIGNMENT_MASK   0xFU    /* Width must be multiple of 16 */
 #define HAL_JPEG_HEIGHT_ALIGNMENT_MASK  0x7U    /* Height must be multiple of 8 */
 
@@ -159,8 +159,8 @@ int HAL_JPEG_Hw_Decode(const vdec_dev_t *dev, uint8_t *pSrc, uint8_t *pDst, int3
 	status_t ret = kStatus_Success;
 	uint32_t status = 0;
 	int aligned_stride = 0;
-	int decode_get_status_start = 0;
-	int decode_get_status_end   = 0;
+	uint32_t decode_get_status_start = 0;
+	uint32_t decode_get_status_end   = 0;
 
 	if (((unsigned int)pSrc % HAL_JPEG_DEC_BUFF_ALIGN) != 0)
 	{

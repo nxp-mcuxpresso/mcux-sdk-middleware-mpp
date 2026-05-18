@@ -236,7 +236,7 @@ typedef struct _user_data_t {
 	mpp_labeled_rect_t labels[1];
 	recognition_result result;
 	uint32_t accessing; /* boolean protecting access to user data */
-	int inference_time_ms;
+	uint32_t inference_time_ms;
 } user_data_t;
 
 /*******************************************************************************
@@ -658,7 +658,7 @@ static void app_task(void *params)
 				{
 					PRINTF("Element stats --------------------------\r\n");
 					PRINTF("mobilefacenet : exec_time %u (ms)\r\n", mobilefacenet_stats.elem.elem_exec_time);
-					PRINTF("inference time %d (ms) \r\n", user_data.inference_time_ms);
+					PRINTF("inference time %u (ms) \r\n", user_data.inference_time_ms);
 					PRINTF("Recognized face: %s with similarity percentage: %d%%\r\n", user_data.result.recognized_name, user_data.result.similarity_percentage);
 				}
 

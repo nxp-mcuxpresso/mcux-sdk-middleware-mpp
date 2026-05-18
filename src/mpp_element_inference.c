@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 NXP
+ * Copyright 2022-2026 NXP
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -114,6 +114,9 @@ unsigned int elem_inference_setup(_elem_t *elem)
         case MPP_INFERENCE_TYPE_TFLITE:
             ret = hal_inference_tflite_setup(valgo);
             break;
+        case MPP_INFERENCE_TYPE_EXECUTORCH:
+            ret = hal_inference_executorch_setup(valgo);
+            break;
         default:
             MPP_LOGE ("ML inference type %d is not supported\n", inference_type);
             ret = MPP_INVALID_PARAM;
@@ -134,7 +137,7 @@ unsigned int elem_inference_setup(_elem_t *elem)
         params.evt_callback_f = mpp->params.evt_callback_f;
         params.cb_userdata = mpp->params.cb_userdata;
         params.tensor_order = elem->params.ml_inference.tensor_order;
-        params.mpp = (mpp_t) mpp; 
+        params.mpp = (mpp_t) mpp;
         memcpy(&params.inference_params,
                         &elem->params.ml_inference.inference_params,sizeof(mpp_inference_params_t));
 

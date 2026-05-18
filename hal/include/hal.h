@@ -83,6 +83,15 @@ int hal_landmark(uint8_t *frame, int width, int height, mpp_pixel_format_t forma
 int hal_inference_tflite_setup(vision_algo_dev_t *dev);
 
 /*!
+ * @brief Hal setup function for inference engine ExecuTorch
+ *
+ * @param[in] dev vision algo device to register
+ * @return error code (0: success, otherwise: failure)
+ *
+ */
+int hal_inference_executorch_setup(vision_algo_dev_t *dev);
+
+/*!
  * @brief Register with a display device specified by name.
  *        If name is NULL, return error.
  *

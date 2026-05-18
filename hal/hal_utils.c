@@ -40,6 +40,8 @@ extern "C" {
 #include "mpp_config.h"
 #include "hal_debug.h"
 #include "hal_static_image.h"
+#include "hal_filesrc.h"
+#include "hal_os.h"
 
 #if MPP_OS_FREERTOS
 #define LOG_STRING_MAX_SIZE 128
@@ -254,6 +256,13 @@ int setup_static_image(static_image_t *);
 int setup_static_image_elt(static_image_t *elt)
 {
     return setup_static_image(elt);
+}
+
+int setup_filesrc(filesrc_t *);
+
+int setup_filesrc_elt(filesrc_t *elt)
+{
+    return setup_filesrc(elt);
 }
 
 /* Computes the checksum of the buffer

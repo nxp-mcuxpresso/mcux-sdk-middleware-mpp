@@ -209,7 +209,7 @@ typedef struct _user_data_t {
     box_data final_boxes[NUM_BOXES_MAX];
     uint32_t accessing; /* boolean protecting access */
     int detected_count; /* number of detected boxes */
-    int inference_time_ms;
+    uint32_t inference_time_ms;
 } user_data_t;
 
 typedef enum _e_cur_model {
@@ -728,7 +728,7 @@ static void app_task(void *params)
         {
             if (last_inf_frame_num <= (user_data.inference_frame_num - 2))
             {
-                PRINTF("inference time %d ms \r\n", user_data.inference_time_ms);
+                PRINTF("inference time %u ms \r\n", user_data.inference_time_ms);
                 if (user_data.detected_count <= 0)
                 {
                     PRINTF("%s : no detection\r\n", g_model_name);

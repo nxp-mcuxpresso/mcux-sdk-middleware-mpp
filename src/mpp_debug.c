@@ -111,6 +111,9 @@ char * elem_name(_elem_t *elem)
         case MPP_ELEMENT_IMG_QUALITY_CHECK:
             str = "IMG_QUALITY_CHECK";
             break;
+        case MPP_ELEMENT_VIDEO_DECODE:
+            str = "VIDEO_DECODE";
+            break;
         case MPP_ELEMENT_NUM:
         default:
             str = "***BAD ELEMENT!***";

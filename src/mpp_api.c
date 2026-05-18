@@ -264,14 +264,14 @@ static void vPipelineCtlTask( void *params )
             pr_rounds++;
         }
 
-    if (api_stats && hal_mutex_lock_no_wait(stats_lock[MPP_STATS_GRP_API]) == MPP_SUCCESS) {
-            api_stats->api.rc_cycle = hal_tick_to_ms(rc_exec_ticks);
-            api_stats->api.rc_cycle_max = hal_tick_to_ms(max_rc_cycle_ticks);
-            api_stats->api.pr_slot = hal_tick_to_ms(pr_slot);
-            api_stats->api.pr_rounds = pr_rounds_cnt + 1;
-            api_stats->api.app_slot = hal_tick_to_ms(app_slot);
-            api_stats->api.cpu_load = 100U - hal_get_idle_percent();
-            (void) hal_mutex_unlock(stats_lock[MPP_STATS_GRP_API]);
+        if (api_stats && hal_mutex_lock_no_wait(stats_lock[MPP_STATS_GRP_API]) == MPP_SUCCESS) {
+                api_stats->api.rc_cycle = hal_tick_to_ms(rc_exec_ticks);
+                api_stats->api.rc_cycle_max = hal_tick_to_ms(max_rc_cycle_ticks);
+                api_stats->api.pr_slot = hal_tick_to_ms(pr_slot);
+                api_stats->api.pr_rounds = pr_rounds_cnt + 1;
+                api_stats->api.app_slot = hal_tick_to_ms(app_slot);
+                api_stats->api.cpu_load = 100U - hal_get_idle_percent();
+                (void) hal_mutex_unlock(stats_lock[MPP_STATS_GRP_API]);
         }
 
 
@@ -583,9 +583,9 @@ buf_desc_t *get_in_buff_from_prev_elem(_elem_t *elem)
     }
     else
     {
-        MPP_LOGI("Current element: %s @ 0x%x\r\n", elem_name(elem), (uint32_t) elem);
-        MPP_LOGI("\tprevious element %s @ 0x%x\r\n", elem_name(elem->prev), (uint32_t) elem->prev);
-        MPP_LOGI("\tinput buffer (prev elem out buf %d): 0x%x\r\n", out_buf_idx, (uint32_t) ret);
+        MPP_LOGD("Current element: %s @ 0x%x\r\n", elem_name(elem), (uint32_t) elem);
+        MPP_LOGD("\tprevious element %s @ 0x%x\r\n", elem_name(elem->prev), (uint32_t) elem->prev);
+        MPP_LOGD("\tinput buffer (prev elem out buf %d): 0x%x\r\n", out_buf_idx, (uint32_t) ret);
     }
 
     return ret;
@@ -919,7 +919,9 @@ int mpp_start(mpp_t mpp, int last, bool force_update)
         /* Set the minimum number of stream enqueue calls until the enqueue to camera is completed */
         for (int i = 0; i < MPP_MAX_BRANCH_NUM; i++)
         {
-            if ((elem->next[i]) && (elem->next[i]->mpp->oper_status == MPP_RUNNING) && (elem->next[i]->mpp->params.exec_flag == MPP_EXEC_RC))
+            if ((elem->next[i]) && 
+                ((elem->next[i]->mpp->oper_status == MPP_RUNNING) || (elem->next[i]->mpp == _mpp)) && 
+                (elem->next[i]->mpp->params.exec_flag == MPP_EXEC_RC))
                 min_req_cnt++;
         }
 
@@ -929,7 +931,9 @@ int mpp_start(mpp_t mpp, int last, bool force_update)
             /* In this case, set the min_req_cnt to the number of active PREEMPT streams */
             for (int i = 0; i < MPP_MAX_BRANCH_NUM; i++)
             {
-                if ((elem->next[i]) && (elem->next[i]->mpp->oper_status == MPP_RUNNING) && (elem->next[i]->mpp->params.exec_flag == MPP_EXEC_PREEMPT))
+                if ((elem->next[i]) && 
+                    ((elem->next[i]->mpp->oper_status == MPP_RUNNING) || (elem->next[i]->mpp == _mpp)) &&
+                    (elem->next[i]->mpp->params.exec_flag == MPP_EXEC_PREEMPT))
                     min_req_cnt++;
             }
             if (min_req_cnt == 0)

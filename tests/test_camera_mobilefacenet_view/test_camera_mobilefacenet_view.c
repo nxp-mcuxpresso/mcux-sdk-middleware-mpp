@@ -182,7 +182,7 @@ typedef struct _user_data_t {
 	mpp_labeled_rect_t labels[1];
 	recognition_result result;
 	uint32_t accessing; /* boolean protecting access to user data */
-	int inference_time_ms;
+	uint32_t inference_time_ms;
 } user_data_t;
 
 /*******************************************************************************
@@ -517,7 +517,7 @@ static void app_task(void *params)
 		{
 			if (last_inf_frame_num != user_data.inference_frame_num)
 			{
-				PRINTF("inference time %d (ms) \r\n", user_data.inference_time_ms);
+				PRINTF("inference time %u (ms) \r\n", user_data.inference_time_ms);
 
 				if (user_data.result.recognized_name[0]=='\0')
 				{

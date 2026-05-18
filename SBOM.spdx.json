@@ -92,6 +92,30 @@
         }
       ],
       "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-57e9bfeb-c1c9-4d86-b080-4840df4a8763",
+      "name": "openh264",
+      "versionInfo": "v25.06.00",
+      "licenseConcluded": "(BSD-2-Clause)",
+      "licenseDeclared": "(BSD-2-Clause)",
+      "downloadLocation": "https://github.com/nxp-mcuxpresso/openh264",
+      "originator": "Organization: NXP",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5fd8de64-6ab0-4803-8652-413f6231f447",
+      "name": "mcuxsdk-middleware-executorch",
+      "versionInfo": "v26.03.00",
+      "licenseConcluded": "(BSD-3-Clause)",
+      "licenseDeclared": "(BSD-3-Clause)",
+      "downloadLocation": "https://github.com/nxp-mcuxpresso/mcuxsdk-middleware-executorch ",
+      "originator": "Organization: NXP",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
     }
   ],
   "relationships": [
@@ -107,6 +131,11 @@
     },
     {
       "spdxElementId": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5fd8de64-6ab0-4803-8652-413f6231f447"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
       "relationshipType": "DYNAMIC_LINK",
       "relatedSpdxElement": "SPDXRef-package-4ae5f197-d954-4200-a365-14ac904a5861"
     },
@@ -124,6 +153,11 @@
       "spdxElementId": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
       "relationshipType": "CONTAINS",
       "relatedSpdxElement": "SPDXRef-package-384bea7d-9530-40af-9a11-f3217f1b705f"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-2ee0ac9c-70b5-4b99-88fb-1841310eaeec",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-57e9bfeb-c1c9-4d86-b080-4840df4a8763"
     }
   ]
 }

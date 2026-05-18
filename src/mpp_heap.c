@@ -100,6 +100,27 @@ static bool mpp_is_done(_mpp_t *mpp)
     return true;
 }
 
+static bool mpp_last_stripe(_mpp_t *mpp)
+{
+    if (mpp == NULL) return true;
+    _elem_t *elem = mpp->first_elem;
+
+    if (elem->io.out_buf[0]->stripe_num == 0)
+        return true;
+    else
+    {
+        if (stripe_cnt >= (MPP_STRIPE_NUM - 1))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 /* MPP serial execution */
 void mpp_execute(_mpp_t *mpp)
 {
@@ -148,6 +169,7 @@ void mpp_execute(_mpp_t *mpp)
         /* no buffer has been dequeued */
         if (ret != MPP_SUCCESS)
         {
+            hal_sema_give(mpp->status_sema);  // Release before early return
             MPP_LOGD("\nNo buffer dequeued from source\n");
             return;
         }
@@ -252,6 +274,11 @@ void mpp_execute(_mpp_t *mpp)
             if (busy)
             {
                 hal_atomic_exit(&ctx);
+                for (i = 0; i < elem->io.nb_in_buf; i++)
+                {
+                    if ((elem->io.inplace != true) && elem->io.in_buf[i]->enqueue_cb != NULL)
+                         elem->io.in_buf[i]->enqueue_cb(elem, elem->io.in_buf[i]);
+                }
                 MPP_LOGD("element %s: input or output buffer busy! skip processing.\n", elem_name(elem));
                 elem = elem->next[0];
                 continue;
@@ -259,6 +286,11 @@ void mpp_execute(_mpp_t *mpp)
             else if (!update)
             {
                 hal_atomic_exit(&ctx);
+                for (i = 0; i < elem->io.nb_in_buf; i++)
+                {
+                    if ((elem->io.inplace != true) && elem->io.in_buf[i]->enqueue_cb != NULL)
+                         elem->io.in_buf[i]->enqueue_cb(elem, elem->io.in_buf[i]);
+                }
                 MPP_LOGD("element %s: no input buffer update! skip processing.\n", elem_name(elem));
                 elem = elem->next[0];
                 continue;
@@ -365,7 +397,11 @@ void mpp_execute(_mpp_t *mpp)
             }
             for (i = 0; i < elem->io.nb_out_buf; i++)
             {
-                elem->io.out_buf[i]->status = MPP_BUFFER_READY;
+                /* keep WRITTING status if set for MPP_ELEMENT_VIDEO_DECODE */
+                if (elem->proc_typ != MPP_ELEMENT_VIDEO_DECODE)
+                    elem->io.out_buf[i]->status = MPP_BUFFER_READY;
+                else if (elem->io.out_buf[i]->status != MPP_BUFFER_WRITTING)
+                    elem->io.out_buf[i]->status = MPP_BUFFER_READY;
                 elem->io.out_buf[i]->frame_id = latest_id;
             }
 
@@ -428,7 +464,7 @@ void mpp_execute(_mpp_t *mpp)
 void mpp_execute_heap(_mpp_t *prio_lst[])
 {
     int i;
-    uint32_t start_time, end_time;
+    uint32_t start_time = 0, end_time = 0;
     mpp_stats_t *stats;
     uint64_t time_us;
     bool done = true;
@@ -445,11 +481,13 @@ void mpp_execute_heap(_mpp_t *prio_lst[])
                 if (stats) start_time = hal_get_exec_time();
                 mpp_execute(mpp);
                 if (stats) end_time = hal_get_exec_time();
+                /* check final stripe (first mpp has the source) */
+                if (mpp_last_stripe(prio_lst[0])) 
+                    mpp->fps_params.frame_cnt++;
                 if (stats && hal_mutex_lock_no_wait(stats_lock[MPP_STATS_GRP_MPP]) == MPP_SUCCESS)
                 {
                     stats->mpp.mpp = (mpp_t)mpp;
                     stats->mpp.mpp_exec_time = end_time - start_time;
-                    mpp->fps_params.frame_cnt++;
                     if (mpp->fps_params.frame_cnt >= MPP_FPS_STATS_WINDOW)
                     {
                         time_us = hal_get_crt_time() - mpp->fps_params.start_time_us;
@@ -499,13 +537,13 @@ void mpp_dump_heap(_mpp_t *prio_lst[])
                 switch (elem->type)
                 {
                 case MPP_TYPE_SOURCE:
-                    MPP_LOGI("\t\tsrc_type %d src %p\r\n", elem->src_typ, elem);
+                    MPP_LOGD("\t\tsrc_type %d src %p\r\n", elem->src_typ, elem);
                     break;
                 case MPP_TYPE_SINK:
-                    MPP_LOGI("\t\tsink_type %d sink %p\r\n", elem->sink_typ, elem);
+                    MPP_LOGD("\t\tsink_type %d sink %p\r\n", elem->sink_typ, elem);
                     break;
                 case MPP_TYPE_PROC:
-                    MPP_LOGI("\t\tproc_type %d proc %p\r\n", elem->proc_typ, elem);
+                    MPP_LOGD("\t\tproc_type %d proc %p\r\n", elem->proc_typ, elem);
                     break;
                 default:
                     MPP_LOGE("\t\tERROR: element %p type unknown \r\n", elem);

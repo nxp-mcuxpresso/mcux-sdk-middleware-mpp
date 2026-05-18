@@ -2,7 +2,28 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-  Current version is 4.0.0
+  Current version is 4.1.0
+  - 4.1.0
+    - New features:
+      - Added camera examples (both USB and FlexIO cameras) for models running on rt700 board
+      - Updated models to neutron converter version 3.1.1
+      - Added new file source element
+      - Added new H264 video decoder element
+      - Added H264 software decoder HAL
+      - Added YUV420P planar format support using PXP as backend
+      - Added HAL for executorch inference engine
+    - Bug fixes:
+      - HAL Zephyr related fixes
+      - NULL pointer checks and missing memset for allocated memories
+    - Known issues:
+      - camera_*_view examples on mimrt700evk: For USB camera with compressed MJPEG format, the application might
+        get stuck when camera FPS is high and parts of the frame are lost; issue is related to HW JPEG decoder
+        which should be capable of detecting corrupted MJPEG frames instead of crashing completely
+      - executorch support is not fully validated yet
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170
+      - mimxrt700evk
   - 4.0.0
     - New features:
       - Added multicore pipeline support using RPMsg sink/source elements
