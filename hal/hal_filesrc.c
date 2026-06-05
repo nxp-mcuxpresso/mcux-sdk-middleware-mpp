@@ -309,6 +309,12 @@ hal_filesrc_status_t HAL_FileSrc_Stop(const filesrc_t *dev)
         f_close(&fil);
         s_filesrc_ctx.file_opened = false;
     }
+    
+    /* Reset EOF state to allow restart */
+    s_filesrc_ctx.end_of_file = false;
+    s_filesrc_ctx.bytes_in_buffer = 0;
+    s_filesrc_ctx.remaining_bytes = 0;
+    s_filesrc_ctx.slice_offset = 0;
 
     HAL_LOGD("--HAL_FileSrc_Stop\n");
     return MPP_kStatus_HAL_FileSrcSuccess;
@@ -347,6 +353,14 @@ hal_filesrc_status_t HAL_FileSrc_Dequeue(const filesrc_t *dev, void **data, uint
         /* Open file if needed */
         if (!ctx->file_opened)
         {
+            if (ctx->end_of_file && !dev->config.loop_enabled)
+            {
+                HAL_LOGD("EOF already reached, returning EOF again\r\n");
+                *data = NULL;
+                *size = 0;
+                return MPP_kStatus_HAL_FileSrcEOF;
+            }
+
             if (filesrc_open_file(dev, ctx) != MPP_kStatus_HAL_FileSrcSuccess)
             {
                 return MPP_kStatus_HAL_FileSrcError;
@@ -405,7 +419,7 @@ hal_filesrc_status_t HAL_FileSrc_Dequeue(const filesrc_t *dev, void **data, uint
                 *size = 0;
                 HAL_LOGI("End of file reached\n");
                 HAL_LOGD("--HAL_FileSrc_Dequeue (EOF)\n");
-                return MPP_kStatus_HAL_FileSrcSuccess;
+                return MPP_kStatus_HAL_FileSrcEOF;
             }
         }
     }

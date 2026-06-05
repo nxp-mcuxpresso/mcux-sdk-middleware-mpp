@@ -39,7 +39,7 @@
 /* Model info */
 #include APP_TFLITE_SCRFD_KPS_INFO
 
-#include "internal/models/scrfd_kps_500m_full_integer_quant/scrfd_kps_output_postproc.h"
+#include "models/scrfd_kps_500m_full_integer_quant/scrfd_kps_output_postproc.h"
 
 /*******************************************************************************
  * Definitions

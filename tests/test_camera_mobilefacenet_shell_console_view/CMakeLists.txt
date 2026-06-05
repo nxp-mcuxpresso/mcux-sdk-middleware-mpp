@@ -22,8 +22,7 @@ include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 mcux_add_include(
     BASE_PATH ${SdkRootDirPath}/middleware/eiq/mpp
     INCLUDES    models
-                internal/models
-                internal/models/mobilefacenet
+                models/mobilefacenet
                 internal/images
 )
 
@@ -35,8 +34,8 @@ mcux_add_source(
             models/utils.h
             models/shell_database_utils.h
             models/shell_database_utils.c
-            internal/models/mobilefacenet/mobilefacenet_output_postproc_quantized.cpp
-            internal/models/mobilefacenet/*.h
+            models/mobilefacenet/mobilefacenet_output_postproc_quantized.cpp
+            models/mobilefacenet/*.h
 )
 
 # top level

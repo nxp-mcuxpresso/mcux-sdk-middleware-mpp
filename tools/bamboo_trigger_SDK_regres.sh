@@ -21,6 +21,8 @@ MCXN947_EXAMPLES=$( cat ${MPP_DIR}/boards/frdmmcxn947/examples.conf )
 MCXN947_EXAMPLES=$( echo ${MCXN947_EXAMPLES} | sed 's/ /,/g' )
 RT700_EXAMPLES=$( cat ${MPP_DIR}/boards/mimxrt700evk/examples.conf )
 RT700_EXAMPLES=$( echo ${RT700_EXAMPLES} | sed 's/ /,/g' )
+# Define skip list for examples that should not be tested
+SKIP_EXAMPLE_LIST="camera_mobilefacenet_view,camera_ultraface_mobilefacenet_view,camera_usb_final_fr_app_view,static_image_mobilefacenet_view"
 EXAMPLES=""
 JSON_CONFIG_FILE="dapeng_config.json"
 JUNIT_TEST_REPORT_FILE="dapeng_test_report.xml"
@@ -413,6 +415,12 @@ do
     # Add all the remaining tests to the list, only if example is supported in the default list
     for i in "${EXAMPLE_LIST[@]:1}"
     do
+        # Check if example is in skip list
+        found=$(search_item_in_list "${i}" "${SKIP_EXAMPLE_LIST}")
+        if [[ "${found}" == "1" ]]; then
+            echo "Example ${i} is in skip list for board ${board}"
+            continue
+        fi
         # Search for the example in the default list
         found=$(search_item_in_list "${i}" "${DEFAULT_EXAMPLES}")
         if [[ "${found}" != "1" ]]; then

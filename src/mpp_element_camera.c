@@ -212,8 +212,37 @@ static inline int camera_enqueue(_elem_t *elem, void *buf)
     /* Update request count only for RC mpp */
     if (mpp->params.exec_flag == cam->dev.config.req_cnt_type)
     {
-        cam->dev.config.crt_stream_req_cnt++;
-        cam->dev.config.stream_requested[buf_index] = cam->params.stream[buf_index].active & true;
+        bool requester_found = false;
+        uint8_t first_empty_found = MAX_STREAM_REQUESTERS;
+        for (int i = 0; i < MAX_STREAM_REQUESTERS; i++)
+        {
+            if (cam->dev.config.stream_requester[buf_index][i] == (void *)mpp)
+            {
+                requester_found = true;
+                break;
+            }
+            else if (first_empty_found == MAX_STREAM_REQUESTERS && cam->dev.config.stream_requester[buf_index][i] == NULL)
+            {
+                first_empty_found = i;
+            }
+        }
+        /* Increment request count only if requester has not already been registered */
+        if (!requester_found)
+        {
+            if (first_empty_found < MAX_STREAM_REQUESTERS)
+            {
+                cam->dev.config.stream_requester[buf_index][first_empty_found] = (void *)mpp;
+                cam->dev.config.crt_stream_req_cnt++;
+            }
+            else
+            {
+                // We should never reach this case
+                MPP_LOGE("Failed to add stream requester for buffer index %d (too many requesters)\n\r", buf_index);
+                MPP_LOGE("Check if MAX_STREAM_REQUESTERS has same value with MPP_MAX_BRANCH_NUM\r\n");
+                return MPP_ERROR;
+            }
+            cam->dev.config.stream_requested[buf_index] = cam->params.stream[buf_index].active & true;
+        }
     }
     else
     {
@@ -268,7 +297,13 @@ static inline int camera_enqueue(_elem_t *elem, void *buf)
 
         /* Clear requested flag */
         for (int i = 0; i < MAX_OUTPUT_PORTS; i++)
+        {
             cam->dev.config.stream_requested[i] = false;
+            for (int j = 0; j < MAX_STREAM_REQUESTERS; j++)
+            {
+                cam->dev.config.stream_requester[i][j] = NULL;
+            }
+        }
 
         cam->dev.config.crt_stream_req_cnt = 0;
     }
@@ -345,10 +380,6 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
         params->stream[0].active = true;
     }
 
-    /* Force in_advance_enqueue to true for USB cameras */
-    if (strcmp(name, "USB_cam") == 0)
-        params->in_advance_enqueue = true;
-
     /* copy params */
     memcpy(&cam->params, params, sizeof(*params));
 
@@ -371,11 +402,20 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
     
     buf_enqueue_func_t  camera_enqueue_callback;
     if (strcmp(name, "Virtual_USB_cam") == 0)
+    {
         camera_enqueue_callback = camera_enqueue;
+    }
     else if (strcmp(name, "USB_cam") == 0)
-        camera_enqueue_callback = camera_enqueue;
+    {
+        if (params->in_advance_enqueue == true)
+            camera_enqueue_callback = camera_enqueue;
+        else
+            camera_enqueue_callback = NULL;
+    }
     else
+    {
         camera_enqueue_callback = NULL;
+    }
 
     MPP_LOGD("Adding camera %s\n", cam->name);
 

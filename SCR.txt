@@ -2,7 +2,7 @@ NXP Software Content Register
 
 Package:                   eIQ Media Processing Pipelines library
 
-Version:                   4.1.0
+Version:                   4.2.0
 Outgoing License:          Apache-2.0
 License File:              LICENSE
 Type of content:           Source code, TFLite Machine Learning models
@@ -19,3 +19,6 @@ Origin:                	   NXP (Apache-2.0)
                            The Independent JPEG Group's software (IJG) - http://www.ijg.org/files/jpegsr9b.zip
                            Poppins Font (SIL Open Font License v1.1) - https://openfontlicense.org/open-font-license-official-text/
                            OpenH264 (BSD-2-Clause) - https://github.com/cisco/openh264
+                           AntiSpoofing (MIT) - https://github.com/oarriaga/face_classification/tree/master/trained_models/emotion_models 
+                           MobileFaceNet (Apache 2.0) - https://www.kaggle.com/code/jasonhcwong/mobilefacenet/
+                           SCRFD (Apache 2.0) - https://github.com/deepinsight/insightface/blob/master/detection/scrfd/README.md

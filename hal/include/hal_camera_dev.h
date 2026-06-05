@@ -37,6 +37,9 @@
 #include "mpp_api_types.h"
 #include "hal_types.h"
 
+/* This should be kept in sync with MPP_MAX_BRANCH_NUM */
+#define MAX_STREAM_REQUESTERS       4
+
 typedef struct _camera_dev camera_dev_t;
 
 /** Camera return status*/
@@ -120,6 +123,7 @@ typedef struct
     mpp_exec_flag_t req_cnt_type; /*!< flag to control stream request counting */
     mpp_camera_stream_cfg stream[NUM_STREAMS]; /*!< stream configuration */
     bool stream_requested[NUM_STREAMS]; /*!< flag to track if a stream is required for enqueue */
+    void *stream_requester[NUM_STREAMS][MAX_STREAM_REQUESTERS]; /*!< array of requesters for each stream */
     bool in_advance_enqueue;     /*!< flag to indicate advance enqueue mode */
 } camera_dev_static_config_t;
 

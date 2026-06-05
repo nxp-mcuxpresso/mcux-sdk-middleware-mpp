@@ -8,6 +8,10 @@ The Media Processing Pipeline for MCUs is a software library for constructing me
 
 This is a clean and simple API which makes it easy to build and prototype vision-based applications
 
+⚠️ **AI Components Disclaimer**
+
+The AI components are provided solely for demonstration, evaluation, and benchmarking purposes and are not designed, licensed, or authorized for production use, deployment, or reliance in any operational setting or safety-related environment. Any use beyond NXP's expressly defined intended purpose is undertaken entirely at the Licensee's own risk and responsibility, including all applicable regulatory, compliance, and liability obligations. Nothing herein shall be construed as a representation or warranty that the AI components are production-ready or suitable for use in real-world or regulated environments. The AI components may not be used to train, fine tune, adapt, or create derivative AI models, nor to extract or reuse model artefacts, except as expressly permitted for the stated demonstration purposes.
+
 ## Concept
 
 The concept behind the API is to create a Media Processing Pipeline (MPP) based on processing elements.

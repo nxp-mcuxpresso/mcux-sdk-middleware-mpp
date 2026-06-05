@@ -20,7 +20,7 @@ mcux_add_include(
 # board files
 include(${SdkRootDirPath}/${board_root}/${board}/eiq_examples/mpp/board.cmake)
 # model and post-processing
-include(${SdkRootDirPath}/middleware/eiq/mpp/internal/models/antispoofing/model.cmake)
+include(${SdkRootDirPath}/middleware/eiq/mpp/models/antispoofing/model.cmake)
 
 # top level
 include(${SdkRootDirPath}/CMakeLists.txt)

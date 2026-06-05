@@ -60,7 +60,8 @@ typedef struct _filesrc filesrc_t;
 typedef enum _hal_filesrc_status
 {
     MPP_kStatus_HAL_FileSrcSuccess = 0,  /*!< Successfully */
-	MPP_kStatus_HAL_FileSrcError         /*!< Error occurs on HAL filesrc */
+	MPP_kStatus_HAL_FileSrcError,        /*!< Error occurs on HAL filesrc */
+    MPP_kStatus_HAL_FileSrcEOF           /*!< End of file reached */
 
 } hal_filesrc_status_t;
 

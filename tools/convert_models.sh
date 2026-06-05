@@ -50,13 +50,13 @@ for MODEL_BASENAME in "ultraface_slim_ultraslim" "nanodet_m_0.5x_nhwc_nopermute"
             MODEL_DIR="models/persondetect"
             MODEL_H_NAME=${MODEL_BASENAME}
         elif [ ${MODEL_BASENAME} == "antispoofing" ]; then
-            MODEL_DIR="internal/models/antispoofing"
+            MODEL_DIR="models/antispoofing"
             MODEL_H_NAME=${MODEL_BASENAME}
         elif [ ${MODEL_BASENAME} == "mobilefacenet_96_96" ]; then
-            MODEL_DIR="internal/models/mobilefacenet"
+            MODEL_DIR="models/mobilefacenet"
             MODEL_H_NAME=${MODEL_BASENAME}
         elif [ ${MODEL_BASENAME} == "scrfd_kps_500m_full_integer_quant_128x128" -o ${MODEL_BASENAME} == "scrfd_kps_500m_full_integer_quant_320x256" -o ${MODEL_BASENAME} == "scrfd_kps_500m_full_integer_quant_256x256" ]; then
-            MODEL_DIR="internal/models/scrfd_kps_500m_full_integer_quant"
+            MODEL_DIR="models/scrfd_kps_500m_full_integer_quant"
             MODEL_H_NAME=${MODEL_BASENAME}
         else
             exit 1;

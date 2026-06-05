@@ -453,32 +453,36 @@ class MPPBuilder:
                 print(f"Warning: Could not parse app config: {e}")
         return ""
 
-    def get_examples_and_tests(self, board, exp, test):
+    def get_examples_and_tests(self, board, exp, test, ignore_conf_arguments):
         """Get list of examples and tests to build"""
         examples = []
         tests = []
 
-        def parse_config_line(line):
+        def parse_config_line(line, app=None, ignore_arguments=False):
             """Parse a config line to extract name and arguments"""
             line = line.strip()
             if not line or line.startswith('#'):
                 return None
             parts = line.split(None, 1)  # Split on first whitespace
-            if len(parts) == 1:
+            if app is not None and app != parts[0]:
+                return None
+            if len(parts) == 1 or ignore_arguments:
                 return [parts[0], ""]
             else:
                 return [parts[0], parts[1]]
 
         # Get examples
-        if exp == "all":
+        if exp:
             examples_file = self.w_dir / "boards" / board / "examples.conf"
             examples_internal_file = self.w_dir / "boards" / board / "examples_internal.conf"
+
+            exp_to_search = None if exp == "all" else exp
 
             if examples_file.exists():
                 try:
                     with open(examples_file, 'r') as f:
                         for line in f:
-                            parsed = parse_config_line(line)
+                            parsed = parse_config_line(line, exp_to_search, ignore_conf_arguments)
                             if parsed:
                                 examples.append(parsed)
                 except Exception as e:
@@ -489,24 +493,28 @@ class MPPBuilder:
                 try:
                     with open(examples_internal_file, 'r') as f:
                         for line in f:
-                            parsed = parse_config_line(line)
+                            parsed = parse_config_line(line, exp_to_search, ignore_conf_arguments)
                             if parsed:
                                 examples.append(parsed)
                 except Exception as e:
                     print(f"Warning: Could not read examples_internal.conf: {e}")
-        elif exp:
-            examples = [[exp, ""]]
+
+            # If example was not found in examples.conf files, try to build it without additional arguments
+            if not len(examples) and exp != "all":
+                examples.append([exp, ""])
 
         # Get tests
-        if test == "all":
+        if test:
             tests_file = self.w_dir / "boards" / board / "tests.conf"
             tests_internal_file = self.w_dir / "boards" / board / "tests_internal.conf"
+
+            test_to_search = None if test == "all" else test
 
             if tests_file.exists():
                 try:
                     with open(tests_file, 'r') as f:
                         for line in f:
-                            parsed = parse_config_line(line)
+                            parsed = parse_config_line(line, test_to_search, ignore_conf_arguments)
                             if parsed:
                                 tests.append(parsed)
                 except Exception as e:
@@ -517,13 +525,15 @@ class MPPBuilder:
                 try:
                     with open(tests_internal_file, 'r') as f:
                         for line in f:
-                            parsed = parse_config_line(line)
+                            parsed = parse_config_line(line, test_to_search, ignore_conf_arguments)
                             if parsed:
                                 tests.append(parsed)
                 except Exception as e:
                     print(f"Warning: Could not read tests_internal.conf: {e}")
-        elif test:
-            tests = [[test, ""]]
+
+            # If test was not found in tests.conf files, try to build it without additional arguments
+            if not len(tests) and test != "all":
+                tests.append([test, ""])
 
         return examples, tests
 
@@ -718,7 +728,7 @@ class MPPBuilder:
         return success
 
     def build(self, board, panel, build_rel_or_dbg, build_type, log_level,
-              extra_build_flags, exp, test):
+              extra_build_flags, exp, test, ignore_conf_arguments):
         """Main build function"""
         self.board = board
         self.build_rel_or_dbg = build_rel_or_dbg
@@ -745,7 +755,7 @@ class MPPBuilder:
             else:
                 self.app_core_folder = "core0"
 
-        examples, tests = self.get_examples_and_tests(board, exp, test)
+        examples, tests = self.get_examples_and_tests(board, exp, test, ignore_conf_arguments)
         panel_config_define = self.get_panel_config_define(board, panel)
 
         original_cwd = os.getcwd()
@@ -1083,6 +1093,8 @@ def main():
                         help="\n".join([f'{k}: {v["help"]}' for k, v in DEBUG_CONSOLE_DEFINES.items()]))
     parser.add_argument("-V", "--code-coverage", action="store_true",
                         help="enable code coverage analysis during build")
+    parser.add_argument("-I", "--ignore-conf-arguments", action="store_true",
+                        help="Ignore additional build arguments (for west command) configured inside .conf file")
 
     argcomplete.autocomplete(parser)
 
@@ -1166,7 +1178,7 @@ def main():
         # Run build
         success = builder.build(
             board, panel, build_rel_or_dbg, build_type,
-            args.log_level, args.flags, exp, test
+            args.log_level, args.flags, exp, test, args.ignore_conf_arguments
         )
 
         if not success:

@@ -1,6 +1,6 @@
 # eIQ MPP Hardware Abstraction Layer API
 
-MPP-HAL VERSION 4.1
+MPP-HAL VERSION 4.2
 
 ## Chapter 1
 
@@ -28,6 +28,7 @@ Here is an overview:
 1. **Source elements HAL**
 - Camera
 - Static image
+- File source
 2. **processing elements HAL**
 - Graphics driver
 - Vision algorithms
@@ -119,11 +120,15 @@ Enabling/Disabling Hal components and devices:
 - struct[ virtual_usb_cam_msg_t](#virtual_usb_cam_msg_t)
 - struct[ static_image_static_config_t](#static_image_static_config_t)
 - struct[ static_image_t](#static_image_t)
+- struct[ filesrc_config_t](#filesrc_config_t)
+- struct[ filesrc_t](#filesrc_t)
 - struct[ gfx_surface_t](#gfx_surface_t)
 - struct[ gfx_rotate_config_t](#gfx_rotate_config_t)
 - struct[ gfx_dev_t](#gfx_dev_t)
 - struct[ hal_rect_t](#hal_rect_t)
 - struct[ vdec_dev_t](#vdec_dev_t)
+- struct[ vdec_h264_frame_info_t](#vdec_h264_frame_info_t)
+- struct[ vdec_h264_dev_t](#vdec_h264_dev_t)
 - struct[ model_param_t](#model_param_t)
 - struct[ valgo_dev_private_capability_t](#valgo_dev_private_capability_t)
 - struct[ vision_frame_t](#vision_frame_t)
@@ -139,6 +144,7 @@ Enabling/Disabling Hal components and devices:
 
 **Macros**
 
+- #define **MAX\_STREAM\_REQUESTERS**
 - #define[ TARGET_CAMERA0_WIDTH](#target_camera0_width)
 - #define **TARGET\_CAMERA0\_HEIGHT**
 - #define **TARGET\_CAMERA1\_WIDTH**
@@ -152,6 +158,7 @@ Enabling/Disabling Hal components and devices:
 - #define[ MPP_EPT_ADDRESSS](#mpp_ept_addresss)
 - #define[ RTSP_EPT_ADDRESS](#rtsp_ept_address)
 - #define[ APP_EP_READY_EVENT_DATA](#app_ep_ready_event_data)
+- #define **FILE\_SOURCE\_FILEPATH\_MAX\_LEN**
 - #define[ HAL_GFX_DEV_CPU_NAME](#hal_gfx_dev_cpu_name)
 - #define[ GUI_PRINTF_BUF_SIZE](#gui_printf_buf_size)
 - #define[ GUI_PRINTF_BUF_SIZE](#gui_printf_buf_size)
@@ -232,6 +239,16 @@ Enabling/Disabling Hal components and devices:
 
 }
 
+- enum[ hal_filesrc_status_t ](#hal_filesrc_status_t) {
+
+  [MPP_kStatus_HAL_FileSrcSuccess ](#mpp_kstatus_hal_filesrcsuccess),
+
+  [MPP_kStatus_HAL_FileSrcError ](#mpp_kstatus_hal_filesrcerror),
+
+  [MPP_kStatus_HAL_FileSrcEOF ](#mpp_kstatus_hal_filesrceof)
+
+}
+
 - enum [gfx_rotate_target_t](#gfx_rotate_target_t) {
 
   kGFXRotateTarget_None,
@@ -239,6 +256,16 @@ Enabling/Disabling Hal components and devices:
   kGFXRotate_SRCSurface,
 
   kGFXRotate_DSTSurface
+
+}
+
+- enum[ hal_vdec_status_t ](#hal_vdec_status_t) {
+
+  [MPP_kStatus_HAL_VDecSuccess ](#mpp_kstatus_hal_vdecsuccess),
+
+  [MPP_kStatus_HAL_VDecSkipped ](#mpp_kstatus_hal_vdecskipped),
+
+  [MPP_kStatus_HAL_VDecError ](#mpp_kstatus_hal_vdecerror)
 
 }
 
@@ -296,11 +323,15 @@ Enabling/Disabling Hal components and devices:
 
 **Functions**
 
+- int[ search_h264_nalu ](#search_h264_nalu)(const uint8\_t ∗data, int32\_t len)
 - int[ HAL_GfxDev_CPU_Register ](#hal_gfxdev_cpu_register)(gfx\_dev\_t ∗dev)
 - int[ HAL_GfxDev_GPU_Register ](#hal_gfxdev_gpu_register)(gfx\_dev\_t ∗dev)
+- void **HAL\_JPEG\_PrintValidationStats** (void)
 - int[ HAL_JPEG_CPU_Register ](#hal_jpeg_cpu_register)(vdec\_dev\_t ∗dev)
 - int[ HAL_JPEG_HW_Register ](#hal_jpeg_hw_register)(vdec\_dev\_t ∗dev)
+- [hal_vdec_status_t](#hal_vdec_status_t)[ HAL_VdecDev_H264_CPU_Register ](#hal_vdecdev_h264_cpu_register)(vdec\_h264\_dev\_t ∗dev)
 - int **setup\_static\_image\_elt** (static\_image\_t ∗elt)
+- int **setup\_filesrc\_elt** (filesrc\_t ∗elt)
 - uint32\_t **calc\_checksum** (int size\_b, void ∗pbuf)
 
 #### 2.1.1 Detailed Description
@@ -339,6 +370,7 @@ Structure that characterizes the camera device.
 |mpp\_exec\_flag\_t|req\_cnt\_type|flag to control stream request counting|
 |mpp\_camera\_stream\_cfg|stream[NUM\_STREAMS]|stream configuration|
 |bool|stream\_requested[NUM\_STREAMS]|flag to track if a stream is required for enqueue|
+|void ∗|stream\_requester[NUM\_STREAMS][MAX_STREAM_REQUESTERS]| array of requestersfor each stream|
 |bool|in\_advance\_enqueue|flag to indicate advance enqueue mode|
 
 ##### camera_dev_private_capability_t
@@ -465,6 +497,36 @@ Attributes of an image element.
 |int|stripe\_idx|the current stripe index|
 |uint8\_t ∗|buffer|static image buffer|
 
+##### filesrc_config_t
+
+**struct filesrc\_config\_t**
+
+Structure that characterize the file source element.
+
+**Data Fields**
+
+|type|name|description|
+|---|---|---|
+|char|filepath[FILE\_SOURCE\_FILEPATH\_MAX\_LEN]|File name to read.|
+|bool|loop\_enabled|Flag to enable looping the file.|
+|int|file\_buffer\_size|File buffer size in bytes.|
+|slice\_search\_func\_t|slice\_search\_func|Optional slice search function.|
+
+##### filesrc_t
+
+**struct \_filesrc**
+
+Attributes of a file source element.
+
+**Data Fields**
+
+|type|name|description|
+|---|---|---|
+|const[ filesrc_operator_t ](#filesrc_operator_t)∗|ops|operations|
+|[filesrc_config_t](#filesrc_config_t)|config|file source configs|
+|uint8\_t ∗|buffer|Pointer to file read buffer.|
+|uint32\_t|buffer\_size|File read buffer size.|
+
 ##### gfx_surface_t
 
 **struct gfx\_surface\_t**
@@ -478,6 +540,7 @@ Gfx surface parameters.
 |int|height|buffer height|
 |int|width|buffer width|
 |int|pitch|buffer pitch|
+|int|pitch\_uv|buffer pitch for chroma planes|
 |int|left|left position|
 |int|top|top position|
 |int|right|right position|
@@ -485,6 +548,8 @@ Gfx surface parameters.
 |int|swapByte|swap byte per two bytes|
 |mpp\_pixel\_format\_t|format|pixel format|
 |void ∗|buf|buffer|
+|void ∗|buf\_u|buffer for chroma plane U|
+|void ∗|buf\_v|buffer for chroma plane V|
 |void ∗|lock|the structure is determined by hal and set to null if not use in hal|
 
 ##### gfx_rotate_config_t
@@ -530,6 +595,26 @@ rectangle positions.
 |int|bottom||
 |int|right||
 
+##### vdec_h264_frame_info_t
+
+**struct vdec\_h264\_frame\_info\_t**
+
+H.264 decode frame information structure.
+
+**Data Fields**
+
+|type|name|description|
+|---|---|---|
+|uint8\_t ∗|src\_data||
+|int32\_t|src\_size||
+|uint8\_t ∗|dst\_y||
+|uint8\_t ∗|dst\_u||
+|uint8\_t ∗|dst\_v||
+|int32\_t|width||
+|int32\_t|height||
+|int32\_t|y\_stride||
+|int32\_t|uv\_stride||
+
 ##### vdec_dev_t
 
 **struct \_vdec\_dev**
@@ -540,6 +625,19 @@ rectangle positions.
 |---|---|---|
 |int|id||
 |const[ vdec_dev_operator_t ](#vdec_dev_operator_t)∗|ops||
+|[mpp_callback_t](#mpp_callback_t)|callback||
+|void ∗|user\_data||
+
+##### vdec_h264_dev_t
+
+**struct \_vdec\_h264\_dev**
+
+**Data Fields**
+
+|type|name|description|
+|---|---|---|
+|int|id||
+|const[ vdec_h264_dev_operator_t ](#vdec_h264_dev_operator_t)∗|ops||
 |[mpp_callback_t](#mpp_callback_t)|callback||
 |void ∗|user\_data||
 
@@ -727,11 +825,14 @@ the hardware specific buffer requirements
 |type|name|description|
 |-|-|-|
 |int|stride|the number of bytes between 2 lines of image|
+|int|stride\_uv|the number of bytes between 2 lines of UV planes (for planar YUV formats)|
 |int|nb\_lines|the number of lines required (set to 0 if the element doesn't require a specific number of lines)|
 |int|alignment|alignment requirement in bytes|
 |int|max\_image\_size|the number of bytes allocated|
 |bool|cacheable|if true, HW will require cache maintenance|
 |unsigned char ∗|addr|the aligned buffer address|
+|unsigned char ∗|addr\_u|the aligned buffer address for chroma plane U (for planar YUV formats)|
+|unsigned char ∗|addr\_v|the aligned buffer address for chroma plane V (for planar YUV formats)|
 |unsigned char ∗|heap\_p|pointer to the heap that should be freed|
 
 ##### hal_img_decoder_setup_t
@@ -793,6 +894,10 @@ computed checksum
 
 ##### 2.1.1.2 Macro Definition Documentation
 
+##### max_stream_requesters
+
+#define MAX\_STREAM\_REQUESTERS
+
 ##### target_camera0_width
 
 #define TARGET\_CAMERA0\_WIDTH
@@ -830,6 +935,12 @@ Endpoint address for RTSP (Real Time Streaming Protocol) inter-core communicatio
 #define APP\_EP\_READY\_EVENT\_DATA
 
 Event data value indicating that the application endpoint is ready for communication.
+
+##### file_source_filepath_max_len
+
+**FILE\_SOURCE\_FILEPATH\_MAX\_LEN**
+
+#define FILE\_SOURCE\_FILEPATH\_MAX\_LEN
 
 ##### hal_gfx_dev_cpu_name
 
@@ -979,11 +1090,37 @@ enum [hal_image_status_t ](#hal_image_status_t)static image return status
 |<a name="mpp_kstatus_hal_imagesuccess"></a>MPP\_kStatus\_HAL\_ImageSuccess|Successfully.|
 |<a name="mpp_kstatus_hal_imageerror"></a>MPP\_kStatus\_HAL\_ImageError|Error occurs on HAL Image.|
 
+##### hal_filesrc_status_t
+
+enum [hal_filesrc_status_t ](#hal_filesrc_status_t)
+
+File source return status.
+
+**Enumerator**
+
+|label|description|
+|-|-|
+|<a name="mpp_kstatus_hal_filesrcsuccess"></a>MPP\_kStatus\_HAL\_FileSrcSuccess|Successfully.|
+|<a name="mpp_kstatus_hal_filesrcerror"></a>MPP\_kStatus\_HAL\_FileSrcError|Error occurs on HAL filesrc.|
+|<a name="mpp_kstatus_hal_filesrceof"></a>MPP\_kStatus\_HAL\_FileSrcEOF|End of file reached.|
 
 ##### gfx_rotate_target_t
 
 enum [gfx_rotate_target_t ](#gfx_rotate_target_t)gfx rotate target
 
+##### hal_vdec_status_t
+
+enum [hal_vdec_status_t ](#hal_vdec_status_t)
+
+video decoder return status
+
+**Enumerator**
+
+|label|description|
+|-|-|
+|<a name="mpp_kstatus_hal_vdecsuccess"></a>MPP\_kStatus\_HAL\_VDecSuccess|Successfully.|
+|<a name="mpp_kstatus_hal_vdecskipped"></a>MPP\_kStatus\_HAL\_VDecSkipped|Skip.|
+|<a name="mpp_kstatus_hal_vdecerror"></a>MPP\_kStatus\_HAL\_VDecError|Error occurs on HAL Video Decoder.|
 
 ##### hal_valgo_status_t
 
@@ -1060,6 +1197,31 @@ enum [checksum_type_t ](#checksum_type_t)checksum calculation method
 
 ##### 2.1.1.5 Function Documentation
 
+**search\_h264\_nalu()**
+
+int search\_h264\_nalu ( const uint8\_t ∗ data, int32\_t len )
+
+Search function for H.264 NALU boundaries.
+
+This function searches for H.264 Network Abstraction Layer Unit (NALU) start codes in the provided data buffer. It looks for:
+- 4-byte start code: 0x00 0x00 0x00 0x01
+- 3-byte start code: 0x00 0x00 0x01
+
+**Parameters**
+
+|in/out|name|description|
+|-|-|-|
+|in|data|Pointer to buffer containing H.264 bitstream data|
+|in|len|Length of data in buffer (bytes)|
+
+**Returns**
+
+Offset to next NALU start code, or -1 if not found
+
+**Note**
+
+This function is provided as a reference implementation. Users can provide custom slice search functions for other formats.
+
 **HAL\_GfxDev\_CPU\_Register()**
 
 int HAL\_GfxDev\_CPU\_Register ( gfx\_dev\_t ∗ dev )
@@ -1125,14 +1287,32 @@ Register the jpeg HW decoder device.
 
 error code (0: success, otherwise: failure)
 
+**HAL\_VdecDev\_H264\_CPU\_Register()**
+
+[hal_vdec_status_t](#hal_vdec_status_t) HAL\_VdecDev\_H264\_CPU\_Register ( vdec\_h264\_dev\_t ∗ dev )
+
+Register the H.264 SW decoder device.
+
+**Parameters**
+
+|in/out|name|description|
+|-|-|-|
+|in|dev|decoder device to register|
+
+**Returns**
+
+error code (0: success, otherwise: failure)
+
 ### 2.2 HAL OPERATIONS
 
 **Data Structures**
 
 - struct[ camera_dev_operator_t](#camera_dev_operator_t)
 - struct[ static_image_operator_t](#static_image_operator_t)
+- struct[ filesrc_operator_t](#filesrc_operator_t)
 - struct[ gfx_dev_operator_t](#gfx_dev_operator_t)
 - struct[ vdec_dev_operator_t](#vdec_dev_operator_t)
+- struct[ vdec_h264_dev_operator_t](#vdec_h264_dev_operator_t)
 - struct[ vision_algo_dev_operator_t](#vision_algo_dev_operator_t)
 - struct[ display_dev_operator_t](#display_dev_operator_t)
 
@@ -1270,6 +1450,71 @@ Operation that needs to be implemented by an image element.
 
    dequeue a buffer from the elt
 
+##### filesrc_operator_t
+
+**struct filesrc\_operator\_t**
+
+Operation that needs to be implemented by a file source element.
+
+**Data Fields**
+
+- [hal_filesrc_status_t(](#hal_filesrc_status_t)∗[init ](#init))(filesrc\_t ∗dev, mpp\_filesrc\_params\_t ∗config, void ∗param)
+- [hal_filesrc_status_t(](#hal_filesrc_status_t)∗[deinit ](#deinit))(filesrc\_t ∗dev)
+- [hal_filesrc_status_t(](#hal_filesrc_status_t)∗[start ](#start))(const filesrc\_t ∗dev)
+- [hal_filesrc_status_t(](#hal_filesrc_status_t)∗[stop ](#stop))(const filesrc\_t ∗dev)
+- [hal_filesrc_status_t(](#hal_filesrc_status_t)∗[dequeue ](#dequeue))(const filesrc\_t ∗dev, void ∗∗data, uint32\_t ∗size)
+- [hal_filesrc_status_t(](#hal_filesrc_status_t)∗[get_buf_desc ](#get_buf_desc))(const filesrc\_t ∗dev, [hw_buf_desc_t ](#hw_buf_desc_t)∗out\_buf, [mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
+
+**Field Documentation**
+
+##### init
+
+**init**
+
+[hal_filesrc_status_t](#hal_filesrc_status_t)(∗ filesrc\_operator\_t::init) (filesrc\_t ∗dev, mpp\_filesrc\_params\_t ∗config, void ∗param)
+
+initialize the dev
+
+##### deinit
+
+**deinit**
+
+[hal_filesrc_status_t](#hal_filesrc_status_t)(∗ filesrc\_operator\_t::deinit) (filesrc\_t ∗dev)
+
+deinitialize the dev
+
+##### start
+
+**start**
+
+[hal_filesrc_status_t](#hal_filesrc_status_t)(∗ filesrc\_operator\_t::start) (const filesrc\_t ∗dev)
+
+start the dev
+
+##### stop
+
+**stop**
+
+[hal_filesrc_status_t](#hal_filesrc_status_t)(∗ filesrc\_operator\_t::stop) (const filesrc\_t ∗dev)
+
+stop the dev
+
+##### dequeue
+
+**dequeue**
+
+[hal_filesrc_status_t](#hal_filesrc_status_t)(∗ filesrc\_operator\_t::dequeue) (const filesrc\_t ∗dev, void ∗∗data, uint32\_t ∗size)
+
+dequeue a buffer
+
+##### get_buf_desc
+
+**get\_buf\_desc**
+
+[hal_filesrc_status_t](#hal_filesrc_status_t)(∗ filesrc\_operator\_t::get\_buf\_desc) (const filesrc\_t ∗dev, [hw_buf_desc_t ](#hw_buf_desc_t)∗out\_buf, [mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
+
+get buffer descriptors and policy
+
 ##### gfx_dev_operator_t
 
 **struct gfx\_dev\_operator\_t**
@@ -1300,6 +1545,17 @@ Operation that needs to be implemented by vdec device.
 - int(∗**deinit** )(const vdec\_dev\_t ∗dev)
 - int(∗ **get\_buf\_desc** )(const vdec\_dev\_t ∗dev, [hw_buf_desc_t](#hw_buf_desc_t) ∗in\_buf, [hw_buf_desc_t](#hw_buf_desc_t) ∗out\_buf, [mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
 - int(∗**decode** )(const vdec\_dev\_t ∗dev, uint8\_t ∗pSrc, uint8\_t ∗pDst, int32\_t jpg\_size, uint32\_t row\_stride)
+
+##### vdec_h264_dev_operator_t
+
+**struct vdec\_h264\_dev\_operator\_t**
+
+**Data Fields**
+
+- [hal_vdec_status_t(](#hal_vdec_status_t)∗**init** )(vdec\_h264\_dev\_t ∗dev, void ∗param)
+- [hal_vdec_status_t(](#hal_vdec_status_t)∗**deinit** )(const vdec\_h264\_dev\_t ∗dev)
+- [hal_vdec_status_t(](#hal_vdec_status_t)∗**get\_buf\_desc** )(const vdec\_h264\_dev\_t ∗dev, [hw_buf_desc_t ](#hw_buf_desc_t)∗in\_buf, [hw_buf_desc_t ](#hw_buf_desc_t)∗out\_buf, [mpp_memory_policy_t ](#mpp_memory_policy_t)∗policy)
+- [hal_vdec_status_t(](#hal_vdec_status_t)∗**decode** )(const vdec\_h264\_dev\_t ∗dev, [vdec_h264_frame_info_t ](#vdec_h264_frame_info_t)∗frame\_info)
 
 ##### vision_algo_dev_operator_t
 
@@ -1544,10 +1800,12 @@ Swaps a buffer's MSB and LSB bytes..
 - int[ hal_label_rectangle ](#hal_label_rectangle)(uint8\_t ∗frame, int width, int height, mpp\_pixel\_format\_t format, mpp\_labeled\_rect\_t ∗lr, int stripe, int stripe\_max)
 - int[ hal_landmark ](#hal_landmark)(uint8\_t ∗frame, int width, int height, mpp\_pixel\_format\_t format, mpp\_landmark\_t ∗lk, int stripe, int stripe\_max)
 - int[ hal_inference_tflite_setup ](#hal_inference_tflite_setup)(vision\_algo\_dev\_t ∗dev)
+- int[ hal_inference_executorch_setup ](#hal_inference_executorch_setup)(vision\_algo\_dev\_t ∗dev)
 - int[ hal_display_setup ](#hal_display_setup)(const char ∗name, display\_dev\_t ∗dev)
 - int[ hal_camera_setup ](#hal_camera_setup)(const char ∗name, camera\_dev\_t ∗dev)
 - int[ hal_gfx_setup ](#hal_gfx_setup)(const char ∗name, gfx\_dev\_t ∗dev)
 - int[ hal_img_decoder_setup ](#hal_img_decoder_setup)(const char ∗name, vdec\_dev\_t ∗dev)
+- int[ hal_mc_dev_setup ](#hal_mc_dev_setup)(const char ∗name, multicore\_dev\_t ∗dev)
 
 #### 2.3.1 Detailed Description
 
@@ -1636,6 +1894,25 @@ Hal setup function for inference engine Tensorflow-Lite Micro.
 
 error code (0: success, otherwise: failure)
 
+##### hal_inference_executorch_setup
+
+**hal\_inference\_executorch\_setup()**
+
+int hal\_inference\_executorch\_setup (
+vision\_algo\_dev\_t ∗ dev )
+
+Hal setup function for inference engine ExecuTorch.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|dev|vision algo device to register|
+
+**Returns**
+
+error code (0: success, otherwise: failure)
+
 ##### hal_display_setup
 
 **hal\_display\_setup()**
@@ -1713,6 +1990,27 @@ If name is NULL, the first available decoder supported by Hw will be selected. T
 | - | - | - |
 |in|name|image decoding device name|
 |in|dev|decoder device to register|
+
+**Returns**
+
+error code (0: success, otherwise: failure)
+
+##### hal_mc_dev_setup
+
+**hal\_mc\_dev\_setup()**
+
+int hal\_mc\_dev\_setup (
+const char ∗ name,
+multicore\_dev\_t ∗ dev )
+
+Register multicore device.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|name|multicore device name|
+|in|dev|multicore device to register|
 
 **Returns**
 

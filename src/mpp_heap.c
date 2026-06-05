@@ -126,7 +126,8 @@ void mpp_execute(_mpp_t *mpp)
 {
     int ret = MPP_SUCCESS;
     int i = 0;
-    bool busy = false;
+    bool in_busy = false;
+    bool out_busy = false;
     bool update = false;
     /**/
     _elem_t *elem = mpp->first_elem;
@@ -251,7 +252,8 @@ void mpp_execute(_mpp_t *mpp)
     /* loop over processing elements in mpp */
     while ((elem != NULL) && (elem->mpp == mpp) && (elem->type == MPP_TYPE_PROC))
     {
-        busy = false;
+        in_busy = false;
+        out_busy = false;
         update = force_update;
         MPP_LOGD_IF(rlmt_log_on, "\t\telem@%p\n", elem);
 
@@ -263,15 +265,22 @@ void mpp_execute(_mpp_t *mpp)
 
             for (i = 0; i < elem->io.nb_in_buf; i++)
             {
-                if (elem->io.in_buf[i]->status == MPP_BUFFER_WRITTING) busy = true;
+                if (elem->io.in_buf[i]->status == MPP_BUFFER_WRITTING) in_busy = true;
                 /* check at least one input frame is new versus last id recorded */
                 if (elem->io.last_frame_id[i] != elem->io.in_buf[i]->frame_id) update = true;
             }
             for (i = 0; i < elem->io.nb_out_buf; i++)
             {
-                if (elem->io.out_buf[i]->status == MPP_BUFFER_READING) busy = true;
+                if (elem->io.out_buf[i]->status == MPP_BUFFER_READING) out_busy = true;
             }
-            if (busy)
+            if (in_busy)
+            {
+                hal_atomic_exit(&ctx);
+                MPP_LOGD("element %s: input buffer busy! skip processing.\n", elem_name(elem));
+                elem = elem->next[0];
+                continue;
+            }
+            else if (out_busy)
             {
                 hal_atomic_exit(&ctx);
                 for (i = 0; i < elem->io.nb_in_buf; i++)
@@ -279,18 +288,13 @@ void mpp_execute(_mpp_t *mpp)
                     if ((elem->io.inplace != true) && elem->io.in_buf[i]->enqueue_cb != NULL)
                          elem->io.in_buf[i]->enqueue_cb(elem, elem->io.in_buf[i]);
                 }
-                MPP_LOGD("element %s: input or output buffer busy! skip processing.\n", elem_name(elem));
+                MPP_LOGD("element %s: output buffer busy! skip processing.\n", elem_name(elem));
                 elem = elem->next[0];
                 continue;
             }
             else if (!update)
             {
                 hal_atomic_exit(&ctx);
-                for (i = 0; i < elem->io.nb_in_buf; i++)
-                {
-                    if ((elem->io.inplace != true) && elem->io.in_buf[i]->enqueue_cb != NULL)
-                         elem->io.in_buf[i]->enqueue_cb(elem, elem->io.in_buf[i]);
-                }
                 MPP_LOGD("element %s: no input buffer update! skip processing.\n", elem_name(elem));
                 elem = elem->next[0];
                 continue;

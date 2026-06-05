@@ -67,7 +67,8 @@ static int filesrc_dequeue(_mpp_t *mpp)
     }
     else
     {
-        MPP_LOGE("filesrc dequeue failed\r\n");
+        if (ret != MPP_kStatus_HAL_FileSrcEOF)
+            MPP_LOGE("filesrc dequeue failed\r\n");
         elem->io.out_buf[0]->status = MPP_BUFFER_EMPTY;
         ret = MPP_ERROR;
     }

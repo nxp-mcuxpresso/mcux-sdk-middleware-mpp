@@ -136,7 +136,7 @@ hal_vdec_status_t HAL_VdecDev_H264_Decode(const vdec_h264_dev_t *dev, vdec_h264_
     }
 
     decState = (*ctx->s_pDecoder)->DecodeFrameNoDelay(ctx->s_pDecoder, frame_info->src_data, frame_info->src_size, pData, &sDstBufInfo);
-    if (decState == 0)
+    if (decState == dsErrorFree)
     {
        if (sDstBufInfo.iBufferStatus == 1)
         {
@@ -155,6 +155,11 @@ hal_vdec_status_t HAL_VdecDev_H264_Decode(const vdec_h264_dev_t *dev, vdec_h264_
             HAL_LOGD("--HAL_VdecDev_H264_Decode (Skipped)\r\n");
             return MPP_kStatus_HAL_VDecSkipped;
         }
+    }
+    else if (decState & dsDataErrorConcealed)
+    {
+        HAL_LOGD("Decoder warning: decState = 0x%x (skipping)\r\n", decState);
+        return MPP_kStatus_HAL_VDecSkipped;
     }
     else
     {

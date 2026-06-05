@@ -2,7 +2,20 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-  Current version is 4.1.0
+Current version is 4.2.0
+  - 4.2.0
+    - New features:
+      - N/A
+    - Bug fixes:
+      - Fixed issues with camera_*_view examples on mimxrt700evk related to HW JPEG decoder not beeing able to
+        detect corrupted JPEG frames
+      - Added face recognition models to be able to publish the demo on github
+    - Known issues:
+      - executorch support is not fully validated yet
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170
+      - mimxrt700evk
   - 4.1.0
     - New features:
       - Added camera examples (both USB and FlexIO cameras) for models running on rt700 board

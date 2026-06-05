@@ -132,6 +132,9 @@ struct _vdec_h264_dev
     void *user_data;
 };
 
+/* Function to print JPEG validation statistics */
+void HAL_JPEG_PrintValidationStats(void);
+
 /*!
  * @brief Register the jpeg SW decoder device
  *

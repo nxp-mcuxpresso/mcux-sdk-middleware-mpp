@@ -345,12 +345,20 @@ hal_camera_status_t HAL_CameraDev_USB_Dequeue(const camera_dev_t *dev, void **da
     usb_frame_ready_msg_t msg;
     void *mpp_buffer = NULL;
     uint32_t mpp_buffer_size = 0;
+    hal_ctx_t ctx;
 
     usb_camera_private_data_t *dev_priv = (usb_camera_private_data_t *)dev->data;
     if (dev_priv == NULL)
     {
         HAL_LOGE("USB camera private data is NULL\r\n");
         return kStatus_HAL_CameraError;
+    }
+
+    if (!dev->config.in_advance_enqueue)
+    {
+        hal_atomic_enter(&ctx);
+        g_Video.pictureBufferState[dev_priv->crt_usb_buffer_index] = 0;
+        hal_atomic_exit(&ctx);
     }
 
     HAL_LOGD("++HAL_CameraDev_USB_Dequeue\r\n");

@@ -69,6 +69,242 @@ static inline int hal_jpegdec_get_aligned_stride(int width, uint32_t pixel_fmt)
     return aligned_stride;
 }
 
+/* JPEG frame validation statistics */
+typedef struct {
+    uint32_t total_frames;           /* Total frames validated */
+    uint32_t valid_frames;           /* Frames that passed validation */
+    uint32_t invalid_frames;         /* Frames that failed validation */
+
+    /* Critical errors (cause validation failure) */
+    uint32_t err_too_small;          /* Frame too small */
+    uint32_t err_no_soi;             /* Missing SOI marker */
+    uint32_t err_no_sof;             /* Missing SOF marker */
+    uint32_t err_no_sos;             /* Missing SOS marker */
+    uint32_t err_invalid_segment;    /* Invalid segment length */
+    uint32_t err_no_eoi;             /* Missing EOI marker */
+
+    /* Warnings (don't cause validation failure) */
+    uint32_t warn_eoi_not_at_end;    /* EOI found but not at end */
+    uint32_t warn_no_dqt;            /* Missing DQT marker */
+    uint32_t warn_no_dht;            /* Missing DHT marker */
+
+    /* Additional statistics */
+    uint32_t max_eoi_offset_from_end; /* Maximum offset from end where EOI was found */
+} jpeg_validation_stats_t;
+
+static jpeg_validation_stats_t s_jpeg_stats = {0};
+
+static bool is_valid_jpeg_frame(const uint8_t *data, uint32_t size)
+{
+    s_jpeg_stats.total_frames++;
+
+    /* Minimum JPEG size: SOI (2) + minimal frame header + some data */
+    if (size < 20)
+    {
+        HAL_LOGI("JPEG frame too small: %u bytes\r\n", size);
+        s_jpeg_stats.err_too_small++;
+        s_jpeg_stats.invalid_frames++;
+        return false;
+    }
+
+    /* Check SOI (Start of Image) marker: 0xFF 0xD8 */
+    if (data[0] != 0xFF || data[1] != 0xD8)
+    {
+        HAL_LOGI("JPEG SOI marker missing\r\n");
+        s_jpeg_stats.err_no_soi++;
+        s_jpeg_stats.invalid_frames++;
+        return false;
+    }
+
+    /* Quick scan for essential markers and validate structure */
+    bool has_sof = false;  /* Start of Frame */
+    bool has_sos = false;  /* Start of Scan */
+    bool has_dqt = false;  /* Define Quantization Table */
+    bool has_dht = false;  /* Define Huffman Table */
+    uint32_t pos = 2;      /* Skip SOI */
+    uint32_t image_data_start = 0;
+
+    while (pos < size - 2)
+    {
+        /* Find next marker (0xFF followed by non-zero, non-0xFF) */
+        if (data[pos] != 0xFF)
+        {
+            pos++;
+            continue;
+        }
+
+        uint8_t marker = data[pos + 1];
+
+        /* Skip padding bytes (0xFF 0xFF) and standalone markers */
+        if (marker == 0xFF || marker == 0x00)
+        {
+            pos++;
+            continue;
+        }
+
+        /* Check for DQT marker (0xDB) - Quantization tables */
+        if (marker == 0xDB)
+        {
+            has_dqt = true;
+        }
+
+        /* Check for DHT marker (0xC4) - Huffman tables */
+        if (marker == 0xC4)
+        {
+            has_dht = true;
+        }
+
+        /* Check for SOF markers (0xC0-0xCF, excluding 0xC4, 0xC8, 0xCC) */
+        if ((marker >= 0xC0 && marker <= 0xCF) &&
+            marker != 0xC4 && marker != 0xC8 && marker != 0xCC)
+        {
+            has_sof = true;
+        }
+
+        /* Check for SOS marker (0xDA) */
+        if (marker == 0xDA)
+        {
+            has_sos = true;
+
+            /* Get segment length */
+            if (pos + 3 < size)
+            {
+                uint16_t segment_len = (data[pos + 2] << 8) | data[pos + 3];
+                image_data_start = pos + 2 + segment_len;
+                HAL_LOGD("Image data starts at offset: %u\r\n", image_data_start);
+            }
+            break;  /* SOS is followed by image data, stop scanning */
+        }
+
+        /* Get segment length and skip to next marker */
+        if (pos + 3 < size)
+        {
+            uint16_t segment_len = (data[pos + 2] << 8) | data[pos + 3];
+            if (segment_len < 2)
+            {
+                HAL_LOGI("Invalid JPEG segment length\r\n");
+                s_jpeg_stats.err_invalid_segment++;
+                s_jpeg_stats.invalid_frames++;
+                return false;
+            }
+            pos += 2 + segment_len;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    /* Validate essential markers */
+    if (!has_sof)
+    {
+        HAL_LOGI("JPEG SOF marker missing\r\n");
+        s_jpeg_stats.err_no_sof++;
+        s_jpeg_stats.invalid_frames++;
+        return false;
+    }
+
+    if (!has_sos)
+    {
+        HAL_LOGI("JPEG SOS marker missing\r\n");
+        s_jpeg_stats.err_no_sos++;
+        s_jpeg_stats.invalid_frames++;
+        return false;
+    }
+
+    /* For baseline JPEG, DQT and DHT should be present */
+    if (!has_dqt)
+    {
+        HAL_LOGI("JPEG DQT marker missing (may cause decode issues)\r\n");
+        s_jpeg_stats.warn_no_dqt++;
+    }
+
+    if (!has_dht)
+    {
+        HAL_LOGI("JPEG DHT marker missing (may cause decode issues)\r\n");
+        s_jpeg_stats.warn_no_dht++;
+    }
+
+    /* Check for EOI marker (0xFF 0xD9) - CRITICAL */
+    bool has_eoi = false;
+    uint32_t eoi_position = 0;
+
+    /* First check if EOI is at the expected position (end of frame) */
+    if (size >= 2 && data[size - 2] == 0xFF && data[size - 1] == 0xD9)
+    {
+        has_eoi = true;
+        eoi_position = size - 2;
+        HAL_LOGD("EOI found at end of frame (offset %u)\r\n", eoi_position);
+    }
+    else
+    {
+        /* Search for EOI from the end backwards until we reach image data start */
+        /* Determine search start position */
+        uint32_t search_start = (image_data_start > 0) ? image_data_start : 2;
+
+        /* Search backwards from end of buffer to start of image data */
+        for (int i = (int)size - 2; i >= (int)search_start; i--)
+        {
+            if (data[i] == 0xFF && data[i + 1] == 0xD9)
+            {
+                has_eoi = true;
+                eoi_position = i;
+                uint32_t offset_from_end = size - eoi_position - 2;
+
+                s_jpeg_stats.warn_eoi_not_at_end++;
+
+                /* Update max offset from end */
+                if (offset_from_end > s_jpeg_stats.max_eoi_offset_from_end)
+                {
+                    s_jpeg_stats.max_eoi_offset_from_end = offset_from_end;
+                }
+
+                HAL_LOGD("EOI found at offset %u (not at end, %u bytes after)\r\n",
+                         eoi_position, offset_from_end);
+                break;
+            }
+        }
+    }
+
+    if (!has_eoi)
+    {
+        HAL_LOGI("JPEG EOI marker missing\r\n");
+        s_jpeg_stats.err_no_eoi++;
+        s_jpeg_stats.invalid_frames++;
+        return false;
+    }
+
+    /* Frame is valid */
+    s_jpeg_stats.valid_frames++;
+    return true;
+}
+
+/* Function to print JPEG validation statistics */
+void HAL_JPEG_PrintValidationStats(void)
+{
+    HAL_LOGI("=== JPEG Validation Statistics ===\r\n");
+    HAL_LOGI("Total frames:    %u\r\n", s_jpeg_stats.total_frames);
+    HAL_LOGI("Valid frames:    %u\r\n", s_jpeg_stats.valid_frames);
+    HAL_LOGI("Invalid frames:  %u\r\n", s_jpeg_stats.invalid_frames);
+
+    HAL_LOGI("\n--- Critical Errors ---\r\n");
+    HAL_LOGI("Too small:       %u\r\n", s_jpeg_stats.err_too_small);
+    HAL_LOGI("No SOI:          %u\r\n", s_jpeg_stats.err_no_soi);
+    HAL_LOGI("No SOF:          %u\r\n", s_jpeg_stats.err_no_sof);
+    HAL_LOGI("No SOS:          %u\r\n", s_jpeg_stats.err_no_sos);
+    HAL_LOGI("Invalid segment: %u\r\n", s_jpeg_stats.err_invalid_segment);
+    HAL_LOGI("No EOI:          %u\r\n", s_jpeg_stats.err_no_eoi);
+
+    HAL_LOGI("\n--- Warnings ---\r\n");
+    HAL_LOGI("EOI not at end:  %u\r\n", s_jpeg_stats.warn_eoi_not_at_end);
+    HAL_LOGI("No DQT:          %u\r\n", s_jpeg_stats.warn_no_dqt);
+    HAL_LOGI("No DHT:          %u\r\n", s_jpeg_stats.warn_no_dht);
+
+    HAL_LOGI("\n--- Additional Info ---\r\n");
+    HAL_LOGI("Max EOI offset from end: %u bytes\r\n", s_jpeg_stats.max_eoi_offset_from_end);
+    HAL_LOGI("================================\r\n");
+}
+
 int HAL_JPEG_Hw_Init(vdec_dev_t *dev, void *param)
 {
 	status_t ret = MPP_SUCCESS;
@@ -174,6 +410,14 @@ int HAL_JPEG_Hw_Decode(const vdec_dev_t *dev, uint8_t *pSrc, uint8_t *pDst, int3
 		return kStatus_Fail;
 	}
 
+#if (!defined(HAL_JPEG_HW_DISABLE_VALIDATION)) || (HAL_JPEG_HW_DISABLE_VALIDATION == 0)
+	if (!is_valid_jpeg_frame((const uint8_t *)pSrc, jpg_size))
+	{
+		HAL_LOGE("Invalid JPEG frame detected\r\n");
+		return kStatus_Fail;
+	}
+#endif
+
 	if (hal_mutex_lock(s_mutex) != kStatus_Success)
 	{
 		HAL_LOGE("Failed to lock JPEG decode mutex\n");
@@ -274,6 +518,11 @@ int HAL_JPEG_HW_Register(vdec_dev_t *dev)
     return 0;
 }
 #else  /* (HAL_ENABLE_JPEG_HW == 1) */
+void HAL_JPEG_PrintValidationStats(void)
+{
+    HAL_LOGE("JPEG HW decoder not enabled, validation statistics not available\n");
+}
+
 int HAL_JPEG_HW_Register(vdec_dev_t *dev)
 {
     HAL_LOGE("JPEG HW decoder not enabled\n");
