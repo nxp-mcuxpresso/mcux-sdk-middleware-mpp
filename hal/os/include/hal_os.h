@@ -38,11 +38,12 @@ typedef struct k_event *hal_event_group_t;           /*!< event group handle */
 
 typedef void (* hal_task_fct_t)( void * );  /*!< task entry-point function */
 typedef uint32_t hal_eventbits_t;           /*!< event bits */
+/** @brief HAL context structure used to save and restore interrupt state. */
 typedef struct hal_ctx
 {
-    unsigned int key;
-    bool active;
-    bool in_isr;
+    unsigned int key;  /*!< saved interrupt key */
+    bool active;       /*!< context is active */
+    bool in_isr;       /*!< executing inside an ISR */
 } hal_ctx_t;
 
 #define HAL_MAX_TIMEOUT 0xffffffff          /*!< maximum timeout */

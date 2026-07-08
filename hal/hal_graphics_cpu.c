@@ -640,6 +640,32 @@ const static hal_gfx_cpu_yuv_ops s_GfxDevCpuOps_VUYX444 = {
     .e_from_yuv = e_from_vuyx444,
 };
 
+/* Coefficients c, d and e for YUYV1P422 format: Y0(0), U(1), Y1(2), V(3)
+ *
+ * c = Y - 16
+ * d = U - 128
+ * e = V - 128
+ */
+static inline int c_from_yuyv1p422(uint8_t *pix, int pixel_id)
+{
+    assert(pixel_id >= 0 && pixel_id <= 1);
+    return (*(pix + 2*pixel_id) - 16);
+}
+static inline int d_from_yuyv1p422(uint8_t *pix)
+{
+    return (*(pix+1) - 128);
+}
+static inline int e_from_yuyv1p422(uint8_t *pix)
+{
+    return (*(pix+3) - 128);
+}
+
+const static hal_gfx_cpu_yuv_ops s_GfxDevCpuOps_YUYV1P422 = {
+    .c_from_yuv = c_from_yuyv1p422,
+    .d_from_yuv = d_from_yuyv1p422,
+    .e_from_yuv = e_from_yuyv1p422,
+};
+
 /* nb of RGB pixels in 4 bytes YUV */
 #define RGB_PIXELS_IN_4B_YUV444  1
 #define RGB_PIXELS_IN_4B_YUV422  2
@@ -1424,6 +1450,16 @@ static inline void color_conv_none(uint8_t pix_id, uint8_t *pixel, uint8_t *r, u
     *b = pixel[2];
 }
 
+/* BGR888 -> RGB: libjpeg outputs BGR888 (B at byte 0, G at byte 1, R at byte 2).
+ * Swap R and B so the downstream write function receives (r, g, b) in the
+ * correct order regardless of the output format. */
+static inline void color_BGR888ToRGB(uint8_t pix_id, uint8_t *pixel, uint8_t *r, uint8_t *g, uint8_t *b)
+{
+    *r = pixel[2];
+    *g = pixel[1];
+    *b = pixel[0];
+}
+
 /* INT32-C & INT31-C: YUV to RGB conversion uses standard ITU-R BT.601 equations.
  * Input ranges: c (Y-16): -16 to 239, d (U-128): -128 to 127, e (V-128): -128 to 127
  * Maximum intermediate values before shift: ~137,000 (well within int range)
@@ -1460,6 +1496,17 @@ static inline void color_VYUY422ToRGB(uint8_t pix_id, uint8_t *pixel, uint8_t *r
     d = s_GfxDevCpuOps_VYUY422.d_from_yuv(pixel);
     e = s_GfxDevCpuOps_VYUY422.e_from_yuv(pixel);
     c = s_GfxDevCpuOps_VYUY422.c_from_yuv(pixel, pix_id);
+    *r = YUV2R(c, d, e);
+    *g = YUV2G(c, d, e);
+    *b = YUV2B(c, d, e);
+}
+static inline void color_YUYV1P422ToRGB(uint8_t pix_id, uint8_t *pixel, uint8_t *r, uint8_t *g, uint8_t *b)
+{
+    int c, d, e;
+
+    d = s_GfxDevCpuOps_YUYV1P422.d_from_yuv(pixel);
+    e = s_GfxDevCpuOps_YUYV1P422.e_from_yuv(pixel);
+    c = s_GfxDevCpuOps_YUYV1P422.c_from_yuv(pixel, pix_id);
     *r = YUV2R(c, d, e);
     *g = YUV2G(c, d, e);
     *b = YUV2B(c, d, e);
@@ -1809,6 +1856,9 @@ static int HAL_GfxDev_Scale_RGB565to888(
     /* Pre-calculate pitch in uint16_t units for faster indexing */
     int src_pitch16 = src_pitch >> 1;
     
+    /* INT32-C: Validate that src_pitch16 and src_h won't overflow when multiplied */
+    assert(src_h > 0 && src_h < INT_MAX / src_pitch16);
+    
     /* Perform scaling with bilinear interpolation - optimized version */
     for (y = 0, sub_y = 0; y < dst_h; y++, sub_y += v_incr)
     {
@@ -1833,14 +1883,32 @@ static int HAL_GfxDev_Scale_RGB565to888(
             uint16_t bl = src_row_bot[src_x];
             uint16_t br = src_row_bot[src_x + 1];
             
+            /* INT32-C & INT31-C: Bilinear interpolation with bounded values
+             * RGB565 extraction: r_tl, r_tr, r_bl, r_br are in range [0, 248] (31 << 3)
+             * inv_distx, distx are in range [0, 255]
+             * Maximum: 248 * 255 = 63,240 (fits in int)
+             * Sum: 63,240 + 63,240 = 126,480 (fits in int)
+             * After shift by 8: max 494 (fits in int)
+             * Final interpolation: 494 * 255 = 125,970, sum = 251,940, after shift = 984
+             * However, due to inv_disty + disty = 256, actual max is ~255 after final shift
+             */
             /* Extract and interpolate RED channel (5 bits) */
             int r_tl = ((tl >> RGB565_RSHIFT) & RGB565_RMASK) << 3;
             int r_tr = ((tr >> RGB565_RSHIFT) & RGB565_RMASK) << 3;
             int r_bl = ((bl >> RGB565_RSHIFT) & RGB565_RMASK) << 3;
             int r_br = ((br >> RGB565_RSHIFT) & RGB565_RMASK) << 3;
+
+            /* INT32-C: Safe arithmetic - values bounded by RGB565 extraction */
+            assert(r_tl >= 0 && r_tl <= 248 && r_tr >= 0 && r_tr <= 248);
+            assert(r_bl >= 0 && r_bl <= 248 && r_br >= 0 && r_br <= 248);
+            assert(inv_distx >= 0 && inv_distx <= SUBPIXINC && distx >= 0 && distx <= SUBPIXINC);
             
             int r_top = (r_tl * inv_distx + r_tr * distx) >> SUBPIXPOW;
             int r_bot = (r_bl * inv_distx + r_br * distx) >> SUBPIXPOW;
+
+            assert(r_top >= 0 && r_top <= 255 && r_bot >= 0 && r_bot <= 255);
+            assert(inv_disty >= 0 && inv_disty <= SUBPIXINC && disty >= 0 && disty <= SUBPIXINC);
+
             int r = (r_top * inv_disty + r_bot * disty) >> SUBPIXPOW;
             
             /* Extract and interpolate GREEN channel (6 bits) */
@@ -1849,8 +1917,15 @@ static int HAL_GfxDev_Scale_RGB565to888(
             int g_bl = ((bl >> RGB565_GSHIFT) & RGB565_GMASK) << 2;
             int g_br = ((br >> RGB565_GSHIFT) & RGB565_GMASK) << 2;
             
+            /* INT32-C: Safe arithmetic - values bounded by RGB565 extraction */
+            assert(g_tl >= 0 && g_tl <= 252 && g_tr >= 0 && g_tr <= 252);
+            assert(g_bl >= 0 && g_bl <= 252 && g_br >= 0 && g_br <= 252);
+            
             int g_top = (g_tl * inv_distx + g_tr * distx) >> SUBPIXPOW;
             int g_bot = (g_bl * inv_distx + g_br * distx) >> SUBPIXPOW;
+            
+            assert(g_top >= 0 && g_top <= 255 && g_bot >= 0 && g_bot <= 255);
+            
             int g = (g_top * inv_disty + g_bot * disty) >> SUBPIXPOW;
             
             /* Extract and interpolate BLUE channel (5 bits) */
@@ -1858,10 +1933,22 @@ static int HAL_GfxDev_Scale_RGB565to888(
             int b_tr = (tr & RGB565_BMASK) << 3;
             int b_bl = (bl & RGB565_BMASK) << 3;
             int b_br = (br & RGB565_BMASK) << 3;
-            
+
+            /* INT32-C: Safe arithmetic - values bounded by RGB565 extraction */
+            assert(b_tl >= 0 && b_tl <= 248 && b_tr >= 0 && b_tr <= 248);
+            assert(b_bl >= 0 && b_bl <= 248 && b_br >= 0 && b_br <= 248);
+
             int b_top = (b_tl * inv_distx + b_tr * distx) >> SUBPIXPOW;
             int b_bot = (b_bl * inv_distx + b_br * distx) >> SUBPIXPOW;
+
+            assert(b_top >= 0 && b_top <= 255 && b_bot >= 0 && b_bot <= 255);
+
             int b = (b_top * inv_disty + b_bot * disty) >> SUBPIXPOW;
+
+            /* INT31-C: Values are guaranteed to be in [0, 255] range by bilinear interpolation */
+            assert(r >= 0 && r <= 255);
+            assert(g >= 0 && g <= 255);
+            assert(b >= 0 && b <= 255);
             
             /* Write RGB888 pixel directly */
             int dst_offset = x * 3;
@@ -1993,6 +2080,16 @@ static int HAL_GfxDev_any_OP(
         else
             f_get_color_byte = get_color_byte_from_rgb888;
         break;
+    case MPP_PIXEL_BGR:
+        /* BGR888: same memory layout as RGB888 (3 bytes per pixel).
+         * Use the same getter as RGB888; color_BGR888ToRGB swaps R and B
+         * when passing (r, g, b) to the write function. */
+        if (scaling)
+            f_get_color_byte = scale_rgb888;
+        else
+            f_get_color_byte = get_color_byte_from_rgb888;
+        f_color_conv = color_BGR888ToRGB;
+        break;
     case MPP_PIXEL_YUV1P444:
         nb_pixels_in_4B = RGB_PIXELS_IN_4B_YUV444;
         if (scaling)
@@ -2022,6 +2119,18 @@ static int HAL_GfxDev_any_OP(
             f_get_color_byte = get_color_byte_from_rgb888;
         }
         f_color_conv = color_VYUY422ToRGB;
+        break;
+    case MPP_PIXEL_YUYV1P422:
+    case MPP_PIXEL_YUYV:
+        nb_pixels_in_4B = RGB_PIXELS_IN_4B_YUV422;
+        if (scaling) {
+            HAL_LOGE("Scaling for YUV422 is not supported yet\n");
+            return -1;
+        }
+        else {
+            f_get_color_byte = get_color_byte_from_rgb888;
+        }
+        f_color_conv = color_YUYV1P422ToRGB;
         break;
     case MPP_PIXEL_RGB565:
         if (scaling)

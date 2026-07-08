@@ -211,7 +211,7 @@ hal_camera_status_t HAL_CameraDev_USB_Init(
         return kStatus_HAL_CameraError;
     }
 
-    if ((config->format != MPP_PIXEL_YUYV) && (config->format != MPP_PIXEL_JPEG))
+    if ((config->format != MPP_PIXEL_YUYV) && (config->format != MPP_PIXEL_YUYV1P422) && (config->format != MPP_PIXEL_JPEG))
     {
         HAL_LOGE("Camera format %d unsupported\r\n", config->format);
         return kStatus_HAL_CameraError;

@@ -22,6 +22,7 @@
  * different image formats and compose images w/ GUI overlays.
  */
 
+#include <assert.h>
 #include "mpp_config.h"
 #include "hal_graphics_dev.h"
 #include "hal_debug.h"
@@ -348,9 +349,10 @@ static int init_input_buffer(pxp_ps_buffer_config_t *pPsBufferConfig, gfx_surfac
         // YUV420P pixel format
         pPsBufferConfig->bufferAddr  = (uint32_t)pSrc->buf + pSrc->left + (pSrc->top * pSrc->pitch);
         // U plane: half resolution (subsampled 2x2)
-        pPsBufferConfig->bufferAddrU = (uint32_t)pSrc->buf_u + (pSrc->left / 2) + ((pSrc->top / 2) * pSrc->pitch_uv);
+        assert((pSrc->left / 2) + ((pSrc->top / 2) * pSrc->pitch_uv) >= 0);
+        pPsBufferConfig->bufferAddrU = (uint32_t)pSrc->buf_u + (uint32_t)((pSrc->left / 2) + ((pSrc->top / 2) * pSrc->pitch_uv));
         // V plane: half resolution (subsampled 2x2)
-        pPsBufferConfig->bufferAddrV = (uint32_t)pSrc->buf_v + (pSrc->left / 2) + ((pSrc->top / 2) * pSrc->pitch_uv);
+        pPsBufferConfig->bufferAddrV = (uint32_t)pSrc->buf_v + (uint32_t)((pSrc->left / 2) + ((pSrc->top / 2) * pSrc->pitch_uv));
     }
     pPsBufferConfig->pitchBytes  = pSrc->pitch;
     PXP_SetProcessSurfaceBackGroundColor(PXP_DEV, 0U);

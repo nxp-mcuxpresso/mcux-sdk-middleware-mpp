@@ -50,18 +50,15 @@ typedef enum _hal_vdec_status
 /** @brief H.264 decode frame information structure */
 typedef struct _vdec_h264_frame_info
 {
-    /* Input parameters */
-    uint8_t *src_data;
-    int32_t src_size;
-    
-    /* Output parameters */
-    uint8_t *dst_y;
-    uint8_t *dst_u;
-    uint8_t *dst_v;
-    int32_t width;
-    int32_t height;
-    int32_t y_stride;
-    int32_t uv_stride;
+    uint8_t *src_data;   /*!< pointer to input compressed H.264 bitstream */
+    int32_t src_size;    /*!< size of input bitstream in bytes */
+    uint8_t *dst_y;      /*!< pointer to output luma (Y) plane */
+    uint8_t *dst_u;      /*!< pointer to output chroma U plane */
+    uint8_t *dst_v;      /*!< pointer to output chroma V plane */
+    int32_t width;       /*!< decoded frame width in pixels */
+    int32_t height;      /*!< decoded frame height in pixels */
+    int32_t y_stride;    /*!< luma plane stride in bytes */
+    int32_t uv_stride;   /*!< chroma plane stride in bytes */
 } vdec_h264_frame_info_t;
 
 /** @} */
@@ -72,31 +69,25 @@ typedef struct _vdec_h264_frame_info
 
 /** @brief Operation that needs to be implemented by vdec device */
 
+/** @brief Operation that needs to be implemented by a JPEG/image decoder device */
 typedef struct
 {
-    /* initialize the dev */
-    int (*init)(vdec_dev_t *dev, void *param);
-    /* deinitialize the dev */
-    int (*deinit)(const vdec_dev_t *dev);
-    /* get buffer descriptors and policy */
+    int (*init)(vdec_dev_t *dev, void *param);                               /*!< initialize the dev */
+    int (*deinit)(const vdec_dev_t *dev);                                    /*!< deinitialize the dev */
     int (*get_buf_desc)(const vdec_dev_t *dev,
-            hw_buf_desc_t *in_buf, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy);
-    /* blit the source surface to the destination surface */
+            hw_buf_desc_t *in_buf, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy); /*!< get buffer descriptors and policy */
     int (*decode)(
-        const vdec_dev_t *dev, uint8_t *pSrc, uint8_t *pDst, int32_t jpg_size, uint32_t row_stride);
+        const vdec_dev_t *dev, uint8_t *pSrc, uint8_t *pDst, int32_t jpg_size, uint32_t row_stride); /*!< decode image data */
 } vdec_dev_operator_t;
 
+/** @brief Operation that needs to be implemented by an H.264 decoder device */
 typedef struct
 {
-    /* initialize the dev */
-    hal_vdec_status_t (*init)(vdec_h264_dev_t *dev, void *param);
-    /* deinitialize the dev */
-    hal_vdec_status_t (*deinit)(const vdec_h264_dev_t *dev);
-    /* get buffer descriptors and policy */
+    hal_vdec_status_t (*init)(vdec_h264_dev_t *dev, void *param);            /*!< initialize the dev */
+    hal_vdec_status_t (*deinit)(const vdec_h264_dev_t *dev);                 /*!< deinitialize the dev */
     hal_vdec_status_t (*get_buf_desc)(const vdec_h264_dev_t *dev,
-            hw_buf_desc_t *in_buf, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy);
-    /* decode the incoming data */
-    hal_vdec_status_t (*decode)(const vdec_h264_dev_t *dev, vdec_h264_frame_info_t *frame_info);
+            hw_buf_desc_t *in_buf, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy); /*!< get buffer descriptors and policy */
+    hal_vdec_status_t (*decode)(const vdec_h264_dev_t *dev, vdec_h264_frame_info_t *frame_info); /*!< decode H.264 frame */
 } vdec_h264_dev_operator_t;
 
 /*! @brief The mpp callback function prototype */
@@ -108,31 +99,27 @@ typedef int (*mpp_callback_t)(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *us
  *  @{
  */
 
+/** @brief Attributes of a JPEG/image decoder device */
 struct _vdec_dev
 {
-    /* unique id */
-    int id;
-    /* operations */
-    const vdec_dev_operator_t *ops;
-    /* callback */
-    mpp_callback_t callback;
-    /* param for the callback */
-    void *user_data;
+    int id;                             /*!< unique id */
+    const vdec_dev_operator_t *ops;     /*!< operations */
+    mpp_callback_t callback;            /*!< callback */
+    void *user_data;                    /*!< param for the callback */
 };
 
+/** @brief Attributes of an H.264 decoder device */
 struct _vdec_h264_dev
 {
-    /* unique id */
-    int id;
-    /* operations */
-    const vdec_h264_dev_operator_t *ops;
-    /* callback */
-    mpp_callback_t callback;
-    /* param for the callback */
-    void *user_data;
+    int id;                                  /*!< unique id */
+    const vdec_h264_dev_operator_t *ops;     /*!< operations */
+    mpp_callback_t callback;                 /*!< callback */
+    void *user_data;                         /*!< param for the callback */
 };
 
-/* Function to print JPEG validation statistics */
+/*!
+ * @brief Print JPEG decoding validation statistics to the debug console
+ */
 void HAL_JPEG_PrintValidationStats(void);
 
 /*!

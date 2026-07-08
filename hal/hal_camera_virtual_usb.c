@@ -625,7 +625,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Init(
     (void) hal_mutex_lock(s_global_mutex);
     global_mutex_locked = true;
 
-    dev_data->rpmsg_local_addr = MPP_EPT_ADDRESSS + s_virt_cam_handle.n_instances;
+    dev_data->rpmsg_local_addr = MPP_EPT_ADDRESS + s_virt_cam_handle.n_instances;
 
     /* Handle the case when two separate virtual camera elements are added */
     if (s_virt_cam_handle.init_done == false)

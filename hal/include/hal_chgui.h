@@ -56,8 +56,6 @@ extern "C" {
  * @param x drawing position on X axe
  * @param y drawing position on Y axe
  * @param label C string pointed by label
- * @return
-
  */
 void GUI_DrawText(uint16_t *lcd_buf, uint16_t fcolor, uint16_t bcolor, uint32_t width,
                     int x, int y, const char *label);

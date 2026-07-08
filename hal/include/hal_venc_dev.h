@@ -71,21 +71,14 @@ typedef struct _venc_h264_frame_info
 *  @{
 */
 
-/** @brief Operation that needs to be implemented by venc device */
-
-/** @brief Operation that needs to be implemented by vdec device */
-
+/** @brief Operations that need to be implemented by an H.264 encoder device */
 typedef struct
 {
-    /* initialize the dev */
-    hal_venc_status_t (*init)(venc_h264_dev_t *dev, void *param);
-    /* deinitialize the dev */
-    hal_venc_status_t (*deinit)(const venc_h264_dev_t *dev);
-    /* get buffer descriptors and policy */
+    hal_venc_status_t (*init)(venc_h264_dev_t *dev, void *param);           /*!< initialize the device */
+    hal_venc_status_t (*deinit)(const venc_h264_dev_t *dev);                /*!< deinitialize the device */
     hal_venc_status_t (*get_buf_desc)(const venc_h264_dev_t *dev,
-            hw_buf_desc_t *in_buf, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy);
-    /* encode the incoming data */
-    hal_venc_status_t (*encode)(const venc_h264_dev_t *dev, venc_h264_frame_info_t *frame_info);
+            hw_buf_desc_t *in_buf, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy); /*!< get buffer descriptors and policy */
+    hal_venc_status_t (*encode)(const venc_h264_dev_t *dev, venc_h264_frame_info_t *frame_info); /*!< encode the incoming data */
 } venc_h264_dev_operator_t;
 
 /*! @brief The mpp callback function prototype */
@@ -97,16 +90,13 @@ typedef int (*mpp_callback_t)(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *us
  *  @{
  */
 
+/** @brief Attributes of an H.264 encoder device. */
 struct _venc_h264_dev
 {
-    /* unique id */
-    int id;
-    /* operations */
-    const venc_h264_dev_operator_t *ops;
-    /* callback */
-    mpp_callback_t callback;
-    /* param for the callback */
-    void *user_data;
+    int id;                              /*!< unique id */
+    const venc_h264_dev_operator_t *ops; /*!< operations */
+    mpp_callback_t callback;             /*!< callback function */
+    void *user_data;                     /*!< parameter for the callback */
 };
 
 /*!

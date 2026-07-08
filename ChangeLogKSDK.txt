@@ -2,7 +2,26 @@
 @page middleware_log Middleware Change Log
 
 @section MPP eIQ Multimedia Processing Pipelines for Microcontrollers
-Current version is 4.3.0
+Current version is 4.4.0
+  - 4.4.0
+    - New features:
+      - Changed documentation generation to produce .md format output (dox2md.py)
+    - Bug fixes:
+      - Fixed all examples on frdmimxrt700
+      - Fixed examples for frdmimxrt1152 (USB camera + VGLite GPU pipeline)
+      - Fixed several Coverity High security issues
+      - Removed unsupported boards folders: evkbimxrt1050, evkmimxrt1170, mcxn9xxbrk, mcxn9xxevk
+    - Known issues:
+      - frdmimxrt1152: camera_view example is very slow even at low resolution (160x120) and low fps (5)
+      - frdmimxrt1152: nanodet inference time is around 3s compared to ~600ms on rt1170
+      - frdmimxrt700: examples are not fully validated yet
+      - frdmmcxn947: for some camera + inference examples, stripes are seen on the screen
+    - Supported evaluation boards:
+      - frdmmcxn947
+      - evkbmimxrt1170
+      - mimxrt700evk
+      - frdmimxrt700
+      - frdmimxrt1152
   - 4.3.0
     - New features:
       - Added frdmimxrt700: basic board support

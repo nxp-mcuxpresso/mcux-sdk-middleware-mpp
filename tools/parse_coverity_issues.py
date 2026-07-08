@@ -27,7 +27,7 @@ from openpyxl.styles import Font
 class CoverityParser:
     def __init__(self, excel_files: List[str], debug: bool = False, show_intermediate: bool = False,
                  coverity_server: str = "coverity9.nxp.com", project: str = "MPP",
-                 fail_on_security: bool = False, fail_on_triage: bool = False):
+                 fail_on_security: bool = True, fail_on_triage: bool = True):
         self.excel_files = excel_files
         self.debug = debug
         self.show_intermediate = show_intermediate
@@ -78,9 +78,9 @@ class CoverityParser:
         df_filtered = df_filtered[df_filtered['displayImpact'].isin(['Medium', 'High'])]
         self.log_debug(f"After displayImpact filter (Medium/High): {len(df_filtered)} rows")
 
-        # Filter 3: Exclude status = Dismissed
-        df_filtered = df_filtered[df_filtered['status'] != 'Dismissed']
-        self.log_debug(f"After status filter (exclude Dismissed): {len(df_filtered)} rows")
+        # Filter 3: Exclude status = Dismissed or Absent Dismissed
+        df_filtered = df_filtered[~df_filtered['status'].isin(['Dismissed', 'Absent Dismissed'])]
+        self.log_debug(f"After status filter (exclude Dismissed/Absent Dismissed): {len(df_filtered)} rows")
 
         return df_filtered
 
@@ -96,9 +96,9 @@ class CoverityParser:
         df_filtered = df_filtered[df_filtered['security_classification'].isin(['1 - Highest', '2 - High'])]
         self.log_debug(f"After security_classification filter (Highest/High): {len(df_filtered)} rows")
 
-        # Filter 3: Exclude status = Dismissed
-        df_filtered = df_filtered[df_filtered['status'] != 'Dismissed']
-        self.log_debug(f"After status filter (exclude Dismissed): {len(df_filtered)} rows")
+        # Filter 3: Exclude status = Dismissed or Absent Dismissed
+        df_filtered = df_filtered[~df_filtered['status'].isin(['Dismissed', 'Absent Dismissed'])]
+        self.log_debug(f"After status filter (exclude Dismissed/Absent Dismissed): {len(df_filtered)} rows")
 
         return df_filtered
 
@@ -308,14 +308,14 @@ class CoverityParser:
             self.log_error(f"Found {total_impact} impact-based issues (High: {len(self.impact_stats['High'])}, Medium: {len(self.impact_stats['Medium'])})")
             exit_code = 1
 
-        # Check security issues if flag is set
+        # Check security issues (always, unless suppressed by --no-fail-on-security)
         if self.fail_on_security:
             total_security = len(self.security_stats['Highest']) + len(self.security_stats['High'])
             if total_security > 0:
                 self.log_error(f"Found {total_security} security classification issues (Highest: {len(self.security_stats['Highest'])}, High: {len(self.security_stats['High'])})")
                 exit_code = 1
 
-        # Check triage issues if flag is set
+        # Check triage issues (always, unless suppressed by --no-fail-on-triage)
         if self.fail_on_triage:
             total_triage = len(self.triage_stats['Triaged']) + len(self.triage_stats['Dismissed'])
             if total_triage > 0:
@@ -392,17 +392,25 @@ class CoverityParser:
             f.write("# Coverity Impact-Based Statistics Report\n\n")
 
             f.write("## Statistics by Impact Level\n\n")
-            f.write("| Impact Level | Count | Coverity Link |\n")
-            f.write("|--------------|-------|---------------|\n")
+            f.write("| Status | Impact Level | Count | Coverity Link |\n")
+            f.write("|--------|--------------|-------|---------------|\n")
 
             total = len(self.impact_stats['Medium']) + len(self.impact_stats['High'])
 
             for impact in ['High', 'Medium']:
                 count = len(self.impact_stats[impact])
                 link = self.generate_coverity_link(self.impact_stats[impact])
-                f.write(f"| {impact} | {count} | {link} |\n")
+                indicator = "❌" if count > 0 else "✅"
+                f.write(f"| {indicator} | **{impact}** | **{count}** | {link} |\n")
 
-            f.write(f"| **Total** | **{total}** | - |\n")
+            indicator = "❌" if total > 0 else "✅"
+            f.write(f"| {indicator} | **Total** | **{total}** | - |\n")
+
+            f.write("\n")
+            if total > 0:
+                f.write("```diff\n- Please fix all the issues detected in the above table before merging the PR.\n```\n")
+            else:
+                f.write("```diff\n+ No Coverity issues found. PR is ready to be merged.\n```\n")
 
         self.log_info(f"Impact report generated: {output_file}")
 
@@ -414,8 +422,8 @@ class CoverityParser:
             f.write("# Coverity Security Classification Statistics Report\n\n")
 
             f.write("## Statistics by Security Classification\n\n")
-            f.write("| Classification | Count | Coverity Link |\n")
-            f.write("|----------------|-------|---------------|\n")
+            f.write("| Status | Classification | Count | Coverity Link |\n")
+            f.write("|--------|----------------|-------|---------------|\n")
 
             total = len(self.security_stats['Highest']) + len(self.security_stats['High'])
 
@@ -423,9 +431,17 @@ class CoverityParser:
                 count = len(self.security_stats[classification])
                 level = 1 if classification == 'Highest' else 2
                 link = self.generate_coverity_link(self.security_stats[classification])
-                f.write(f"| {classification} (Level {level}) | {count} | {link} |\n")
+                indicator = "❌" if count > 0 else "✅"
+                f.write(f"| {indicator} | **{classification} (Level {level})** | **{count}** | {link} |\n")
 
-            f.write(f"| **Total** | **{total}** | - |\n")
+            indicator = "❌" if total > 0 else "✅"
+            f.write(f"| {indicator} | **Total** | **{total}** | - |\n")
+
+            f.write("\n")
+            if total > 0:
+                f.write("```diff\n- Please fix all the issues detected in the above table before merging the PR.\n```\n")
+            else:
+                f.write("```diff\n+ No Coverity issues found. PR is ready to be merged.\n```\n")
 
         self.log_info(f"Security report generated: {output_file}")
 
@@ -437,17 +453,25 @@ class CoverityParser:
             f.write("# Coverity Triage Statistics Report (Without Comment)\n\n")
 
             f.write("## Statistics by Status\n\n")
-            f.write("| Status | Count | Coverity Link |\n")
-            f.write("|--------|-------|---------------|\n")
+            f.write("| Status | Triage Status | Count | Coverity Link |\n")
+            f.write("|--------|---------------|-------|---------------|\n")
 
             total = len(self.triage_stats['Triaged']) + len(self.triage_stats['Dismissed'])
 
             for status in ['Triaged', 'Dismissed']:
                 count = len(self.triage_stats[status])
                 link = self.generate_coverity_link(self.triage_stats[status])
-                f.write(f"| {status} | {count} | {link} |\n")
+                indicator = "❌" if count > 0 else "✅"
+                f.write(f"| {indicator} | **{status}** | **{count}** | {link} |\n")
 
-            f.write(f"| **Total** | **{total}** | - |\n")
+            indicator = "❌" if total > 0 else "✅"
+            f.write(f"| {indicator} | **Total** | **{total}** | - |\n")
+
+            f.write("\n")
+            if total > 0:
+                f.write("```diff\n- Please fix all the issues detected in the above table before merging the PR.\n```\n")
+            else:
+                f.write("```diff\n+ No Coverity issues found. PR is ready to be merged.\n```\n")
 
         self.log_info(f"Triage report generated: {output_file}")
 
@@ -577,14 +601,18 @@ def main():
         help="Coverity project name (default: MPP)"
     )
     parser.add_argument(
-        "-f", "--fail-on-security",
-        action="store_true",
-        help="Exit with error code if security classification issues (Highest/High) are found"
+        "--no-fail-on-security",
+        dest="fail_on_security",
+        action="store_false",
+        default=True,
+        help="Do not exit with error if security classification issues (Highest/High) are found (default: fail)"
     )
     parser.add_argument(
-        "-g", "--fail-on-triage",
-        action="store_true",
-        help="Exit with error code if triage issues without comment (Triaged/Dismissed) are found"
+        "--no-fail-on-triage",
+        dest="fail_on_triage",
+        action="store_false",
+        default=True,
+        help="Do not exit with error if triage issues without comment (Triaged/Dismissed) are found (default: fail)"
     )
 
     args = parser.parse_args()

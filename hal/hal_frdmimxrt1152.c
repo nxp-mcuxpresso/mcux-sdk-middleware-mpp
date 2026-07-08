@@ -87,14 +87,14 @@ int hal_display_setup(const char *name, display_dev_t *dev)
 }
 
 /* Camera setup */
-int HAL_CameraDev_MipiOv5640_setup(const char *name, camera_dev_t *dev);
+int HAL_CameraDev_USB_setup(const char *name, camera_dev_t *dev);
 
 hal_camera_setup_t camera_setup[] =
 {
 #if MPP_OS_FREERTOS
-    {"MipiOv5640", HAL_CameraDev_MipiOv5640_setup},
+    {"USB_cam",    HAL_CameraDev_USB_setup},
 #elif MPP_OS_ZEPHYR
-    {"MipiOv5640", HAL_CameraDev_Zephyr_setup},
+    {"USB_cam", HAL_CameraDev_Zephyr_setup},
 #endif
 };
 

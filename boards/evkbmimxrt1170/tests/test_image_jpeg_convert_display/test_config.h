@@ -28,7 +28,7 @@
 void *image_data = (void *)tiger_jpeg_data;
 unsigned int image_data_len = tiger_jpeg_data_len;
 #define IMAGE_NAME "tiger_jpeg"
-#define EXPECTED_CHECKSUM 0x394094e3
+#define EXPECTED_CHECKSUM 0x82feb09f
 #else
 #pragma message "configuration APP_CONFIG value is not supported by test"
 #endif

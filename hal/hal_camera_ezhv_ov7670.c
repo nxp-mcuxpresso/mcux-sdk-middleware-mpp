@@ -53,8 +53,8 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Init(
 {
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     HAL_LOGD("++HAL_CameraDev_EzhV_Ov7670_Init( param[%p]\n", param);
-    
-    if (((config->width == 640) && (config->height == 480)) || 
+
+    if (((config->width == 640) && (config->height == 480)) ||
             ((config->width == 320) && (config->height == 240)))
     {
         /* keep void for future resolution to be supported */
@@ -130,7 +130,7 @@ hal_camera_status_t HAL_CameraDev_EzhV_Ov7670_Deinit(camera_dev_t *dev)
 {
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     status_t status = kStatus_Success;
-    
+
     /* TODO */
 
     if (status != kStatus_Success) return kStatus_HAL_CameraError;

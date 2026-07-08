@@ -17,6 +17,8 @@
  */
 
 #include <string.h>
+#include <assert.h>
+#include <limits.h>
 #include "mpp_api.h"
 #include "mpp_api_types_internal.h"
 #include "mpp_debug.h"
@@ -163,8 +165,10 @@ unsigned int elem_video_decode_setup(_elem_t *elem)
         memset(elem->io.out_buf[0], 0, sizeof(buf_desc_t));
 
         elem->io.out_buf[0]->format = elem->params.decode.out_format;
-        elem->io.out_buf[0]->width = elem->params.decode.width;
-        elem->io.out_buf[0]->height = elem->params.decode.height;
+        assert(elem->params.decode.width <= INT_MAX);
+        assert(elem->params.decode.height <= INT_MAX);
+        elem->io.out_buf[0]->width = (int)elem->params.decode.width;
+        elem->io.out_buf[0]->height = (int)elem->params.decode.height;
 
         /* init stripes: none */
         elem->io.out_buf[0]->stripe_num = 0;

@@ -38,7 +38,7 @@ typedef struct _model_param_t {
     int model_size;                          /*!< model binary size */
     float model_input_mean;                  /*!< model 'mean' of input values, used for normalization */
     float model_input_std;                   /*!< model 'standard deviation' of input values, used for normalization */
-    uint32_t model_id;                       /*<! unique model identifier */
+    uint32_t model_id;                       /*!< unique model identifier */
     mpp_inference_params_t inference_params; /*!< inference parameters */
     int height;                              /*!< frame height */
     int width;                               /*!< frame width  */
@@ -76,6 +76,7 @@ typedef struct _vision_frame
     void *input_buf;           /*!< pixel input buffer */
 } vision_frame_t;
 
+/** @brief Opaque private data pointer for vision algorithm devices */
 typedef void *vision_algo_private_data_t;
 
 typedef struct _vision_algo_dev vision_algo_dev_t;

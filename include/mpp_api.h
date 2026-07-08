@@ -282,7 +282,7 @@ int mpp_stop(mpp_t mpp);
 /**
  * Force the update of a branch of the pipeline
  *
- * This function forces and update of the branch of the pipeline even if 
+ * This function forces an update of the branch of the pipeline even if
  *          there is no new input frame.
  *
  * @param [in] mpp pipeline branch to set the flag force_update to true
@@ -298,8 +298,6 @@ int mpp_force_update(mpp_t mpp);
  * Calling this function when stats are enabled has no effect.
  *
  * @param [in]  grp statistics group
- *
- * @return
  */
 void mpp_stats_enable(mpp_stats_grp_t grp);
 
@@ -311,7 +309,7 @@ void mpp_stats_enable(mpp_stats_grp_t grp);
  * This function is used to ensure stats are not updated while
  * application tasks use the stats structures.
  *
- * @param [in} grp statistics group
+ * @param [in] grp statistics group
  */
 void mpp_stats_disable(mpp_stats_grp_t grp);
 
@@ -354,11 +352,10 @@ struct rpmsg_lite_instance *mpp_secondary_core_rpmsg_init(void);
 void *mpp_init_rpmsg(void);
 #endif /* RPMSG_USED */
 
-/* 
+/**
  * Initialize the storage subsystem
  *
- * @return: MPP_SUCCESS on success, MPP_ERROR on failure
- *
+ * @return MPP_SUCCESS on success, MPP_ERROR on failure
  */
 int mpp_storage_init(void);
 

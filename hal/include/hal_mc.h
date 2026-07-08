@@ -51,6 +51,7 @@ typedef enum _hal_mc_status
     kStatus_HAL_MultiCoreNoDataReq     /*!< No data request available */
 } hal_mc_status_t;
 
+/** @brief Multicore device type. */
 typedef enum _hal_mc_dev_type
 {
     kHAL_MultiCoreDevTypeSink = 0,   /*!< Multicore sink device */
@@ -64,8 +65,8 @@ typedef struct _mc_dev_operator
     hal_mc_status_t (*deinit)(multicore_dev_t *dev); /*!< deinitialize the dev */
     hal_mc_status_t (*start)(multicore_dev_t *dev); /*!< start the dev */
     hal_mc_status_t (*stop)(multicore_dev_t *dev); /*!< stop the dev */
-    hal_mc_status_t (*enqueue)(const multicore_dev_t *dev, void **data, uint32_t *compressed_size, uint32_t *stripe, uint32_t *frame_id); /*!< enqueue a buffer to the dev */
-    hal_mc_status_t (*dequeue)(const multicore_dev_t *dev, void **data, uint32_t *compressed_size, uint32_t *stripe, uint32_t *frame_id); /*!< dequeue a buffer from the dev (blocking) */
+    hal_mc_status_t (*enqueue)(const multicore_dev_t *dev, void **data, int *compressed_size, int *stripe, unsigned short *frame_id); /*!< enqueue a buffer to the dev */
+    hal_mc_status_t (*dequeue)(const multicore_dev_t *dev, void **data, int *compressed_size, int *stripe, unsigned short *frame_id); /*!< dequeue a buffer from the dev (blocking) */
     hal_mc_status_t (*get_buf_desc)(const multicore_dev_t *dev, void *io_desc, mpp_memory_policy_t prev_mem_policy); /*!< get buffer descriptors and policy */
     hal_mc_status_t (*lock)(const multicore_dev_t *dev); /*!< lock the device for exclusive access and operations */
     hal_mc_status_t (*unlock)(const multicore_dev_t *dev); /*!< unlock the device after exclusive operations */

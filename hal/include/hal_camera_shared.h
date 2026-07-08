@@ -17,10 +17,7 @@
  */
 
  /**
- * @defgroup HAL_TYPES HAL Types
- *
- * This section provides the detailed documentation for the MPP HAL VIRTUAL CAMERA types
- *
+ * \addtogroup HAL_TYPES
  * @{
  */
 
@@ -30,16 +27,24 @@
 #include <stdint.h>
 
 
-/** @brief Buffer alignment requirement for camera device buffers in bytes. */
+/** @brief Default width in pixels of camera output for camera 0. */
 #define TARGET_CAMERA0_WIDTH  320
+/** @brief Default height in pixels of camera output for camera 0. */
 #define TARGET_CAMERA0_HEIGHT 240
+/** @brief Default width in pixels of camera output for camera 1. */
 #define TARGET_CAMERA1_WIDTH  640
+/** @brief Default height in pixels of camera output for camera 1. */
 #define TARGET_CAMERA1_HEIGHT 480
+/** @brief Total pixel count for camera 0 resolution. */
 #define TARGET_CAMERA0_RESOLUTION (TARGET_CAMERA0_WIDTH*TARGET_CAMERA0_HEIGHT)
+/** @brief Total pixel count for camera 1 resolution. */
 #define TARGET_CAMERA1_RESOLUTION (TARGET_CAMERA1_WIDTH*TARGET_CAMERA1_HEIGHT)
+/** @brief Maximum pixel count across all camera resolutions. */
 #define TARGET_CAMERA_MAX_RESOLUTION (TARGET_CAMERA0_RESOLUTION > TARGET_CAMERA1_RESOLUTION ? TARGET_CAMERA0_RESOLUTION : TARGET_CAMERA1_RESOLUTION)
+/** @brief Default camera capture rate in frames per second. */
 #define TARGET_CAMERA_FPS (30)
 
+/** @brief Buffer alignment requirement for camera device buffers in bytes. */
 #define CAMERA_DEV_BUFFER_ALIGN        64
 
 /** @brief Endpoint address for Core 1 inter-core communication channel. */
@@ -47,7 +52,7 @@
 /** @brief Endpoint address for MPP (Media Processing Pipeline) inter-core communication channel.
  * MPP might use a range of endpoints starting with 40 and up to 49 included
  */
-#define MPP_EPT_ADDRESSS               (40U)
+#define MPP_EPT_ADDRESS                (40U)
 /** @brief Endpoint address for RTSP (Real Time Streaming Protocol) inter-core communication channel. */
 #define RTSP_EPT_ADDRESS               (50U)
 
@@ -69,9 +74,10 @@ typedef enum virtual_usb_cam_msg_type {
     VIRT_USB_CAM_ERROR
 } virtual_usb_cam_msg_type_e;
 
+/** @brief User identifier for multicore virtual camera messages. */
 typedef enum virtual_usb_cam_user_id {
-    RTSP_USER_ID = 0,
-    MPP_USER_ID
+    RTSP_USER_ID = 0, /*!< RTSP user identifier */
+    MPP_USER_ID       /*!< MPP user identifier */
 } virtual_usb_cam_user_id_e;
 
 /** @brief Structure that characterizes the color format for the camera output. */
@@ -107,6 +113,7 @@ typedef struct {
 typedef struct {
     virtual_usb_cam_msg_type_e msg_type;    /*!< Type of message being sent (config, request, response, etc.) */
     virtual_usb_cam_user_id_e  user_id;     /*!< Identifier for the user/component sending the message (RTSP or MPP) */
+    /** @brief Union holding the message payload, interpreted based on msg_type. */
     union msg_payload_u
     {
         virtual_usb_cam_config_msg_t config; /*!< Configuration message payload for camera setup */

@@ -82,22 +82,15 @@ typedef struct _gfx_dev gfx_dev_t;
 
 typedef struct
 {
-    /* initialize the dev */
-    int (*init)(gfx_dev_t *dev, void *param);
-    /* deinitialize the dev */
-    int (*deinit)(gfx_dev_t *dev);
-    /* get buffer descriptors and policy */
+    int (*init)(gfx_dev_t *dev, void *param);                               /*!< initialize the dev */
+    int (*deinit)(gfx_dev_t *dev);                                          /*!< deinitialize the dev */
     int (*get_buf_desc)(const gfx_dev_t *dev,
-            hw_buf_desc_t *in_buf, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy);
-    /* blit the source surface to the destination surface */
+            hw_buf_desc_t *in_buf, hw_buf_desc_t *out_buf, mpp_memory_policy_t *policy); /*!< get buffer descriptors and policy */
     int (*blit)(
-        const gfx_dev_t *dev, const gfx_surface_t *pSrc, const gfx_surface_t *pDst, const gfx_rotate_config_t *pRotate, mpp_flip_mode_t flip);
-    /* draw rect in overlay surface */
-    int (*drawRect)(const gfx_dev_t *dev, gfx_surface_t *pOverlay, int x, int y, int w, int h, int color);
-    /* draw picture in overlay surface */
+        const gfx_dev_t *dev, const gfx_surface_t *pSrc, const gfx_surface_t *pDst, const gfx_rotate_config_t *pRotate, mpp_flip_mode_t flip); /*!< blit source to destination surface */
+    int (*drawRect)(const gfx_dev_t *dev, gfx_surface_t *pOverlay, int x, int y, int w, int h, int color); /*!< draw rectangle in overlay surface */
     int (*drawPicture)(
-        const gfx_dev_t *dev, gfx_surface_t *pOverlay, int x, int y, int w, int h, int alpha, const char *pIcon);
-    /* draw Text in overlay surface */
+        const gfx_dev_t *dev, gfx_surface_t *pOverlay, int x, int y, int w, int h, int alpha, const char *pIcon); /*!< draw picture in overlay surface */
     int (*drawText)(const gfx_dev_t *dev,
                     gfx_surface_t *pOverlay,
                     int x,
@@ -105,16 +98,14 @@ typedef struct
                     int textColor,
                     int bgColor,
                     int type,
-                    const char *pText);
-    /* blit the source surface with overlay surface to the destination surface */
+                    const char *pText);                                      /*!< draw text in overlay surface */
     int (*compose)(const gfx_dev_t *dev,
                    gfx_surface_t *pSrc,
                    gfx_surface_t *pOverlay,
                    gfx_surface_t *pDst,
                    gfx_rotate_config_t *pRotate,
-                   mpp_flip_mode_t flip);
-    /* finalize the rendering into destination surface (must be called once after all blit/draw/compose operations) */
-    int (*finish)(gfx_dev_t *dev);
+                   mpp_flip_mode_t flip);                                    /*!< blit source with overlay to destination surface */
+    int (*finish)(gfx_dev_t *dev);                                          /*!< finalize rendering into destination surface */
 } gfx_dev_operator_t;
 
 
@@ -127,24 +118,17 @@ typedef int (*mpp_callback_t)(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *us
  *  @{
  */
 
+/** @brief Attributes of a graphics device. */
 struct _gfx_dev
 {
-    /* unique id */
-    int id;
-    /* operations */
-    const gfx_dev_operator_t *ops;
-    /* graphic source surface */
-    gfx_surface_t src;
-    /* graphic destination surface */
-    gfx_surface_t dst;
-    /* callback */
-    mpp_callback_t callback;
-    /* param for the callback */
-    void *cb_user_data;
-    /* stores the vglite context pointer */
-    void *user_data;
-    /* mpp handle to be passed to the callback */
-    mpp_t mpp;
+    int id;                             /*!< unique id */
+    const gfx_dev_operator_t *ops;      /*!< operations */
+    gfx_surface_t src;                  /*!< graphic source surface */
+    gfx_surface_t dst;                  /*!< graphic destination surface */
+    mpp_callback_t callback;            /*!< callback */
+    void *cb_user_data;                 /*!< param for the callback */
+    void *user_data;                    /*!< stores the vglite context pointer */
+    mpp_t mpp;                          /*!< mpp handle to be passed to the callback */
 };
 
 /*!

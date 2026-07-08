@@ -34,6 +34,7 @@
 #include "mpp_api_types.h"
 #include "hal_types.h"
 
+/** @brief Maximum file path length for file source elements */
 #define FILE_SOURCE_FILEPATH_MAX_LEN 128
 
 /**
@@ -64,6 +65,8 @@ typedef enum _hal_filesrc_status
     MPP_kStatus_HAL_FileSrcEOF           /*!< End of file reached */
 
 } hal_filesrc_status_t;
+
+/** @} */
 
 /*! \addtogroup HAL_OPERATIONS
  *  @{

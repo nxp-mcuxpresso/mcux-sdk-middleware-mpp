@@ -223,8 +223,7 @@ def create_symbolic_links(mpp_dir: Path, sdk_install_dir: Path) -> None:
     print("Creating symbolic links...")
 
     boards_dir = mpp_dir / "boards"
-    excluded_boards = ["evkmimxrt1170",
-                       "mcxn9xxbrk", "mcxn9xxevk", "evkbimxrt1050"]
+    excluded_boards = []
 
     for board in os.listdir(boards_dir):
         if board in excluded_boards:
@@ -292,8 +291,7 @@ def remove_symbolic_links(mpp_dir: Path, sdk_install_dir: Path) -> None:
     print("Removing symbolic links...")
 
     boards_dir = mpp_dir / "boards"
-    excluded_boards = ["evkmimxrt1170",
-                       "mcxn9xxbrk", "mcxn9xxevk", "evkbimxrt1050"]
+    excluded_boards = []
 
     for board in os.listdir(boards_dir):
         if board in excluded_boards:
@@ -320,8 +318,7 @@ def remove_symbolic_links(mpp_dir: Path, sdk_install_dir: Path) -> None:
 def check_symlinks_exist(mpp_dir: Path, sdk_install_dir: Path) -> bool:
     """Check if symbolic links exist."""
     boards_dir = mpp_dir / "boards"
-    excluded_boards = ["evkmimxrt1170",
-                       "mcxn9xxbrk", "mcxn9xxevk", "evkbimxrt1050"]
+    excluded_boards = []
 
     for board in os.listdir(boards_dir):
         if board in excluded_boards:

@@ -112,10 +112,12 @@ unsigned int elem_inference_setup(_elem_t *elem)
         switch (inference_type)
         {
         case MPP_INFERENCE_TYPE_TFLITE:
-            ret = hal_inference_tflite_setup(valgo);
+            if (hal_inference_tflite_setup(valgo) != 0)
+                ret = MPP_ERROR;
             break;
         case MPP_INFERENCE_TYPE_EXECUTORCH:
-            ret = hal_inference_executorch_setup(valgo);
+            if (hal_inference_executorch_setup(valgo) != 0)
+                ret = MPP_ERROR;
             break;
         default:
             MPP_LOGE ("ML inference type %d is not supported\n", inference_type);

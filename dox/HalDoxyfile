@@ -340,7 +340,7 @@ OPTIMIZE_OUTPUT_SLICE  = NO
 #
 # Note see also the list of default file extension mappings.
 
-EXTENSION_MAPPING      = C
+EXTENSION_MAPPING      = c=C
 
 # If the MARKDOWN_SUPPORT tag is enabled then doxygen pre-processes all comments
 # according to the Markdown format, which allows for more readable
@@ -897,7 +897,10 @@ INPUT                  = hal/include/hal_camera_dev.h \
                          hal/include/hal_types.h \
                          hal/include/hal_utils.h \
                          hal/include/hal.h \
-                         hal/include/hal_os.h \
+                         hal/os/include/hal_os.h \
+                         hal/include/hal_mc.h \
+                         hal/include/hal_storage.h \
+                         hal/include/hal_venc_dev.h \
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -2085,7 +2088,7 @@ MAN_LINKS              = NO
 # captures the structure of the code including all documentation.
 # The default value is: NO.
 
-GENERATE_XML           = NO
+GENERATE_XML           = YES
 
 # The XML_OUTPUT tag is used to specify where the XML pages will be put. If a
 # relative path is entered the value of OUTPUT_DIRECTORY will be put in front of

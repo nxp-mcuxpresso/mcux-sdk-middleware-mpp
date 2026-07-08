@@ -248,6 +248,13 @@ static int check_convert_params(_elem_t *elem)
             {
                 /* For custom angles, calculate bounding box */
                 float angle_rad = elem->params.convert.custom_angle * 3.14159265f / 180.0f;
+                /* CID 54622912, CID 54622917: MISRA D4.11 - validate sinf/cosf argument is finite
+                 * (not NaN or infinity) before passing to library functions */
+                if (!isfinite(angle_rad))
+                {
+                    HAL_LOGE("Custom rotation angle is not finite, skipping\n");
+                    return -1;
+                }
                 float cos_val = fabsf(cosf(angle_rad));
                 float sin_val = fabsf(sinf(angle_rad));
                 

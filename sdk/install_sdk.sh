@@ -108,10 +108,6 @@ create_symbolic_links()
     # defined in mpp repo in the boards directory
     echo "Creating symbolic links..."
     for board in `ls ${MPP_DIR}/boards`; do
-        # this boards are not supported by the SDK anymore
-        if [ ${board} == "evkmimxrt1170" -o  ${board} == "mcxn9xxbrk" -o ${board} == "mcxn9xxevk" -o  ${board} == "evkbimxrt1050" ] ; then
-            continue
-        fi
         # create the symbolic links
         rm -rf "${SDK_INSTALL_DIR}/mcuxsdk/examples/_boards/${board}/eiq_examples/mpp"
         ln -s "$PWD/boards/${board}" "${SDK_INSTALL_DIR}/mcuxsdk/examples/_boards/${board}/eiq_examples/mpp"
@@ -133,10 +129,6 @@ remove_symbolic_links()
     # This is needed to avoid git fetch conflicts
     echo "Removing symbolic links..."
     for board in `ls ${MPP_DIR}/boards`; do
-        # this boards are not supported by the SDK anymore
-        if [ ${board} == "evkmimxrt1170" -o  ${board} == "mcxn9xxbrk" -o ${board} == "mcxn9xxevk" -o  ${board} == "evkbimxrt1050" ] ; then
-            continue
-        fi
         rm -rf "${SDK_INSTALL_DIR}/mcuxsdk/examples/_boards/${board}/eiq_examples/mpp"
     done
     rm -rf ${SDK_INSTALL_DIR}/mcuxsdk/examples/eiq_examples/mpp
@@ -331,10 +323,6 @@ if [ -d "${SDK_INSTALL_DIR}" ]; then
         # Check if symbolic links exist before removing them
         SYMLINKS_EXIST="false"
         for board in `ls ${MPP_DIR}/boards`; do
-            # this boards are not supported by the SDK anymore
-            if [ ${board} == "evkmimxrt1170" -o  ${board} == "mcxn9xxbrk" -o ${board} == "mcxn9xxevk" -o  ${board} == "evkbimxrt1050" ] ; then
-                continue
-            fi
             if [ -L "${SDK_INSTALL_DIR}/mcuxsdk/examples/_boards/${board}/eiq_examples/mpp" ]; then
                 SYMLINKS_EXIST="true"
                 break

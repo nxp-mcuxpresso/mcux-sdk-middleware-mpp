@@ -67,7 +67,7 @@ class MPPBuilder:
                 "1": "cm33_core1"
             },
             "frdmimxrt1152": {
-                "0": "cm33_core0"
+                "0": ""
             },
             "frdmimxrt700": {
                 "0": "cm33_core0",
@@ -534,9 +534,6 @@ class MPPBuilder:
                 except Exception as e:
                     print(
                         f"Warning: Could not read examples_internal.conf: {e}")
-        elif exp:
-            examples = [[exp, ""]]
-            print(f"Warning: Could not read examples_internal.conf: {e}")
 
             # If example was not found in examples.conf files, try to build it without additional arguments
             if not len(examples) and exp != "all":
@@ -650,10 +647,12 @@ class MPPBuilder:
             "west", "build", "-b", board, source_path, "-p", "always",
             "--config", build_type,
             "--toolchain", "armgcc",
-            f"-Dcore_id={core_id}",
             f"-DHAL_LOG_LEVEL={log_level}",
             f"-DMPP_COMMIT={self.mpp_commit_id}"
         ]
+
+        if core_id:
+            west_cmd.append(f"-Dcore_id={core_id}")
 
         if self.code_coverage_enable:
             west_cmd.append("-DENABLE_COVERAGE=1")
@@ -701,20 +700,25 @@ class MPPBuilder:
             f"build_{board}" / self.build_rel_or_dbg
         build_output_dir.mkdir(parents=True, exist_ok=True)
 
-        if self.app_config_index:
-            elf_src = self.sdk_dir / build_path / f"{app}_{core_id}.elf"
-            bin_src = self.sdk_dir / build_path / f"{app}_{core_id}.bin"
-            elf_dst = build_output_dir / \
-                f"{app}_{core_id}_config{self.app_config_index}.elf"
-            bin_dst = build_output_dir / \
-                f"{app}_{core_id}_config{self.app_config_index}.bin"
-            self.last_built_elf = f"{app}_{core_id}_config{self.app_config_index}.elf"
+        if core_id:
+            core_suffix = f"_{core_id}"
         else:
-            elf_src = self.sdk_dir / build_path / f"{app}_{core_id}.elf"
-            bin_src = self.sdk_dir / build_path / f"{app}_{core_id}.bin"
-            elf_dst = build_output_dir / f"{app}_{core_id}.elf"
-            bin_dst = build_output_dir / f"{app}_{core_id}.bin"
-            self.last_built_elf = f"{app}_{core_id}.elf"
+            core_suffix = ""
+
+        if self.app_config_index:
+            elf_src = self.sdk_dir / build_path / f"{app}{core_suffix}.elf"
+            bin_src = self.sdk_dir / build_path / f"{app}{core_suffix}.bin"
+            elf_dst = build_output_dir / \
+                f"{app}{core_suffix}_config{self.app_config_index}.elf"
+            bin_dst = build_output_dir / \
+                f"{app}{core_suffix}_config{self.app_config_index}.bin"
+            self.last_built_elf = f"{app}{core_suffix}_config{self.app_config_index}.elf"
+        else:
+            elf_src = self.sdk_dir / build_path / f"{app}{core_suffix}.elf"
+            bin_src = self.sdk_dir / build_path / f"{app}{core_suffix}.bin"
+            elf_dst = build_output_dir / f"{app}{core_suffix}.elf"
+            bin_dst = build_output_dir / f"{app}{core_suffix}.bin"
+            self.last_built_elf = f"{app}{core_suffix}.elf"
 
         # Copy files
         try:
@@ -882,74 +886,127 @@ class MPPBuilder:
             except Exception as e:
                 print(f"Warning: Could not extract version: {e}")
 
-    def build_api_doc(self, api_name, header_file, api_version, doxyfile_name, output_file_name):
-        """Build API documentation"""
-        # Check if doxygen is available
+    def build_api_doc(self, api_name, doc_title, api_version, doxyfile_name,
+                      output_file_name, intro_from_page=False, image_dirs=None,
+                      image_map=None):
+        """Build API documentation as a Markdown file using doxygen XML output.
+
+        Runs doxygen with GENERATE_XML=YES (already set in the Doxyfiles), then
+        invokes dox/dox2md.py to convert the XML into a .md file that matches
+        the format of docs/mpp_api/mpp_api.md and docs/hal_api/hal_api.md.
+
+        image_dirs -- optional list of directory paths (relative to w_dir) that
+                      contain images referenced by the generated .md file.
+                      Any images found there will be copied into the output docs
+                      directory alongside the .md.
+        image_map  -- optional dict of {src_name: dst_name} remappings applied to
+                      image filenames in the generated .md
+                      (e.g. {"mpp_hal_overview.png": "hal.png"}).
+        """
         doxygen_cmd = self._find_executable("doxygen")
         if not doxygen_cmd:
             print("Warning: doxygen not found, skipping documentation generation")
             return
 
-        temp_dir = Path(tempfile.mkdtemp())
-        pdf_path = temp_dir / "refman.pdf"
-        rtf_path = Path("rtf") / "refman.rtf"
+        # All doxygen output goes into dox_out/ inside the project directory.
+        dox_out_dir = self.w_dir / "dox_out"
+        dox_out_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            # Copy dox directory
-            dox_src = self.w_dir / "dox"
-            dox_dst = temp_dir / "dox"
-            if dox_src.exists():
-                shutil.copytree(dox_src, dox_dst)
-
-            # Set environment variables
-            env = os.environ.copy()
-            env["LATEX_OUTPUT"] = str(temp_dir)
-            env["LATEX_HEADER"] = str(temp_dir / "dox" / header_file)
-            env["PROJECT_NUMBER"] = api_version
-
-            # Update header file
-            header_path = temp_dir / "dox" / header_file
-            if header_path.exists():
-                try:
-                    with open(header_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        content = f.read()
-                    content = content.replace(
-                        f"{api_name} VERSION", f"{api_name} VERSION {api_version}")
-                    with open(header_path, 'w', encoding='utf-8') as f:
-                        f.write(content)
-                except Exception as e:
-                    print(f"Warning: Could not update header file: {e}")
-
-            # Run doxygen
+            # Run doxygen to produce XML
             doxyfile_path = self.w_dir / "dox" / doxyfile_name
-            if doxyfile_path.exists():
-                result = subprocess.run(
-                    [doxygen_cmd, str(doxyfile_path)], env=env, cwd=self.w_dir)
-                if result.returncode != 0:
-                    print(f"Warning: doxygen failed for {doxyfile_name}")
+            if not doxyfile_path.exists():
+                print(f"Warning: {doxyfile_name} not found, skipping")
+                return
 
-            # Generate PDF (if make is available)
-            make_cmd = self._find_executable("make")
-            if make_cmd and not self.is_windows:
-                subprocess.run([make_cmd, "pdf"], cwd=temp_dir)
-            elif self.is_windows:
-                print("Warning: PDF generation skipped on Windows (make not available)")
+            # Write an override Doxyfile that @INCLUDEs the original and sets
+            # OUTPUT_DIRECTORY to dox_out/ and enables XML-only output.
+            tmp_doxyfile = dox_out_dir / f"{doxyfile_name}.override"
+            tmp_doxyfile.write_text(
+                f"@INCLUDE = {doxyfile_path}\n"
+                f"OUTPUT_DIRECTORY = {dox_out_dir}\n"
+                f"PROJECT_NUMBER = {api_version}\n"
+                "GENERATE_XML = YES\n"
+                "GENERATE_HTML = NO\n"
+                "GENERATE_LATEX = NO\n"
+                "WARN_LOGFILE =\n"
+            )
 
-            # Copy output files
-            if pdf_path.exists():
-                shutil.copy2(pdf_path, f"{output_file_name}.pdf")
-                print(f"Generated {output_file_name}.pdf")
+            # Capture doxygen log to dox_out/<api_name>_doxylog.txt
+            log_file = dox_out_dir / f"{output_file_name}_doxylog.txt"
+            result = subprocess.run(
+                [doxygen_cmd, str(tmp_doxyfile)], cwd=self.w_dir,
+                capture_output=True)
+            doxy_output = result.stdout + result.stderr
+            log_file.write_bytes(doxy_output)
 
-            if rtf_path.exists():
-                shutil.copy2(rtf_path, f"{output_file_name}.rtf")
-                shutil.rmtree("rtf", ignore_errors=True)
-                print(f"Generated {output_file_name}.rtf")
+            if result.returncode != 0:
+                print(f"Warning: doxygen failed for {doxyfile_name}")
+                print(result.stderr.decode(errors="ignore")[:500])
+
+            # Fail if doxygen emitted any warnings
+            doxy_text = doxy_output.decode(errors="ignore")
+            doxy_warnings = [
+                line for line in doxy_text.splitlines()
+                if ": warning:" in line.lower() or line.lower().startswith("warning:")
+            ]
+            if doxy_warnings:
+                print(f"ERROR: doxygen produced {len(doxy_warnings)} warning(s) for {doxyfile_name}:")
+                for w in doxy_warnings:
+                    print(f"  {w}")
+                raise SystemExit(f"Doxygen warnings found in {log_file}. Fix them and re-run.")
+
+            xml_dir = dox_out_dir / "xml"
+            if not xml_dir.exists():
+                print(f"Warning: doxygen XML output not found in {xml_dir}")
+                return
+
+            # Convert XML to Markdown using dox/dox2md.py
+            dox2md = self.w_dir / "dox" / "dox2md.py"
+            if not dox2md.exists():
+                print("Warning: dox/dox2md.py not found, skipping markdown generation")
+                return
+
+            # Output .md into docs/<output_file_name>/<output_file_name>.md
+            md_output = self.w_dir / "docs" / output_file_name / f"{output_file_name}.md"
+            cmd = [
+                "python", str(dox2md),
+                "--xml-dir", str(xml_dir),
+                "--title", doc_title,
+                "--version", api_version,
+                "--output", str(md_output),
+            ]
+            if intro_from_page:
+                cmd.append("--intro-from-page")
+
+            if image_map:
+                # Pass explicit src:dst remappings to dox2md so generated ![]()
+                # links use the canonical filename in docs/ (e.g. hal.png).
+                cmd.append("--image-map")
+                cmd.extend(f"{src}:{dst}" for src, dst in image_map.items())
+
+            result = subprocess.run(cmd, cwd=self.w_dir)
+            if result.returncode != 0:
+                print(f"Warning: dox2md.py failed for {output_file_name}")
+
+            # Copy images from image_dirs into the output docs directory so
+            # that relative image references in the generated .md resolve.
+            if image_dirs:
+                out_doc_dir = md_output.parent
+                for img_dir in image_dirs:
+                    src_dir = self.w_dir / img_dir
+                    if not src_dir.is_dir():
+                        continue
+                    for img_file in src_dir.iterdir():
+                        if img_file.suffix.lower() in (".png", ".jpg", ".jpeg", ".svg", ".gif"):
+                            dst = out_doc_dir / img_file.name
+                            try:
+                                shutil.copy2(img_file, dst)
+                            except Exception as copy_err:
+                                print(f"Warning: Could not copy image {img_file}: {copy_err}")
 
         except Exception as e:
             print(f"Warning: Documentation generation failed: {e}")
-        finally:
-            # Cleanup
-            shutil.rmtree(temp_dir, ignore_errors=True)
 
     def build_doc(self, board):
         """Build MPP and HAL API documentation"""
@@ -963,7 +1020,10 @@ class MPPBuilder:
                     content = f.read().strip()
                     # Extract version from MPP_VERSION_x.x.x format
                     if "_" in content:
-                        mpp_version = content.split("_")[-1]
+                        raw = content.split("_")[-1]
+                        # Keep only major.minor, append .0 (drop commit hash)
+                        parts = raw.split(".")
+                        mpp_version = f"{parts[0]}.{parts[1]}" if len(parts) >= 2 else raw
             except Exception as e:
                 print(f"Warning: Could not read version file: {e}")
 
@@ -971,12 +1031,26 @@ class MPPBuilder:
             print("Warning: mpp version not found, using empty version")
 
         # Build MPP documentation
-        self.build_api_doc("MPP", "header.tex", mpp_version,
-                           "Doxyfile", "mpp_api")
+        self.build_api_doc(
+            "MPP",
+            "eIQ MCU Media Processing Pipeline API",
+            mpp_version,
+            "Doxyfile",
+            "mpp_api",
+        )
 
-        # Build HAL documentation
-        self.build_api_doc("MPP-HAL", "hal_header.tex",
-                           mpp_version, "HalDoxyfile", "hal_api")
+        # Build HAL documentation.
+        # image_map remaps mpp_hal_overview.png (from hal/ IMAGE_PATH) to
+        # hal.png, which is the pre-existing canonical name in docs/hal_api/.
+        self.build_api_doc(
+            "MPP-HAL",
+            "eIQ MPP Hardware Abstraction Layer API",
+            mpp_version,
+            "HalDoxyfile",
+            "hal_api",
+            intro_from_page=True,
+            image_map={"mpp_hal_overview.png": "hal.png"},
+        )
 
     def list_panels(self, boards):
         """List supported panels for boards"""
@@ -1242,8 +1316,10 @@ def main():
                 build_type = f"flexspi_nor_sdram_{build_rel_or_dbg}"
 
         # Set default panel
-        if board in ["evkbmimxrt1170", "mimxrt700evk", "frdmimxrt700"]:
-            default_panel = "2"
+        if board in ["evkbmimxrt1170", "mimxrt700evk", "frdmimxrt1152"]:
+            default_panel = "2"  # DEMO_PANEL_RK055MHD091
+        elif board == "frdmimxrt700":
+            default_panel = "5"  # DEMO_PANEL_RASPI_7INCH
         else:
             default_panel = ""
 

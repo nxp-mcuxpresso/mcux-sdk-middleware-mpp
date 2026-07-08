@@ -189,8 +189,10 @@ int HAL_JPEG_Cpu_Decode(const vdec_dev_t *dev, uint8_t *pSrc, uint8_t *pDst, int
     /* Step 3: read image parameters with jpeg_read_header() */
     jpeg_read_header(&ctx->cinfo, true);
 
-    /* Step 4: set parameters for decompression */
-    ctx->cinfo.dct_method = JDCT_FLOAT;
+    /* Step 4: set parameters for decompression.
+     * Use integer DCT (JDCT_ISLOW) to avoid large floating-point coefficient
+     * buffers; JDCT_FLOAT needs significantly more heap on constrained targets. */
+    ctx->cinfo.dct_method = JDCT_ISLOW;
 
     /* scaling factor is cinfo.scale_num / 8, no resize = 8 */
     ctx->cinfo.scale_num = HAL_LIBJPEG_SCALE;

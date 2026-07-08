@@ -29,8 +29,9 @@
 
 #include "mpp_api_types.h"
 
-/** maximum number of element inputs/outputs */
+/** maximum number of element inputs */
 #define MAX_INPUT_PORTS    2
+/** @brief Maximum number of element outputs */
 #define MAX_OUTPUT_PORTS   2
 
 /** The memory allocation policy of an element's hal.

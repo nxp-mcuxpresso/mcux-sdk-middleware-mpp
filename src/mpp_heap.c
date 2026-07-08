@@ -16,6 +16,8 @@
  *  limitations under the License.
  */
 
+#include <assert.h>
+
 #include "mpp_heap.h"
 #include "hal_os.h"
 #include "mpp_debug.h"
@@ -234,7 +236,8 @@ void mpp_execute(_mpp_t *mpp)
                     bufsize = elem->io.out_buf[i]->compressed_size;
                 else
                     bufsize = elem->io.out_buf[i]->hw->stride * elem->io.out_buf[i]->height;
-                HAL_DCACHE_CleanByRange((uint32_t) elem->io.out_buf[i]->hw->addr, bufsize);
+                assert(bufsize >= 0);
+                HAL_DCACHE_CleanByRange((uint32_t) elem->io.out_buf[i]->hw->addr, (uint32_t)bufsize);
             }
         }
 
@@ -344,6 +347,7 @@ void mpp_execute(_mpp_t *mpp)
 
         if (stats) end_time = hal_get_exec_time();
         if (stats && hal_mutex_lock_no_wait(stats_lock[MPP_STATS_GRP_ELEMENT]) == MPP_SUCCESS) {
+            assert(end_time >= start_time);
             stats->elem.elem_exec_time = end_time - start_time;
             (void) hal_mutex_unlock(stats_lock[MPP_STATS_GRP_ELEMENT]);
         }
@@ -495,7 +499,10 @@ void mpp_execute_heap(_mpp_t *prio_lst[])
                     if (mpp->fps_params.frame_cnt >= MPP_FPS_STATS_WINDOW)
                     {
                         time_us = hal_get_crt_time() - mpp->fps_params.start_time_us;
-                        stats->mpp.fps = (mpp->fps_params.frame_cnt * 1000000) / time_us;
+                        assert(time_us > 0);
+                        uint64_t fps_calc = (mpp->fps_params.frame_cnt * 1000000UL) / time_us;
+                        assert(fps_calc <= 0xFFFFFFFFUL);
+                        stats->mpp.fps = (unsigned int)fps_calc;
                         mpp->fps_params.frame_cnt = 0;
                         mpp->fps_params.start_time_us = hal_get_crt_time();
                     }

@@ -693,7 +693,14 @@ static int hal_vglite_init_surface(gfx_rotate_config_t rotate, vg_lite_matrix_t 
         int output_height = gDst->bottom - gDst->top + 1;
 
         /* Convert angle to radians */
-        float angle_rad = rotate.custom_angle * M_PI / 180.0f;
+        float angle_rad = rotate.custom_angle * (float)M_PI / 180.0f;
+        /* MISRA D4.11 - validate sinf/cosf argument is finite
+         * (not NaN or infinity) before passing to library functions */
+        if (!isfinite(angle_rad))
+        {
+            HAL_LOGE("VGLite: custom rotation angle_rad is not finite\n");
+            return -1;
+        }
         float cos_val = ABS(cosf(angle_rad));
         float sin_val = ABS(sinf(angle_rad));
 

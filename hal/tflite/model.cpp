@@ -308,10 +308,11 @@ status_t MODEL_Init(const void *model_data,
 
     /* LUT implementation for input tensor conversion optimization */
     #if (HAL_ENABLE_TENSOR_CONVERSION_LUT == 1)
-        if (interpreter && interpreter->input(0))
+        TfLiteTensor *input_tensor_0 = interpreter->input(0);
+        if (input_tensor_0 != nullptr)
         {
-            float input_scale = interpreter->input(0)->params.scale;
-            float input_zero_point = interpreter->input(0)->params.zero_point;
+            float input_scale = input_tensor_0->params.scale;
+            float input_zero_point = input_tensor_0->params.zero_point;
             int i_zero_point = input_zero_point;
             int inv_scale = 0;
 
@@ -456,6 +457,13 @@ uint8_t* MODEL_GetInputTensorData(tflite::MicroInterpreter* interpreter, mpp_ten
 {
     TfLiteTensor* inputTensor = interpreter->input(0);
 
+    /* CID 54622869: guard against null input tensor before dereferencing */
+    if (inputTensor == nullptr)
+    {
+        HAL_LOGE("MODEL_GetInputTensorData: input tensor is NULL\r\n");
+        return nullptr;
+    }
+
     return GetTensorData(inputTensor, dims, type, scale, zero_point);
 }
 
@@ -477,8 +485,15 @@ void MODEL_ConvertInput(model_interpreter_data_t *interpreter_data, uint8_t* dat
      * input_scale : model input scale.
      * input_zero_point: model input zero point.
      */
-    float input_scale = interpreter->input(0)->params.scale;
-    float input_zero_point = interpreter->input(0)->params.zero_point;
+    /* CID 48174440, CID 48174450: guard against null input tensor */
+    TfLiteTensor* input_tensor = interpreter->input(0);
+    if (input_tensor == nullptr)
+    {
+        HAL_LOGE("MODEL_ConvertInput: input tensor is NULL\r\n");
+        return;
+    }
+    float input_scale = input_tensor->params.scale;
+    float input_zero_point = input_tensor->params.zero_point;
     int inv_scale = 0;
     int i_zero_point = input_zero_point;
 

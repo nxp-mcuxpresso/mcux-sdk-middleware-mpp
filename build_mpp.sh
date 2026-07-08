@@ -38,7 +38,7 @@ setup_toolchain_and_sdk_dir()
         frdmmcxn947)
             CORE_ID="cm33_core0"
             ;;
-        mimxrt700evk)
+        mimxrt700evk|frdmimxrt700)
             CORE_ID="cm33_core0"
             ;;
         evkbmimxrt1170)
@@ -149,7 +149,7 @@ build()
     if [ "${BOARD}" == "frdmmcxn947" ] ; then
         PANEL_CONFIG_DEFINE=""
     else
-        PANELNAME=$(grep "define DEMO_PANEL_[[:alnum:]]* ${PANEL}" ${SDK_DIR}/examples/_boards/${BOARD}/display_support.h | cut -d ' ' -f 2 | sed 's/^DEMO_PANEL_//')
+        PANELNAME=$(grep "define DEMO_PANEL_[[:alnum:]_]* ${PANEL}" ${SDK_DIR}/examples/_boards/${BOARD}/display_support.h | cut -d ' ' -f 2 | sed 's/^DEMO_PANEL_//')
         if [[ "${PANELNAME}" == "RK055MHD091" ]]; then
             PANEL_CONFIG_DEFINE=-DCONFIG_${PANELNAME}A0="y"
         else
@@ -362,7 +362,7 @@ usage()
     echo "usage:"
     echo "$0 [-ab:e:h?id:Dp:c:f:t:s:g:C:SVv]"
     echo " -h|?: help"
-    echo " -b <board name>: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk}"
+    echo " -b <board name>: {evkbmimxrt1170, frdmmcxn947, mimxrt700evk, frdmimxrt700}"
     echo " -D: build mpp and hal APIs documentation"
     echo " -e <example name>: build the example app {camera_view, all, ...}"
     echo " -i: build for host (x86)"
@@ -447,7 +447,7 @@ fi
 echo "SDK_DIR=${SDK_DIR}"
 
 if [ "${BOARDS}" == "all" ] ; then
-    BOARDS="frdmmcxn947 evkbmimxrt1170 mimxrt700evk"
+    BOARDS="frdmmcxn947 evkbmimxrt1170 mimxrt700evk frdmimxrt700"
 fi
 
 # default example camera_view (only if EXP and TEST are not set after parsing arguments)
@@ -458,7 +458,7 @@ fi
 for BOARD in ${BOARDS} ; do
     if [[ "${INPUT_CORE_ID}" != "" ]]; then
         case "${BOARD}" in
-            frdmmcxn947|mimxrt700evk)
+            frdmmcxn947|mimxrt700evk|frdmimxrt700)
                 if [[ "${INPUT_CORE_ID}" == "1" ]]; then
                     INPUT_CORE_ID="cm33_core1"
                     APP_CORE_FOLDER="core1"
@@ -483,7 +483,7 @@ for BOARD in ${BOARDS} ; do
     fi
 
     #adjust build type
-    if [ "${BOARD}" == "frdmmcxn947" -o "${BOARD}" == "mimxrt700evk" ] ; then
+    if [ "${BOARD}" == "frdmmcxn947" -o "${BOARD}" == "mimxrt700evk" -o "${BOARD}" == "frdmimxrt700" ] ; then
         if [[ "${INPUT_CORE_ID}" == "cm33_core1" ]] ; then
             BUILD_TYPE=${BUILD_REL_OR_DBG}
         else
@@ -497,6 +497,8 @@ for BOARD in ${BOARDS} ; do
     #RT700 & RT1170: Default Panel 2
     if [ "${BOARD}" == "evkbmimxrt1170" -o "${BOARD}" == "mimxrt700evk" ] ; then
         default_panel="2"
+    elif [ "${BOARD}" == "frdmimxrt700" ] ; then
+        default_panel="5"
     else
         default_panel=""
     fi

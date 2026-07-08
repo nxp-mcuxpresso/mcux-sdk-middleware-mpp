@@ -64,7 +64,7 @@ archive_armgcc () {
 
     # build folder name
     case "${BOARD}" in
-        evkmimxrt1170 | evkbimxrt1050 | evkbmimxrt1170)
+        evkbmimxrt1170)
             BUILD_PREFIX="flexspi_nor_sdram_"
             CORE_ID="cm7"
             ;;

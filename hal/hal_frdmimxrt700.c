@@ -22,7 +22,11 @@
 #include <stddef.h>
 #include "hal_os.h"
 
+#if defined(MIMXRT798S_cm33_core0_SERIES)
 #include "fsl_cache.h"
+#else
+#include "fsl_common.h"
+#endif
 
 #include "hal_graphics_dev.h"
 #include "hal_vdec_dev.h"
@@ -60,7 +64,10 @@ int hal_gfx_setup(const char *name, gfx_dev_t *dev)
 
 /* Display setup */
 #if MPP_OS_FREERTOS
+int HAL_DisplayDev_LcdifRpi7Inch_setup(display_dev_t *dev);
+#if !defined(CONFIG_RASPI_7INCH)
 int HAL_DisplayDev_LcdifWaveshare5Inch_setup(display_dev_t *dev);
+#endif
 #elif MPP_OS_ZEPHYR
 int HAL_DisplayDev_Zephyr_setup(display_dev_t *dev);
 #endif
@@ -69,9 +76,15 @@ int HAL_DisplayDev_Fbdev_setup(display_dev_t *dev);
 hal_display_setup_t display_setup[] =
 {
 #if MPP_OS_FREERTOS
+    {"LcdifRpi7Inch",       HAL_DisplayDev_LcdifRpi7Inch_setup},
+#if !defined(CONFIG_RASPI_7INCH)
     {"LcdifWaveshare5Inch", HAL_DisplayDev_LcdifWaveshare5Inch_setup},
+#endif
 #elif MPP_OS_ZEPHYR
+    {"LcdifRpi7Inch",       HAL_DisplayDev_Zephyr_setup},
+#if !defined(CONFIG_RASPI_7INCH)
     {"LcdifWaveshare5Inch", HAL_DisplayDev_Zephyr_setup},
+#endif
 #endif
     {"FBdev", HAL_DisplayDev_Fbdev_setup},
 };
@@ -86,13 +99,12 @@ int hal_display_setup(const char *name, display_dev_t *dev)
 /* Camera setup */
 int HAL_CameraDev_EzhV_Ov7670_setup(const char *name, camera_dev_t *dev);
 int HAL_CameraDev_USB_setup(const char *name, camera_dev_t *dev);
-int HAL_CameraDev_VirtualUSB_setup(const char *name, camera_dev_t *dev);
-
+int HAL_CameraDev_Virtual_USB_setup(const char *name, camera_dev_t *dev);
 hal_camera_setup_t camera_setup[] =
 {
     {"EzhV_Ov7670", HAL_CameraDev_EzhV_Ov7670_setup},
     {"USB_cam",     HAL_CameraDev_USB_setup},
-    {"Virtual_USB_cam", HAL_CameraDev_VirtualUSB_setup},
+    {"Virtual_USB_cam", HAL_CameraDev_Virtual_USB_setup},
 };
 
 int setup_camera_dev(hal_camera_setup_t camera_setup[], int camera_nb,

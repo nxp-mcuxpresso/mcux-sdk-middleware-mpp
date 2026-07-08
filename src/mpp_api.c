@@ -18,6 +18,8 @@
 
 #define MPP_LOG_MODULE_REGISTER
 
+#include <assert.h>
+
 #include "mpp_api.h"
 #include "mpp_api_types_internal.h"
 #include "mpp_heap.h"
@@ -268,7 +270,9 @@ static void vPipelineCtlTask( void *params )
                 api_stats->api.rc_cycle = hal_tick_to_ms(rc_exec_ticks);
                 api_stats->api.rc_cycle_max = hal_tick_to_ms(max_rc_cycle_ticks);
                 api_stats->api.pr_slot = hal_tick_to_ms(pr_slot);
-                api_stats->api.pr_rounds = pr_rounds_cnt + 1;
+                assert(pr_rounds_cnt < 0xFFFFFFFFU);
+                api_stats->api.pr_rounds = pr_rounds_cnt + 1U;
+                assert(app_slot >= 0);
                 api_stats->api.app_slot = hal_tick_to_ms(app_slot);
                 api_stats->api.cpu_load = 100U - hal_get_idle_percent();
                 (void) hal_mutex_unlock(stats_lock[MPP_STATS_GRP_API]);
@@ -645,7 +649,7 @@ void set_in_buff_from_prev_elem(_elem_t *elem)
         {
             /* This is not the first element in the current branch
              * Check if there is a split after previous element */
-            uint32_t n_buffs = elem->prev->io.nb_out_buf;
+            int n_buffs = elem->prev->io.nb_out_buf;
             if (elem->prev->next[1] != NULL)
                 n_buffs = 1;
             for (int i = 0; i < n_buffs; i++)

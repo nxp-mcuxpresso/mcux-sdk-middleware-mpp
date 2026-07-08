@@ -53,12 +53,12 @@ typedef enum _hal_rtspsink_status
 /** @brief Operation that needs to be implemented by an RTSP sink element */
 typedef struct _rtspsink_operator
 {
-    hal_rtspsink_status_t (*init)(rtspsink_t *dev, mpp_rtspsink_params_t *config, void *param);
-    hal_rtspsink_status_t (*deinit)(rtspsink_t *dev);
-    hal_rtspsink_status_t (*start)(const rtspsink_t *dev);
-    hal_rtspsink_status_t (*stop)(const rtspsink_t *dev);
-    hal_rtspsink_status_t (*enqueue)(const rtspsink_t *dev, void *data, uint32_t size);
-    hal_rtspsink_status_t (*get_buf_desc)(const rtspsink_t *dev, hw_buf_desc_t *in_buf, mpp_memory_policy_t *policy);
+    hal_rtspsink_status_t (*init)(rtspsink_t *dev, mpp_rtspsink_params_t *config, void *param); /*!< initialize the dev */
+    hal_rtspsink_status_t (*deinit)(rtspsink_t *dev);                                           /*!< deinitialize the dev */
+    hal_rtspsink_status_t (*start)(const rtspsink_t *dev);                                      /*!< start the dev */
+    hal_rtspsink_status_t (*stop)(const rtspsink_t *dev);                                       /*!< stop the dev */
+    hal_rtspsink_status_t (*enqueue)(const rtspsink_t *dev, void *data, uint32_t size);         /*!< enqueue a buffer */
+    hal_rtspsink_status_t (*get_buf_desc)(const rtspsink_t *dev, hw_buf_desc_t *in_buf, mpp_memory_policy_t *policy); /*!< get buffer descriptors and policy */
 } rtspsink_operator_t;
 
 /** @} */
@@ -70,23 +70,29 @@ typedef struct _rtspsink_operator
 /** @brief Structure that characterize the RTSP sink element. */
 typedef struct
 {
-    uint16_t port;
-    char ip_addr[IPV4_STR_LEN];
-    uint32_t frame_width;
-    uint32_t frame_height;
-    rtp_payload_type_t payload_type;
-    rtp_frame_type_t frame_type;
+    uint16_t port;                     /*!< RTSP server port number */
+    char ip_addr[IPV4_STR_LEN];        /*!< destination IP address string */
+    uint32_t frame_width;              /*!< video frame width in pixels */
+    uint32_t frame_height;             /*!< video frame height in pixels */
+    rtp_payload_type_t payload_type;   /*!< RTP payload type */
+    rtp_frame_type_t frame_type;       /*!< RTP frame type */
 } rtspsink_config_t;
 
 /** @brief Attributes of an RTSP sink element. */
 struct _rtspsink
 {
-    const rtspsink_operator_t *ops;
-    rtspsink_config_t config;
+    const rtspsink_operator_t *ops;    /*!< operations */
+    rtspsink_config_t config;          /*!< RTSP sink configuration */
 };
 
 /** @} */
 
+/*!
+ * @brief Register the RTSP sink device
+ *
+ * @param[in] dev RTSP sink device to register
+ * @return error code (0: success, otherwise: failure)
+ */
 int setup_rtspsink(rtspsink_t *dev);
 
 #endif /*_HAL_RTSPSINK_H_*/

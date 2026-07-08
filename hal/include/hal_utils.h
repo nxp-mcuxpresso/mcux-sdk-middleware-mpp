@@ -30,41 +30,69 @@
 #include "hal_graphics_dev.h"
 #include "hal_vdec_dev.h"
 
-/** video decoder setup */
+/** @brief Video decoder setup function pointer type */
 typedef int (*img_decoder_setup_func_t) (vdec_dev_t *);
+
+/** @brief Video decoder setup descriptor */
 typedef struct
 {
-    const char* vdec_dev_name;
-    img_decoder_setup_func_t decoder_setup_func;
+    const char* vdec_dev_name;                   /*!< name of the video decoder device */
+    img_decoder_setup_func_t decoder_setup_func; /*!< pointer to the decoder setup function */
 } hal_img_decoder_setup_t;
 
-/** graphics setup */
+/** @brief Graphics setup function pointer type */
 typedef int (*graphic_setup_func_t) (gfx_dev_t *);
+
+/** @brief Graphics device setup descriptor */
 typedef struct
 {
-    const char* gfx_dev_name;
-    graphic_setup_func_t gfx_setup_func;
+    const char* gfx_dev_name;               /*!< name of the graphics device */
+    graphic_setup_func_t gfx_setup_func;    /*!< pointer to the graphics setup function */
 } hal_graphics_setup_t;
 
-/** display setup */
+/** @brief Display setup function pointer type */
 typedef int (*display_setup_func_t) (display_dev_t *);
+
+/** @brief Display device setup descriptor */
 typedef struct
 {
-    const char* display_name;
-    display_setup_func_t display_setup_func;
+    const char* display_name;                    /*!< name of the display device */
+    display_setup_func_t display_setup_func;     /*!< pointer to the display setup function */
 } hal_display_setup_t;
 
-/** camera setup */
+/** @brief Camera setup function pointer type */
 typedef int (*camera_setup_func_t)(const char *, camera_dev_t *);
 
+/** @brief Camera device setup descriptor */
 typedef struct
 {
-    const char* camera_name;
-    camera_setup_func_t camera_setup_func;
+    const char* camera_name;                 /*!< name of the camera device */
+    camera_setup_func_t camera_setup_func;   /*!< pointer to the camera setup function */
 } hal_camera_setup_t;
 
+/*!
+ * @brief Register the static image source element
+ *
+ * @param[in] elt static image element to register
+ * @return error code (0: success, otherwise: failure)
+ */
 int setup_static_image_elt(static_image_t *elt);
+
+/*!
+ * @brief Register the file source element
+ *
+ * @param[in] elt file source element to register
+ * @return error code (0: success, otherwise: failure)
+ */
 int setup_filesrc_elt(filesrc_t *elt);
+
+/*!
+ * @brief Compute a 32-bit checksum over a memory buffer
+ *
+ * @param[in] size_b buffer size in bytes
+ * @param[in] pbuf   pointer to the buffer
+ * @return 32-bit checksum value
+ */
 uint32_t calc_checksum(int size_b, void *pbuf);
 
 /** checksum calculation method */
@@ -87,7 +115,11 @@ typedef struct
 *  @{
 */
 
-/** returns the number of bits per pixel per format, unknown format return 0 */
+/**
+ * @brief Returns the number of bits per pixel for a given format.
+ * @param[in] type pixel format
+ * @return bits per pixel, or 0 for unknown format
+ */
 static inline int get_bitpp(mpp_pixel_format_t type)
 {
     int ret;
@@ -112,6 +144,7 @@ static inline int get_bitpp(mpp_pixel_format_t type)
     case MPP_PIXEL_GRAY16:
     case MPP_PIXEL_UYVY1P422:
     case MPP_PIXEL_VYUY1P422:
+    case MPP_PIXEL_YUYV1P422:
     case MPP_PIXEL_YUYV:
         ret = 16;
         break;

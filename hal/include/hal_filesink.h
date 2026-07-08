@@ -34,6 +34,7 @@
 #include "mpp_api_types.h"
 #include "hal_types.h"
 
+/** @brief Maximum file path length for file sink elements */
 #define FILE_SINK_FILEPATH_MAX_LEN 128
 
 typedef struct _filesink filesink_t;
@@ -44,6 +45,8 @@ typedef enum _hal_filesink_status
     MPP_kStatus_HAL_FileSinkSuccess = 0,  /*!< Successfully */
     MPP_kStatus_HAL_FileSinkError         /*!< Error occurs on HAL filesink */
 } hal_filesink_status_t;
+
+/** @} */
 
 /*! \addtogroup HAL_OPERATIONS
  *  @{

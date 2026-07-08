@@ -127,14 +127,16 @@ static int quality_check_func(_elem_t *elem)
 
             /* Welford's algorithm to compute mean and variance in the same pass */
             delta_scaled = (int32_t)luminance_scaled - mean_scaled;
-            mean_scaled += delta_scaled / (pixel_index + 1);
+            int32_t increment = delta_scaled / (pixel_index + 1);
+            assert((increment >= 0) ? (mean_scaled <= INT32_MAX - increment) : (mean_scaled >= INT32_MIN - increment));
+            mean_scaled = mean_scaled + increment;
             delta2_scaled = (int32_t)luminance_scaled - mean_scaled;
 
             int64_t product = (int64_t)delta_scaled * delta2_scaled;
             assert(product >= INT64_MIN && product <= INT64_MAX);
             int64_t delta_M2 = product >> 10;
             /* Check for overflows */
-            assert(M2_scaled <= INT64_MAX - delta_M2);
+            assert(delta_M2 >= 0 && delta_M2 <= INT64_MAX - M2_scaled);
             M2_scaled += delta_M2;
         }
     }

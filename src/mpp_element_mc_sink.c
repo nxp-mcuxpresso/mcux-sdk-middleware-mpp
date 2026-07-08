@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include "mpp_api_types.h"
 #include "mpp_api.h"
@@ -144,7 +145,8 @@ static inline int mc_sink_dequeue(_elem_t *elem, void *buf)
      * Since an element can have more than one input only if the previous element
      * has multiple outputs and all of them connected to the same mc sink device 
      * always wait for requests for all inputs before dequeuing */
-    if (mc->dev.config.crt_req_cnt >= mc_elem->io.nb_in_buf)
+    assert(mc_elem->io.nb_in_buf >= 0);
+    if (mc->dev.config.crt_req_cnt >= (unsigned int)mc_elem->io.nb_in_buf)
     {
         /* Dequeue the buffer from the multicore device */
         ret = mc->dev.ops->dequeue(&mc->dev, send_addr, NULL, NULL, NULL);
@@ -210,9 +212,9 @@ static inline int mc_sink_enqueue(_mpp_t *mpp)
     _elem_t *elem = mpp->last_elem;
     _multicore_dev_t *mc = elem->dev.mc;
     void *send_addr[MAX_OUTPUT_PORTS] = {NULL};
-    uint32_t send_size[MAX_OUTPUT_PORTS] = {0};
-    uint32_t stripe_num[MAX_OUTPUT_PORTS] = {0};
-    uint32_t frame_id[MAX_OUTPUT_PORTS] = {0};
+    int send_size[MAX_OUTPUT_PORTS] = {0};
+    int stripe_num[MAX_OUTPUT_PORTS] = {0};
+    unsigned short frame_id[MAX_OUTPUT_PORTS] = {0};
 
     if (mc == NULL)
     {
@@ -290,7 +292,13 @@ int mpp_mc_sink_add(mpp_t mpp, mpp_mc_params_t *params)
         return MPP_MALLOC_ERROR;
 
     memset(mc, 0, sizeof(_multicore_dev_t));
-    snprintf(mc->name, sizeof(mc->name), "MC_SINK_%d", (int) params->local_rpmsg_addr);
+    int str_ret = snprintf(mc->name, sizeof(mc->name), "MC_SINK_%lu", params->local_rpmsg_addr);
+    if (str_ret < 0 || str_ret >= sizeof(mc->name))
+    {
+        MPP_LOGE("Failed to format MC sink name(name is too long or encoding error happened)\r\n\terr = %d\r\n", str_ret);
+        hal_free(mc);
+        return MPP_ERROR;
+    }
     elem->dev.mc = mc;
 
     /* fill in display parameters */

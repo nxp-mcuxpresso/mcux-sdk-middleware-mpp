@@ -63,6 +63,7 @@ typedef unsigned int mpp_evt_mask_t;
 /** Bit mask to receive all Events */
 #define MPP_EVENT_ALL 0xffffffff
 
+/** @brief Maximum number of RPMsg endpoints per core */
 #define MPP_MAX_RPMSG_EPT_PER_CORE      5
 
 /**
@@ -83,6 +84,7 @@ typedef enum {
     MPP_EXEC_PREEMPT       /*!< preemptable */
 } mpp_exec_flag_t;
 
+/** @brief Statistics group identifier */
 typedef enum {
     MPP_STATS_GRP_API = 0,  /*!< API (global) stats*/
     MPP_STATS_GRP_MPP,      /*!< mpp_t stats*/
@@ -90,6 +92,7 @@ typedef enum {
     MPP_STATS_GRP_NUM       /*!< number of groups */
 } mpp_stats_grp_t;
 
+/** @brief Statistics data container, content depends on the group */
 typedef union {
     struct {
         unsigned int rc_cycle;      /*!< run-to-completion (RC) cycle duration (ms) */
@@ -111,6 +114,7 @@ typedef union {
 } mpp_stats_t;
 
 
+/** @brief API initialization parameters */
 typedef struct {
     mpp_stats_t *stats;         /*!< API stats */
     unsigned int rc_cycle_min;  /*!< minimum cycle duration for RC tasks (ms), 0: sets default value */
@@ -120,13 +124,13 @@ typedef struct {
     int pipeline_pr_task_prio;  /*!< pipeline preemptable tasks priority. 0: sets default value */
 } mpp_api_params_t;
 
-/** Pipeline creation parameters */
+/** @brief Pipeline creation parameters */
 typedef struct {
-        int (*evt_callback_f)(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data);
-        mpp_evt_mask_t mask ;
-        mpp_exec_flag_t exec_flag;
-        void *cb_userdata;
-        mpp_stats_t *stats;
+        int (*evt_callback_f)(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data); /*!< event callback function */
+        mpp_evt_mask_t mask;        /*!< event mask */
+        mpp_exec_flag_t exec_flag;  /*!< execution flag */
+        void *cb_userdata;          /*!< user data pointer passed to the callback */
+        mpp_stats_t *stats;         /*!< pointer to statistics structure */
 } mpp_params_t;
 
 /** Rotation value */
@@ -255,18 +259,15 @@ typedef struct {
     int compressed_size;   /*!< size in bytes for compressed format */
 } mpp_img_params_t;
 
+/** @brief Parameters passed to the callback after a convert element processes a frame */
 typedef struct {
-    /* Convert element id */
-    uint32_t id;
-    /* Crop parameters */
-    uint32_t left;
-    uint32_t right;
-    uint32_t top;
-    uint32_t bottom;
-    /* Custom rotation angle */
-    float rotation;
-    /* vglite matrix pointer */
-    void *vg_lite_m;
+    uint32_t id;        /*!< convert element id */
+    uint32_t left;      /*!< crop left coordinate */
+    uint32_t right;     /*!< crop right coordinate */
+    uint32_t top;       /*!< crop top coordinate */
+    uint32_t bottom;    /*!< crop bottom coordinate */
+    float rotation;     /*!< custom rotation angle */
+    void *vg_lite_m;    /*!< vglite matrix pointer */
 } mpp_convert_cb_param_t;
 
 /** File slice search function type */
@@ -391,7 +392,7 @@ typedef struct {
     uint32_t model_id; /*! < model identifier */
 } mpp_inference_cb_param_t;
 
-/* Image quality metrics */
+/** @brief Image quality metrics */
 typedef struct {
     int brightness;      /*!< brightness metric */
     int contrast;        /*!< contrast metric */
@@ -601,7 +602,7 @@ union {
 
 /** @}*/
 
-/** @defgroup return_codes
+/** @defgroup return_codes Return Codes
  *  MPP APIs return status definitions
  * @{
  */

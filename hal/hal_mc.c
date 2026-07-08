@@ -93,8 +93,8 @@ typedef struct {
         } data_req;
         struct {
             void *addr[MAX_OUTPUT_PORTS];
-            uint32_t size[MAX_OUTPUT_PORTS];
-            uint32_t frame_id[MAX_OUTPUT_PORTS];
+            int size[MAX_OUTPUT_PORTS];
+            unsigned short frame_id[MAX_OUTPUT_PORTS];
         } data_rsp;
     } payload;
 } mc_message_t;
@@ -863,7 +863,7 @@ hal_mc_status_t HAL_MultiCoreDev_Unlock(const multicore_dev_t *dev)
     return ret;
 }
 
-hal_mc_status_t HAL_MultiCoreDev_Dequeue(const multicore_dev_t *dev, void **data, uint32_t *compressed_size, uint32_t *stripe, uint32_t *frame_id)
+hal_mc_status_t HAL_MultiCoreDev_Dequeue(const multicore_dev_t *dev, void **data, int *compressed_size, int *stripe, unsigned short *frame_id)
 {
     HAL_LOGD("++HAL_MultiCoreDev_Dequeue\r\n");
     hal_mc_status_t ret = kStatus_HAL_MultiCoreSuccess;
@@ -994,7 +994,7 @@ hal_mc_status_t HAL_MultiCoreDev_Dequeue(const multicore_dev_t *dev, void **data
     return ret;
 }
 
-hal_mc_status_t HAL_MultiCoreDev_Enqueue(const multicore_dev_t *dev, void **data, uint32_t *compressed_size, uint32_t *stripe, uint32_t *frame_id)
+hal_mc_status_t HAL_MultiCoreDev_Enqueue(const multicore_dev_t *dev, void **data, int *compressed_size, int *stripe, unsigned short *frame_id)
 {
     HAL_LOGD("++HAL_MultiCoreDev_Enqueue\r\n");
     hal_mc_status_t ret = kStatus_HAL_MultiCoreSuccess;
@@ -1107,7 +1107,7 @@ hal_mc_status_t HAL_MultiCoreDev_Enqueue(const multicore_dev_t *dev, void **data
             send_msg.payload.data_rsp.frame_id[i] = frame_id[i];
         }
 
-         /* Debug prints for data response message to be sent */
+        /* Debug prints for data response message to be sent */
         HAL_LOGD("Sending data response message:\r\n");
         for (int i = 0; i < dev_priv->nb_buffers; i++)
         {
