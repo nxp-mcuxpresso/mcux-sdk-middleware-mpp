@@ -23,6 +23,7 @@
 unsigned int elem_test_setup(_elem_t *elem);
 unsigned int elem_lbl_rct_setup(_elem_t *elem);
 unsigned int elem_convert_setup(_elem_t *elem);
+unsigned int elem_convert_multipass_setup(_elem_t *elem);
 unsigned int elem_inference_setup(_elem_t *elem);
 unsigned int elem_img_decode_setup(_elem_t *elem);
 unsigned int elem_img_compose_setup(_elem_t *elem);
@@ -67,4 +68,28 @@ elem_setup_func_t get_setup_function(mpp_element_id_t id) {
     while(refid != MPP_ELEMENT_NUM);
 
    return fp;
+}
+
+/* registered multipass setup functions (only elements that explicitly support multipass) */
+elem_func_id_pair elem_multipass_setup_funcs[] =
+{
+    {MPP_ELEMENT_CONVERT, elem_convert_multipass_setup},
+    {MPP_ELEMENT_NUM, NULL}   /* keep this last */
+};
+
+multipass_elem_setup_func_t get_multipass_elem_setup_function(mpp_element_id_t id) {
+    int idx = 0;
+    mpp_element_id_t refid = MPP_ELEMENT_NUM;
+    multipass_elem_setup_func_t fp = NULL;
+    do {
+        refid = elem_multipass_setup_funcs[idx].id;
+        if (refid == id) {
+            fp = elem_multipass_setup_funcs[idx].func;
+            break;  /* id found */
+        }
+        idx++;
+    }
+    while(refid != MPP_ELEMENT_NUM);
+
+    return fp;
 }

@@ -30,5 +30,13 @@ include(${SdkRootDirPath}/CMakeLists.txt)
 # board & app specific cmake
 include(${SdkRootDirPath}/middleware/eiq/mpp/boards/${board}/tests/test_virtual_dual_camera_view/${core_id}/reconfig.cmake OPTIONAL)
 
+# When sysbuild is not enabled, use pre-built core1 image that drives the USB camera
+if(NOT SYSBUILD)
+   file(COPY ${SdkRootDirPath}/middleware/eiq/mpp/boards/${board}/tests/test_virtual_dual_camera_view/${core_id}/core1_image_VGA.bin
+        DESTINATION ${APPLICATION_BINARY_DIR}/${CONFIG_TOOLCHAIN}/)
+   file(RENAME ${APPLICATION_BINARY_DIR}/${CONFIG_TOOLCHAIN}/core1_image_VGA.bin
+               ${APPLICATION_BINARY_DIR}/${CONFIG_TOOLCHAIN}/core1_image.bin)
+endif()
+
 mcux_convert_binary(BINARY ${APPLICATION_BINARY_DIR}/${MCUX_SDK_PROJECT_NAME}.bin)
 

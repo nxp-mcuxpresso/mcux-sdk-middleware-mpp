@@ -5,9 +5,11 @@ cscope.*
 !boards/mimxrt700evk/examples/camera_usb_final_fr_app_view/cm33_core0/core1_image_QVGA.bin
 !boards/mimxrt700evk/examples/camera_usb_final_fr_app_view/cm33_core0/core1_image_VGA.bin
 !boards/mimxrt700evk/examples/camera_usb_final_fr_app_view/cm33_core0/core1_image_QVGA_VGA.bin
+!boards/mimxrt700evk/tests/test_virtual_dual_camera_view/cm33_core0/core1_image_VGA.bin
 !boards/frdmimxrt700/examples/camera_usb_final_fr_app_view/cm33_core0/core1_image_QVGA.bin
 !boards/frdmimxrt700/examples/camera_usb_final_fr_app_view/cm33_core0/core1_image_VGA.bin
 !boards/frdmimxrt700/examples/camera_usb_final_fr_app_view/cm33_core0/core1_image_QVGA_VGA.bin
+!boards/frdmimxrt700/tests/test_virtual_dual_camera_view/cm33_core0/core1_image_VGA.bin
 !boards/frdmimxrt700/drivers/ezhv.bin
 *.dis
 *.elf

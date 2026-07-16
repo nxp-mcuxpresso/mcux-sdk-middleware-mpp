@@ -9,7 +9,11 @@
 #include <stdint.h>
 #include <string.h>
 #include "mpp_config.h"
+#ifdef APP_FONT_HEADER
 #include APP_FONT_HEADER
+#else
+#include "Poppins_20_rgb565.h"
+#endif
 #include "draw_text.h"
 
 static void blit_cell_RGB565_clipped(const uint16_t *cell,

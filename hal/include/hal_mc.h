@@ -92,10 +92,13 @@ typedef struct
     bool initial_enqueue_done; /*!< flag to indicate if initial enqueue is done */
     uint32_t min_req_cnt; /*!< minimum number of buffers required */
     uint32_t crt_req_cnt; /*!< current number of buffers requested */
-    mpp_exec_flag_t req_exec_type; /*<! execution type for buffer requests */
+    mpp_exec_flag_t req_exec_type; /*!< execution type for buffer requests */
     bool requested[MAX_OUTPUT_PORTS]; /*!< buffer request status */
     bool enqueued[MAX_OUTPUT_PORTS]; /*!< buffer enqueued status */
     void *buff_desc[MAX_OUTPUT_PORTS]; /*!< hw address to receive data */
+    /*! optional pipeline event callback - set before calling init to receive MPP_EVENT_MC_REMOTE_DEINIT */
+    int (*callback)(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data);
+    void *cb_user_data; /*!< opaque pointer forwarded to callback */
 } mc_dev_static_config_t;
 
 /** @brief Attributes of a multicore device. */

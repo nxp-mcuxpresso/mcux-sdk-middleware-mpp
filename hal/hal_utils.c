@@ -41,6 +41,7 @@ extern "C" {
 #include "hal_debug.h"
 #include "hal_static_image.h"
 #include "hal_filesrc.h"
+#include "hal_rtspsrc.h"
 #include "hal_os.h"
 
 #if MPP_OS_FREERTOS
@@ -263,6 +264,13 @@ int setup_filesrc(filesrc_t *);
 int setup_filesrc_elt(filesrc_t *elt)
 {
     return setup_filesrc(elt);
+}
+
+int setup_rtspsrc(rtspsrc_t *);
+
+int setup_rtspsrc_elt(rtspsrc_t *elt)
+{
+    return setup_rtspsrc(elt);
 }
 
 /* Computes the checksum of the buffer

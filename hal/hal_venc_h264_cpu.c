@@ -198,6 +198,8 @@ hal_venc_status_t HAL_VencDev_H264_Deinit(const venc_h264_dev_t *dev)
     }
 
     hal_free(ctx);
+    /* prevent dangling pointer use after free */
+    ((venc_h264_dev_t *)dev)->user_data = NULL;
 
     HAL_LOGD("--HAL_VencDev_H264_Deinit\r\n");
 

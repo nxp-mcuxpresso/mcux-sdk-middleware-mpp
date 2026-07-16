@@ -14,6 +14,7 @@ MPP VERSION 4.4
 - int[ mpp_static_img_add (](#mpp_static_img_add)[mpp_t ](#mpp_t) mpp, [mpp_img_params_t ](#mpp_img_params_t) * params, void * addr, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h)
 - int[ mpp_filesrc_add (](#mpp_filesrc_add)[mpp_t ](#mpp_t) mpp, [mpp_filesrc_params_t ](#mpp_filesrc_params_t) * params, void * addr, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h)
 - int[ mpp_filesink_add (](#mpp_filesink_add)[mpp_t ](#mpp_t) mpp, [mpp_filesink_params_t ](#mpp_filesink_params_t) * params, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h)
+- int[ mpp_rtspsrc_add (](#mpp_rtspsrc_add)[mpp_t ](#mpp_t) mpp, [mpp_rtspsrc_params_t ](#mpp_rtspsrc_params_t) * params, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h)
 - int[ mpp_rtspsink_add (](#mpp_rtspsink_add)[mpp_t ](#mpp_t) mpp, [mpp_rtspsink_params_t ](#mpp_rtspsink_params_t) * params, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h)
 - int[ mpp_mc_source_add (](#mpp_mc_source_add)[mpp_t ](#mpp_t) mpp, [mpp_mc_params_t ](#mpp_mc_params_t) * params, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h)
 - int[ mpp_display_add (](#mpp_display_add)[mpp_t ](#mpp_t) mpp, const char * name, [mpp_display_params_t ](#mpp_display_params_t) * params)
@@ -23,8 +24,12 @@ MPP VERSION 4.4
 - void *[ mpp_get_input_buff_address (](#mpp_get_input_buff_address)[mpp_elem_handle_t ](#mpp_elem_handle_t) elem, uint32_t index)
 - int[ mpp_element_add (](#mpp_element_add)[mpp_t ](#mpp_t) mpp, [mpp_element_id_t ](#mpp_element_id_t) id, [mpp_element_params_t ](#mpp_element_params_t) * params, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h)
 - int[ mpp_split (](#mpp_split)[mpp_t ](#mpp_t) mpp, unsigned int num, [mpp_params_t ](#mpp_params_t) * params, [mpp_t ](#mpp_t) * out\_list)
+- int[ mpp_link_branch (](#mpp_link_branch)[mpp_elem_handle_t ](#mpp_elem_handle_t) hook\_elem\_h, [mpp_t ](#mpp_t) new\_mpp)
 - int[ mpp_background (](#mpp_background)[mpp_t ](#mpp_t) mpp, [mpp_params_t ](#mpp_params_t) * params, [mpp_t ](#mpp_t) * out\_mpp)
+- int[ mpp_multipass_element_add (](#mpp_multipass_element_add)[mpp_t ](#mpp_t) mpp, [mpp_element_id_t ](#mpp_element_id_t) id, [mpp_element_params_t ](#mpp_element_params_t) * params\_array, uint32_t n\_params, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h)
+- int[ mpp_set_n_passes (](#mpp_set_n_passes)[mpp_t ](#mpp_t) mpp, uint32_t n\_passes)
 - int[ mpp_element_update (](#mpp_element_update)[mpp_t ](#mpp_t) mpp, [mpp_elem_handle_t ](#mpp_elem_handle_t) elem\_h, [mpp_element_params_t ](#mpp_element_params_t) * params, bool force\_update)
+- int[ mpp_multipass_element_update (](#mpp_multipass_element_update)[mpp_t ](#mpp_t) mpp, [mpp_elem_handle_t ](#mpp_elem_handle_t) elem\_h, [mpp_element_params_t ](#mpp_element_params_t) * params\_array, uint32_t n\_params, bool force\_update)
 - bool[ mpp_is_running (](#mpp_is_running)[mpp_t ](#mpp_t) mpp)
 - int[ mpp_start (](#mpp_start)[mpp_t ](#mpp_t) mpp, int last, bool force\_update)
 - int[ mpp_stop (](#mpp_stop)[mpp_t ](#mpp_t) mpp)
@@ -35,6 +40,10 @@ MPP VERSION 4.4
 - int[ mpp_storage_init (](#mpp_storage_init)void)
 - int[ mpp_storage_get_free_space (](#mpp_storage_get_free_space)uint64_t * free\_bytes, uint64_t * total\_bytes)
 - int[ mpp_eth_netif_init (](#mpp_eth_netif_init)uint8_t ip\_addr, uint8_t netmask, uint8_t gateway)
+- int[ mpp_destroy (](#mpp_destroy)[mpp_t ](#mpp_t) mpp)
+- int[ mpp_api_ctl_tasks_destroy (](#mpp_api_ctl_tasks_destroy)void)
+- void[ mpp_print_heap (](#mpp_print_heap)void)
+- uint32_t[ mpp_get_free_heap (](#mpp_get_free_heap)void)
 
 ### 1.1 Detailed Description
 
@@ -160,6 +169,24 @@ Sink file addition.
 
 [Return Codes](#return-codes)
 
+##### mpp_rtspsrc_add
+
+int mpp\_rtspsrc\_add ( [mpp_t ](#mpp_t) mpp, [mpp_rtspsrc_params_t ](#mpp_rtspsrc_params_t) * params, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h )
+
+Source RTSP addition.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|mpp|input pipeline|
+|in|params|RTSP parameters|
+|out|elem\_h|element handle in pipeline|
+
+**Returns**
+
+[Return Codes](#return-codes)
+
 ##### mpp_rtspsink_add
 
 int mpp\_rtspsink\_add ( [mpp_t ](#mpp_t) mpp, [mpp_rtspsink_params_t ](#mpp_rtspsink_params_t) * params, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h )
@@ -171,7 +198,7 @@ Sink RTSP addition.
 |in/out|name|description|
 | - | - | - |
 |in|mpp|input pipeline|
-|in|params|file parameters|
+|in|params|RTSP parameters|
 |out|elem\_h|element handle in pipeline|
 
 **Returns**
@@ -342,6 +369,31 @@ Pipeline multiplication.
 
 - *out_list* array must contain at least *num* elements.
 
+##### mpp_link_branch
+
+int mpp\_link\_branch ( [mpp_elem_handle_t ](#mpp_elem_handle_t) hook\_elem\_h, [mpp_t ](#mpp_t) new\_mpp )
+
+Link a newly built pipeline as a live branch off an existing element in a running pipeline.
+
+The new pipeline must have been fully constructed and closed before this call. Its exec_flag (set at mpp_create time) determines which heap it joins. The pipeline is started immediately (equivalent to mpp_start with last=false) and begins receiving frames from hook_elem on the next execution cycle.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|hook\_elem\_h|handle of the element in the running pipeline to branch off from|
+|in|new\_mpp|handle of the closed pipeline to attach as a branch|
+
+**Returns**
+
+[Return Codes](#return-codes)
+
+**Precondition**
+
+- hook_elem_h must belong to a running pipeline
+- new_mpp must be in MPP_CLOSED state and not running
+- If new_mpp->first_elem does not own its input buffer, the hook element output buffer must already be allocated
+
 ##### mpp_background
 
 int mpp\_background ( [mpp_t ](#mpp_t) mpp, [mpp_params_t ](#mpp_params_t) * params, [mpp_t ](#mpp_t) * out\_mpp )
@@ -360,6 +412,48 @@ Put next elements processing in background.
 
 [Return Codes](#return-codes)
 
+##### mpp_multipass_element_add
+
+int mpp\_multipass\_element\_add ( [mpp_t ](#mpp_t) mpp, [mpp_element_id_t ](#mpp_element_id_t) id, [mpp_element_params_t ](#mpp_element_params_t) * params\_array, uint32_t n\_params, [mpp_elem_handle_t ](#mpp_elem_handle_t) * elem\_h )
+
+Add processing element with per-pass parameter sets (single input, single output)
+
+This function adds an element configured to run with a different set of parameters on each pass. params_array[i] is selected for pass index i. If the effective pass count exceeds n_params, the last entry is reused.
+Available elements are the same as for mpp_element_add.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|mpp|input pipeline|
+|in|id|element id|
+|in|params\_array|array of element parameters, one per pass (must have at least 1 entry)|
+|in|n\_params|number of entries in params_array|
+|out|elem\_h|element handle in pipeline|
+
+**Returns**
+
+[Return Codes](#return-codes)
+
+##### mpp_set_n_passes
+
+int mpp\_set\_n\_passes ( [mpp_t ](#mpp_t) mpp, uint32_t n\_passes )
+
+Set the number of passes per source frame for a pipeline branch.
+
+This function sets how many times the pipeline branch is executed per source frame. A value of 0 is invalid and returns MPP_INVALID_PARAM; n_passes must be at least 1. Can be called before or after mpp_start to update the pass count at runtime. Sub-branches that share the same execution heap inherit the pass count from the topmost ancestor whose n_passes is non-zero; a sub-branch whose own n_passes is 0 (unset) falls back to that inherited value.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|mpp|pipeline branch handle|
+|in|n\_passes|desired pass count (must be >= 1)|
+
+**Returns**
+
+[Return Codes](#return-codes)
+
 ##### mpp_element_update
 
 int mpp\_element\_update ( [mpp_t ](#mpp_t) mpp, [mpp_elem_handle_t ](#mpp_elem_handle_t) elem\_h, [mpp_element_params_t ](#mpp_element_params_t) * params, bool force\_update )
@@ -373,6 +467,26 @@ Update element parameters.
 |in|mpp|input pipeline|
 |in|elem\_h|element handle in the pipeline.|
 |in|params|new element parameters|
+|in|force\_update|force the pipeline to run even though there is no input frame update for processing elements after update. If the force_update flag was already requested before, the current value is ignored|
+
+**Returns**
+
+[Return Codes](#return-codes)
+
+##### mpp_multipass_element_update
+
+int mpp\_multipass\_element\_update ( [mpp_t ](#mpp_t) mpp, [mpp_elem_handle_t ](#mpp_elem_handle_t) elem\_h, [mpp_element_params_t ](#mpp_element_params_t) * params\_array, uint32_t n\_params, bool force\_update )
+
+Update element parameters for multiple pipeline passes.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|mpp|input pipeline|
+|in|elem\_h|element handle in the pipeline|
+|in|params\_array|array of element parameters, one entry per pass|
+|in|n\_params|number of entries in params_array|
 |in|force\_update|force the pipeline to run even though there is no input frame update for processing elements after update. If the force_update flag was already requested before, the current value is ignored|
 
 **Returns**
@@ -536,6 +650,54 @@ This function initializes the Ethernet network interface with the specified IP a
 
 0 on success, non-zero on error
 
+##### mpp_destroy
+
+int mpp\_destroy ( [mpp_t ](#mpp_t) mpp )
+
+Destroy a stopped pipeline and free all its resources.
+
+The pipeline must not be in MPP_RUNNING state. All HAL device deinit functions are called and all memory allocated for elements, device structs, and output buffer descriptors is freed.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|mpp|handle to the pipeline to destroy|
+
+**Returns**
+
+MPP_SUCCESS on success, MPP_ERROR if the pipeline is still running, MPP_INVALID_PARAM if mpp is NULL.
+
+##### mpp_api_ctl_tasks_destroy
+
+int mpp\_api\_ctl\_tasks\_destroy ( void )
+
+Destroy the three pipeline control tasks created by [mpp_api_init() ](#mpp_api_init()).
+
+Also destroys the associated event groups, semaphore, and stats mutexes. May only be called after all pipelines have been destroyed (prio lists empty).
+
+**Returns**
+
+MPP_SUCCESS on success, MPP_ERROR if any pipeline is still registered.
+
+##### mpp_print_heap
+
+void mpp\_print\_heap ( void )
+
+Print the current free heap size to the log.
+
+Useful to call before and after [mpp_destroy() ](#mpp_destroy()) to verify full cleanup. Implemented for FreeRTOS only; prints a notice on other OSes.
+
+##### mpp_get_free_heap
+
+uint32_t mpp\_get\_free\_heap ( void )
+
+Get the current free heap size.
+
+**Returns**
+
+The amount of free heap memory in bytes
+
 <a id="mpp-types"></a>
 
 ## 2. MPP Types
@@ -551,6 +713,7 @@ This function initializes the Ethernet network interface with the specified IP a
 - struct [mpp_convert_cb_param_t](#mpp_convert_cb_param_t)
 - struct [mpp_filesrc_params_t](#mpp_filesrc_params_t)
 - struct [mpp_filesink_params_t](#mpp_filesink_params_t)
+- struct [mpp_rtspsrc_params_t](#mpp_rtspsrc_params_t)
 - struct [mpp_rtspsink_params_t](#mpp_rtspsink_params_t)
 - struct [mpp_mc_params_t](#mpp_mc_params_t)
 - struct [mpp_display_params_t](#mpp_display_params_t)
@@ -571,20 +734,22 @@ This function initializes the Ethernet network interface with the specified IP a
 - struct [mpp_stats_t.api](#mpp_stats_t_8api)
 - struct [mpp_stats_t.mpp](#mpp_stats_t_8mpp)
 - struct [mpp_stats_t.elem](#mpp_stats_t_8elem)
+- struct [mpp_api_params_t.multicore](#mpp_api_params_t_8multicore)
+- struct [mpp_api_params_t.multicore.core](#mpp_api_params_t_8multicore_8core)
 - struct [mpp_color_t.rgb](#mpp_color_t_8rgb)
-- union [mpp_element_params_t.__unnamed5__](#mpp_element_params_t_8__unnamed5__)
-- struct [mpp_element_params_t.__unnamed5__.static_image](#mpp_element_params_t_8__unnamed5___8static_image)
-- struct [mpp_element_params_t.__unnamed5__.compose](#mpp_element_params_t_8__unnamed5___8compose)
-- struct [mpp_element_params_t.__unnamed5__.labels](#mpp_element_params_t_8__unnamed5___8labels)
-- struct [mpp_element_params_t.__unnamed5__.convert](#mpp_element_params_t_8__unnamed5___8convert)
-- struct [mpp_element_params_t.__unnamed5__.resize](#mpp_element_params_t_8__unnamed5___8resize)
-- struct [mpp_element_params_t.__unnamed5__.color_conv](#mpp_element_params_t_8__unnamed5___8color_conv)
-- struct [mpp_element_params_t.__unnamed5__.rotate](#mpp_element_params_t_8__unnamed5___8rotate)
-- struct [mpp_element_params_t.__unnamed5__.test](#mpp_element_params_t_8__unnamed5___8test)
-- struct [mpp_element_params_t.__unnamed5__.decode](#mpp_element_params_t_8__unnamed5___8decode)
-- struct [mpp_element_params_t.__unnamed5__.encode](#mpp_element_params_t_8__unnamed5___8encode)
-- struct [mpp_element_params_t.__unnamed5__.ml_inference](#mpp_element_params_t_8__unnamed5___8ml_inference)
-- struct [mpp_element_params_t.__unnamed5__.img_quality_check](#mpp_element_params_t_8__unnamed5___8img_quality_check)
+- union [mpp_element_params_t.__unnamed7__](#mpp_element_params_t_8__unnamed7__)
+- struct [mpp_element_params_t.__unnamed7__.static_image](#mpp_element_params_t_8__unnamed7___8static_image)
+- struct [mpp_element_params_t.__unnamed7__.compose](#mpp_element_params_t_8__unnamed7___8compose)
+- struct [mpp_element_params_t.__unnamed7__.labels](#mpp_element_params_t_8__unnamed7___8labels)
+- struct [mpp_element_params_t.__unnamed7__.convert](#mpp_element_params_t_8__unnamed7___8convert)
+- struct [mpp_element_params_t.__unnamed7__.resize](#mpp_element_params_t_8__unnamed7___8resize)
+- struct [mpp_element_params_t.__unnamed7__.color_conv](#mpp_element_params_t_8__unnamed7___8color_conv)
+- struct [mpp_element_params_t.__unnamed7__.rotate](#mpp_element_params_t_8__unnamed7___8rotate)
+- struct [mpp_element_params_t.__unnamed7__.test](#mpp_element_params_t_8__unnamed7___8test)
+- struct [mpp_element_params_t.__unnamed7__.decode](#mpp_element_params_t_8__unnamed7___8decode)
+- struct [mpp_element_params_t.__unnamed7__.encode](#mpp_element_params_t_8__unnamed7___8encode)
+- struct [mpp_element_params_t.__unnamed7__.ml_inference](#mpp_element_params_t_8__unnamed7___8ml_inference)
+- struct [mpp_element_params_t.__unnamed7__.img_quality_check](#mpp_element_params_t_8__unnamed7___8img_quality_check)
 
 **Macros**
 
@@ -593,7 +758,14 @@ This function initializes the Ethernet network interface with the specified IP a
 - #define [MPP_IP_ADDR_LEN](#mpp_ip_addr_len)
 - #define [MPP_INVALID](#mpp_invalid)
 - #define [MPP_EVENT_ALL](#mpp_event_all)
+- #define [MPP_MAX_CORES](#mpp_max_cores)
 - #define [MPP_MAX_RPMSG_EPT_PER_CORE](#mpp_max_rpmsg_ept_per_core)
+- #define [CONFIG_MPP_RPMSG_ADDR_START](#config_mpp_rpmsg_addr_start)
+- #define [CONFIG_MPP_MCMGR_DATA_START](#config_mpp_mcmgr_data_start)
+- #define [MPP_RPMSG_ADDR_CORE_START](#mpp_rpmsg_addr_core_start)
+- #define [MPP_RPMSG_ADDR_CORE_END](#mpp_rpmsg_addr_core_end)
+- #define [MPP_RPMSG_ADDR_API_TX](#mpp_rpmsg_addr_api_tx)
+- #define [MPP_RPMSG_ADDR_API_RX](#mpp_rpmsg_addr_api_rx)
 - #define [MAX_TENSOR_DIMS](#max_tensor_dims)
 
 **Typedefs**
@@ -619,6 +791,8 @@ This function initializes the Ethernet network interface with the specified IP a
   [MPP_EVENT_CONVERT_PARAMS_READY](#mpp_event_convert_params_ready),
 
   [MPP_EVENT_INTERNAL_TEST_RESERVED](#mpp_event_internal_test_reserved),
+
+  [MPP_EVENT_MC_REMOTE_DEINIT](#mpp_event_mc_remote_deinit),
 
   [MPP_EVENT_NUM](#mpp_event_num) }
 - enum [mpp_exec_flag_t](#mpp_exec_flag_t) {
@@ -724,22 +898,28 @@ This function initializes the Ethernet network interface with the specified IP a
   [NUM_STREAMS](#num_streams) }
 - enum [mpp_rpmsg_endpoint_addr_e](#mpp_rpmsg_endpoint_addr_e) {
 
-  [MPP_RPMSG_EPT_ADDR_INVALID](#mpp_rpmsg_ept_addr_invalid),
+  [MPP_RPMSG_ADDR_INVALID](#mpp_rpmsg_addr_invalid),
 
-  [MPP_RPMSG_EPT_ADDR_CORE0_START](#mpp_rpmsg_ept_addr_core0_start),
+  [MPP_RPMSG_ADDR_START](#mpp_rpmsg_addr_start),
 
-  [MPP_RPMSG_EPT_ADDR_CORE0_STOP](#mpp_rpmsg_ept_addr_core0_stop),
+  [MPP_RPMSG_ADDR_END](#mpp_rpmsg_addr_end),
 
-  [MPP_RPMSG_EPT_ADDR_CORE1_START](#mpp_rpmsg_ept_addr_core1_start),
+  [MPP_RPMSG_ADDR_API_TX_BASE](#mpp_rpmsg_addr_api_tx_base),
 
-  [MPP_RPMSG_EPT_ADDR_CORE1_STOP](#mpp_rpmsg_ept_addr_core1_stop) }
+  [MPP_RPMSG_ADDR_API_RX_BASE](#mpp_rpmsg_addr_api_rx_base),
+
+  [MPP_RPMSG_ADDR_MAX](#mpp_rpmsg_addr_max) }
 - enum [mpp_mcmgr_event_data_e](#mpp_mcmgr_event_data_e) {
 
-  [MPP_MCMGR_EVENT_DATA_INVALID](#mpp_mcmgr_event_data_invalid),
+  [MPP_MCMGR_DATA_INVALID](#mpp_mcmgr_data_invalid),
 
-  [MPP_MCMGR_EVENT_DATA_START](#mpp_mcmgr_event_data_start),
+  [MPP_MCMGR_DATA_START](#mpp_mcmgr_data_start),
 
-  [MPP_MCMGR_EVENT_DATA_STOP](#mpp_mcmgr_event_data_stop) }
+  [MPP_MCMGR_DATA_END](#mpp_mcmgr_data_end),
+
+  [MPP_MCMGR_DATA_API](#mpp_mcmgr_data_api),
+
+  [MPP_MCMGR_DATA_MAX](#mpp_mcmgr_data_max) }
 - enum [rtp_payload_type_t](#rtp_payload_type_t) {
 
   [RTP_PAYLOAD_TYPE_JPEG](#rtp_payload_type_jpeg),
@@ -829,6 +1009,7 @@ API initialization parameters.
 |int|pipeline\_task\_max\_prio|pipeline tasks maximum priority.|
 |int|pipeline\_rc\_task\_prio|0: sets default value|
 |int|pipeline\_pr\_task\_prio|0: sets default value|
+|struct mpp_api_params_t::@3|multicore||
 
 ##### mpp_params_t
 
@@ -845,6 +1026,7 @@ Pipeline creation parameters.
 |[mpp_exec_flag_t ](#mpp_exec_flag_t)|exec\_flag|execution flag|
 |void *|cb\_userdata|user data pointer passed to the callback|
 |[mpp_stats_t ](#mpp_stats_t) *|stats|pointer to statistics structure|
+|uint32_t|core\_id|core ID where the pipeline runs|
 
 ##### mpp_camera_stream_cfg
 
@@ -860,6 +1042,7 @@ Camera stream configuration for multi-stream cameras.
 |bool|active|Stream is active or not.|
 |int|height||
 |int|width||
+|int|usb\_camera\_index|Set to -1 (or leave zero-initialised) for automatic assignment (first free g_Videos[] slot). Use a non-negative value to select a specific camera when a single USB device exposes multiple UVC interfaces (e.g. 0 = RGB, 1 = IR).|
 
 ##### mpp_camera_params_t
 
@@ -945,6 +1128,22 @@ File sink parameters.
 |bool|append\_mode|Flag to enable append mode (false = overwrite)|
 |uint64_t|max\_file\_size|Maximum file size in bytes.|
 
+##### mpp_rtspsrc_params_t
+
+**struct mpp\_rtspsrc\_params\_t**
+
+RTSP source parameters.
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|const char *|rtsp\_url|RTSP URL (rtsp://ip:port/path)|
+|uint64_t|rtsp\_buffer\_size|Maximum buffer size in bytes.|
+|int|width|Source image width in pixels.|
+|int|height|Source image height in pixels.|
+|[mpp_pixel_format_t ](#mpp_pixel_format_t)|format|Pixel format of output buffer (use MPP_PIXEL_JPEG for compressed JPEG)|
+
 ##### mpp_rtspsink_params_t
 
 **struct mpp\_rtspsink\_params\_t**
@@ -973,9 +1172,10 @@ MC element parameters.
 |type|name|description|
 | - | - | - |
 |void *|rpmsg\_inst|pointer to rpmsg instance|
-|uint16_t|remote\_event\_data|remote event data for mcmgr|
+|uint32_t|remote\_core\_id|remote core id|
 |uint32_t|local\_rpmsg\_addr|local rpmsg endpoint address|
 |uint32_t|remote\_rpmsg\_addr|remote rpmsg endpoint address|
+|uint16_t|event\_data|event data for mcmgr|
 
 ##### mpp_display_params_t
 
@@ -1079,7 +1279,7 @@ mpp color encoding
 |type|name|description|
 | - | - | - |
 |uint32_t|raw|Raw color.|
-|struct mpp_color_t::@3|rgb|RGB color|
+|struct mpp_color_t::@5|rgb|RGB color|
 
 ##### mpp_labeled_rect_t
 
@@ -1200,7 +1400,7 @@ Static image and Processing elements parameters.
 
 **Data Fields**
 
-- union mpp_element_params_t::@4 @5
+- union mpp_element_params_t::@6 @7
 - [mpp_stats_t ](#mpp_stats_t) * stats
 
 ##### mpp_stats_t.api
@@ -1241,6 +1441,28 @@ Static image and Processing elements parameters.
 |[mpp_elem_handle_t ](#mpp_elem_handle_t)|hnd||
 |unsigned int|elem\_exec\_time|element execution time (ms)|
 
+##### mpp_api_params_t.multicore
+
+**struct mpp\_api\_params\_t.multicore**
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|uint32_t|n\_remote\_cores|number of remote cores|
+|struct mpp_api_params_t::@3::@4|core[MPP_MAX_CORES - 1]||
+
+##### mpp_api_params_t.multicore.core
+
+**struct mpp\_api\_params\_t.multicore.core**
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|uint32_t|remote\_core\_id|remote core id|
+|void *|rpmsg\_inst|pointer to rpmsg instance|
+
 ##### mpp_color_t.rgb
 
 **struct mpp\_color\_t.rgb**
@@ -1256,32 +1478,32 @@ rgb color values
 |uint8_t|B|Blue byte.|
 |uint8_t|pad|padding byte|
 
-##### mpp_element_params_t.__unnamed5__
+##### mpp_element_params_t.__unnamed7__
 
-**union mpp\_element\_params\_t.\_\_unnamed5\_\_**
+**union mpp\_element\_params\_t.\_\_unnamed7\_\_**
 
 **Data Fields**
 
 |type|name|description|
 | - | - | - |
 |[mpp_camera_params_t ](#mpp_camera_params_t)|camera|Camera element's parameters.|
-|struct mpp_element_params_t::@4::@6|static\_image|Static Image element's parameters.|
+|struct mpp_element_params_t::@6::@8|static\_image|Static Image element's parameters.|
 |[mpp_mc_params_t ](#mpp_mc_params_t)|mc\_source|Multicore source element's parameters|
-|struct mpp_element_params_t::@4::@7|compose|Compose element's parameters.|
-|struct mpp_element_params_t::@4::@8|labels|Labeled Rectangle and Landmarks element's parameters.|
-|struct mpp_element_params_t::@4::@9|convert|Convert element's parameters.|
-|struct mpp_element_params_t::@4::@10|resize|Resize element's parameters.|
-|struct mpp_element_params_t::@4::@11|color\_conv|Color convert element's parameters.|
-|struct mpp_element_params_t::@4::@12|rotate|Rotate element's parameters.|
-|struct mpp_element_params_t::@4::@13|test|Test element's parameters.|
-|struct mpp_element_params_t::@4::@14|decode|Decoder element's parameters.|
-|struct mpp_element_params_t::@4::@15|encode|Encoder element's parameters.|
-|struct mpp_element_params_t::@4::@16|ml\_inference|ML inference element's parameters.|
-|struct mpp_element_params_t::@4::@17|img\_quality\_check|Image quality check element's parameters.|
+|struct mpp_element_params_t::@6::@9|compose|Compose element's parameters.|
+|struct mpp_element_params_t::@6::@10|labels|Labeled Rectangle and Landmarks element's parameters.|
+|struct mpp_element_params_t::@6::@11|convert|Convert element's parameters.|
+|struct mpp_element_params_t::@6::@12|resize|Resize element's parameters.|
+|struct mpp_element_params_t::@6::@13|color\_conv|Color convert element's parameters.|
+|struct mpp_element_params_t::@6::@14|rotate|Rotate element's parameters.|
+|struct mpp_element_params_t::@6::@15|test|Test element's parameters.|
+|struct mpp_element_params_t::@6::@16|decode|Decoder element's parameters.|
+|struct mpp_element_params_t::@6::@17|encode|Encoder element's parameters.|
+|struct mpp_element_params_t::@6::@18|ml\_inference|ML inference element's parameters.|
+|struct mpp_element_params_t::@6::@19|img\_quality\_check|Image quality check element's parameters.|
 
-##### mpp_element_params_t.__unnamed5__.static_image
+##### mpp_element_params_t.__unnamed7__.static_image
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.static\_image**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.static\_image**
 
 Static Image element's parameters.
 
@@ -1292,9 +1514,9 @@ Static Image element's parameters.
 |[mpp_img_params_t ](#mpp_img_params_t)|img\_params|static image parameters|
 |void *|img\_buffer|static image buffer address|
 
-##### mpp_element_params_t.__unnamed5__.compose
+##### mpp_element_params_t.__unnamed7__.compose
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.compose**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.compose**
 
 Compose element's parameters.
 
@@ -1311,9 +1533,9 @@ Compose element's parameters.
 |int|out\_width|output buffer width|
 |int|out\_height|output buffer height|
 
-##### mpp_element_params_t.__unnamed5__.labels
+##### mpp_element_params_t.__unnamed7__.labels
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.labels**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.labels**
 
 Labeled Rectangle and Landmarks element's parameters.
 
@@ -1328,9 +1550,9 @@ Labeled Rectangle and Landmarks element's parameters.
 |uint32_t|detected\_landmk|detected landmarks|
 |[mpp_landmark_t ](#mpp_landmark_t) *|landmarks|array of landmark data|
 
-##### mpp_element_params_t.__unnamed5__.convert
+##### mpp_element_params_t.__unnamed7__.convert
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.convert**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.convert**
 
 Convert element's parameters.
 
@@ -1352,9 +1574,9 @@ Convert element's parameters.
 |bool|stripe\_in|input stripe mode|
 |bool|stripe\_out|output stripe mode|
 
-##### mpp_element_params_t.__unnamed5__.resize
+##### mpp_element_params_t.__unnamed7__.resize
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.resize**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.resize**
 
 Resize element's parameters.
 
@@ -1363,9 +1585,9 @@ Resize element's parameters.
 - unsigned int width
 - unsigned int height
 
-##### mpp_element_params_t.__unnamed5__.color_conv
+##### mpp_element_params_t.__unnamed7__.color_conv
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.color\_conv**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.color\_conv**
 
 Color convert element's parameters.
 
@@ -1373,9 +1595,9 @@ Color convert element's parameters.
 
 - [mpp_pixel_format_t ](#mpp_pixel_format_t) pixel\_format
 
-##### mpp_element_params_t.__unnamed5__.rotate
+##### mpp_element_params_t.__unnamed7__.rotate
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.rotate**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.rotate**
 
 Rotate element's parameters.
 
@@ -1383,9 +1605,9 @@ Rotate element's parameters.
 
 - [mpp_rotate_degree_t ](#mpp_rotate_degree_t) angle
 
-##### mpp_element_params_t.__unnamed5__.test
+##### mpp_element_params_t.__unnamed7__.test
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.test**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.test**
 
 Test element's parameters.
 
@@ -1396,9 +1618,9 @@ Test element's parameters.
 - unsigned int height
 - [mpp_pixel_format_t ](#mpp_pixel_format_t) format
 
-##### mpp_element_params_t.__unnamed5__.decode
+##### mpp_element_params_t.__unnamed7__.decode
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.decode**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.decode**
 
 Decoder element's parameters.
 
@@ -1411,9 +1633,9 @@ Decoder element's parameters.
 |unsigned int|height||
 |[mpp_pixel_format_t ](#mpp_pixel_format_t)|out\_format||
 
-##### mpp_element_params_t.__unnamed5__.encode
+##### mpp_element_params_t.__unnamed7__.encode
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.encode**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.encode**
 
 Encoder element's parameters.
 
@@ -1440,9 +1662,9 @@ Encoder element's parameters.
 |int32_t|max\_spatial\_bitrate|Maximum spatial layer bitrate.|
 |int32_t|entropy\_coding\_mode|0: CAVLC, 1: CABAC|
 
-##### mpp_element_params_t.__unnamed5__.ml_inference
+##### mpp_element_params_t.__unnamed7__.ml_inference
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.ml\_inference**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.ml\_inference**
 
 ML inference element's parameters.
 
@@ -1459,9 +1681,9 @@ ML inference element's parameters.
 |[mpp_tensor_order_t ](#mpp_tensor_order_t)|tensor\_order|model input tensor component order|
 |[mpp_inference_params_t ](#mpp_inference_params_t)|inference\_params|model specific parameters used by the inference|
 
-##### mpp_element_params_t.__unnamed5__.img_quality_check
+##### mpp_element_params_t.__unnamed7__.img_quality_check
 
-**struct mpp\_element\_params\_t.\_\_unnamed5\_\_.img\_quality\_check**
+**struct mpp\_element\_params\_t.\_\_unnamed7\_\_.img\_quality\_check**
 
 Image quality check element's parameters.
 
@@ -1505,11 +1727,53 @@ Invalid pipeline handle.
 
 Bit mask to receive all Events.
 
+##### MPP_MAX_CORES
+
+#define **MPP\_MAX\_CORES**
+
+Maximum number of cores supported in a multicore MPP system.
+
 ##### MPP_MAX_RPMSG_EPT_PER_CORE
 
 #define **MPP\_MAX\_RPMSG\_EPT\_PER\_CORE**
 
 Maximum number of RPMsg endpoints per core.
+
+##### CONFIG_MPP_RPMSG_ADDR_START
+
+#define **CONFIG\_MPP\_RPMSG\_ADDR\_START**
+
+Base RPMsg endpoint address; override with CONFIG_MPP_RPMSG_ADDR_START.
+
+##### CONFIG_MPP_MCMGR_DATA_START
+
+#define **CONFIG\_MPP\_MCMGR\_DATA\_START**
+
+Base MCMGR event data value for MPP; override with CONFIG_MPP_MCMGR_DATA_START.
+
+##### MPP_RPMSG_ADDR_CORE_START
+
+#define **MPP\_RPMSG\_ADDR\_CORE\_START**
+
+First RPMsg endpoint address for a given core.
+
+##### MPP_RPMSG_ADDR_CORE_END
+
+#define **MPP\_RPMSG\_ADDR\_CORE\_END**
+
+Last RPMsg endpoint address for a given core.
+
+##### MPP_RPMSG_ADDR_API_TX
+
+#define **MPP\_RPMSG\_ADDR\_API\_TX**
+
+Remote API transmit endpoint address for a given core.
+
+##### MPP_RPMSG_ADDR_API_RX
+
+#define **MPP\_RPMSG\_ADDR\_API\_RX**
+
+Remote API receive endpoint address for a given core.
 
 ##### MAX_TENSOR_DIMS
 
@@ -1566,6 +1830,8 @@ Bundle inference function type.
   MPP_EVENT_CONVERT_PARAMS_READY,
 
   MPP_EVENT_INTERNAL_TEST_RESERVED,
+
+  MPP_EVENT_MC_REMOTE_DEINIT,
 
   MPP_EVENT_NUM }
 
@@ -1713,15 +1979,17 @@ Camera stream type - for multiple stream camera.
 
 **enum mpp\_rpmsg\_endpoint\_addr\_e**
 
-{ MPP_RPMSG_EPT_ADDR_INVALID,
+{ MPP_RPMSG_ADDR_INVALID,
 
-  MPP_RPMSG_EPT_ADDR_CORE0_START,
+  MPP_RPMSG_ADDR_START,
 
-  MPP_RPMSG_EPT_ADDR_CORE0_STOP,
+  MPP_RPMSG_ADDR_END,
 
-  MPP_RPMSG_EPT_ADDR_CORE1_START,
+  MPP_RPMSG_ADDR_API_TX_BASE,
 
-  MPP_RPMSG_EPT_ADDR_CORE1_STOP }
+  MPP_RPMSG_ADDR_API_RX_BASE,
+
+  MPP_RPMSG_ADDR_MAX }
 
 Multicore pipeline RPMSG endpoint addresses.
 
@@ -1729,11 +1997,15 @@ Multicore pipeline RPMSG endpoint addresses.
 
 **enum mpp\_mcmgr\_event\_data\_e**
 
-{ MPP_MCMGR_EVENT_DATA_INVALID,
+{ MPP_MCMGR_DATA_INVALID,
 
-  MPP_MCMGR_EVENT_DATA_START,
+  MPP_MCMGR_DATA_START,
 
-  MPP_MCMGR_EVENT_DATA_STOP }
+  MPP_MCMGR_DATA_END,
+
+  MPP_MCMGR_DATA_API,
+
+  MPP_MCMGR_DATA_MAX }
 
 Multicore pipeline MCMGR remote event data.
 
@@ -1834,6 +2106,7 @@ Inference type.
 - #define [MPP_MUTEX_TIMEOUT](#mpp_mutex_timeout)
 - #define [MPP_MUTEX_ERROR](#mpp_mutex_error)
 - #define [MPP_MALLOC_ERROR](#mpp_malloc_error)
+- #define [MPP_UNSUPPORTED](#mpp_unsupported)
 
 ### 3.1 Detailed Description
 
@@ -1894,3 +2167,9 @@ Mutex error occured.
 #define **MPP\_MALLOC\_ERROR**
 
 Memory allocation error occured.
+
+##### MPP_UNSUPPORTED
+
+#define **MPP\_UNSUPPORTED**
+
+Operation not supported for this element.

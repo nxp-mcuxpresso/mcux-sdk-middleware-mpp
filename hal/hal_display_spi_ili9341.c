@@ -376,6 +376,13 @@ hal_display_status_t HAL_DisplayDev_SpiIli9341_Init(
 hal_display_status_t HAL_DisplayDev_SpiIli9341_Deinit(const display_dev_t *dev)
 {
     hal_display_status_t ret = kStatus_HAL_DisplaySuccess;
+
+    if (s_transfer_done != NULL)
+    {
+        hal_sema_delete(s_transfer_done);
+        s_transfer_done = NULL;
+    }
+
     return ret;
 }
 

@@ -42,6 +42,8 @@
 
 #include "rpmsg_lite.h"
 
+#include "shared_data.h"
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -81,7 +83,7 @@
 #define IMG_CONVERT_DEV_NAME NULL
 #endif
 
-/* set this flag to perform an image rotation (1: 90°, 2: 180°, 3: 270°) */
+/* set this flag to perform an image rotation (1: 90, 2: 180, 3: 270) */
 #ifndef IMG_ROTATE
 #define IMG_ROTATE 0
 #endif
@@ -144,6 +146,12 @@ typedef struct _args_t {
 static struct rpmsg_lite_instance *rpmsg_inst = NULL;
 
 static mpp_stats_t mp_stats = {0};
+
+/* Set by the event callback when the remote core triggers deinit.
+ * Private to this core - not part of the shared memory struct. */
+static volatile uint32_t remote_deinit_requested = 0;
+
+user_data_t user_data __attribute__((section(".noinit.$shared_user_data")));
 
 /*******************************************************************************
  * Prototypes
@@ -227,8 +235,15 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
     static bool chksm_done = false;
     static int count = 0;   /* frame counter, to ignore first frames */
     static int chksm_time = 0;  /* time of checksum */
+    (void) user_data;
 
     switch(evt) {
+    case MPP_EVENT_MC_REMOTE_DEINIT:
+        /* Remote core has started deinit - defer teardown to app_task. */
+        PRINTF("\r\nRemote core deinit notified - scheduling local pipeline teardown\r\n");
+        remote_deinit_requested = 1;
+        break;
+
     case MPP_EVENT_INTERNAL_TEST_RESERVED:
         chksm = (checksum_data_t *)evt_data;
         if (chksm == NULL) {
@@ -300,7 +315,7 @@ int main(int argc, char *argv[])
     BOARD_Init();
 #endif
 
-    PRINTF("****** %s TEST test_image_convert_display ******\r\n", TEST_MODE);
+    PRINTF("****** %s TEST test_mc_image_convert_display ******\r\n", TEST_MODE);
     PRINTF("****** PARAMS: IMG_CONVERT_CPU = [%d] ******\r\n", IMG_CONVERT_CPU);
     PRINTF("****** PARAMS: IMG_CONVERT_GPU = [%d] ******\r\n", IMG_CONVERT_GPU);
     PRINTF("****** PARAMS: IMAGE_NAME = [%s] ******\r\n", IMAGE_NAME);
@@ -399,65 +414,53 @@ static int dyn_crop_loop(mpp_t mp, mpp_elem_handle_t convert_h, mpp_element_para
 }
 #endif
 
-static void app_task(void *params)
+static int build_pipeline(args_t *args, bool stripe_mode,
+                           mpp_t *mp_out, mpp_elem_handle_t *convert_h_out)
 {
-    bool stripe_mode = (APP_STRIPE_MODE > 0)? true : false;
-    int ret = 0;
-    args_t *args = (args_t *) params;
+    int ret;
     mpp_elem_handle_t convert_h = (mpp_elem_handle_t) NULL;
 
-    PRINTF("[%s]\r\n", mpp_get_version());
+    uint32_t current_core_id = MCMGR_GetCurrentCore();
+    uint32_t remote_core_id = current_core_id ? 0 : 1;
 
-    /* Boot secondary core */
-    (void) mpp_boot_secondary_core();
-    PRINTF("Secondary core is up\r\n");
-
-    /* Initialize RPMSG module */
-    rpmsg_inst = (struct rpmsg_lite_instance *) mpp_init_rpmsg();
-    if (rpmsg_inst == NULL) {
-        PRINTF("RPMSG init failed\r\n");
-        goto err;
-    }
-    PRINTF("RPMsg intialized\r\n");
-    PRINTF("RPMsg shared mem base: 0x%x\r\n", (uint32_t) rpmsg_inst->sh_mem_base);
-
-    /* add support for params */
-    ret = mpp_api_init(NULL);
-    if (ret)
-        goto err;
+    /* Configure api params for multicore */
+    mpp_api_params_t api_params;
+    memset(&api_params, 0, sizeof(api_params));
+    api_params.multicore.n_remote_cores = 1;
+    api_params.multicore.core[0].remote_core_id = remote_core_id;
+    api_params.multicore.core[0].rpmsg_inst = rpmsg_inst;
+    ret = mpp_api_init(&api_params);
+    if (ret) return ret;
 
     mpp_t mp;
     mpp_params_t mpp_params;
     memset(&mpp_params, 0, sizeof(mpp_params));
     mpp_params.exec_flag = MPP_EXEC_RC;
     mpp_params.evt_callback_f = &mpp_event_listener;
+    mpp_params.cb_userdata = &user_data;
     mpp_params.mask = MPP_EVENT_ALL;
     mpp_params.stats = &mp_stats;
     mp = mpp_create(&mpp_params, &ret);
-    if (mp == MPP_INVALID)
-	goto err;
+    if (mp == MPP_INVALID) return ret;
+
+    user_data.core0_mpp = mp;
 
     /* add mc source element */
     static mpp_mc_params_t mc_src_params;
     memset(&mc_src_params, 0, sizeof(mc_src_params));
     mc_src_params.rpmsg_inst = rpmsg_inst;
-    mc_src_params.remote_event_data = MPP_MCMGR_EVENT_DATA_START;
-    mc_src_params.local_rpmsg_addr = MPP_RPMSG_EPT_ADDR_CORE0_START;
-    mc_src_params.remote_rpmsg_addr = MPP_RPMSG_EPT_ADDR_CORE1_START;
+    mc_src_params.remote_core_id = remote_core_id;
+    mc_src_params.event_data = MPP_MCMGR_DATA_START;
+    mc_src_params.local_rpmsg_addr = MPP_RPMSG_ADDR_CORE_START(current_core_id);
+    mc_src_params.remote_rpmsg_addr = MPP_RPMSG_ADDR_CORE_START(remote_core_id);
     ret = mpp_mc_source_add(mp, &mc_src_params, NULL);
-    if (ret) {
-        PRINTF("Failed to add element SOURCE_MC\n");
-        goto err;
-    }
+    if (ret) { PRINTF("Failed to add element SOURCE_MC\n"); return ret; }
 
     /* Add element convert */
     mpp_element_params_t elem_params;
     set_img_convert_params(&elem_params);
     ret = mpp_element_add(mp, MPP_ELEMENT_CONVERT, &elem_params, &convert_h);
-    if (ret ) {
-        PRINTF("Failed to add element CONVERT\n");
-        goto err;
-    }
+    if (ret) { PRINTF("Failed to add element CONVERT\n"); return ret; }
 
     /* Set display's parameters */
     mpp_display_params_t disp_params;
@@ -467,20 +470,113 @@ static void app_task(void *params)
     disp_params.height = DISP_BUF_HEIGHT;
     disp_params.stripe = stripe_mode;
     ret = mpp_display_add(mp, args->display_name, &disp_params);
-    if (ret) {
-	    PRINTF("Failed to add display %s\r\n", args->display_name);
-		goto err;
-    }
+    if (ret) { PRINTF("Failed to add display %s\r\n", args->display_name); return ret; }
 
     mpp_stats_enable(MPP_STATS_GRP_MPP);
 
     ret = mpp_start(mp, 1, false);
-    if (ret) {
-        PRINTF("Failed to start pipeline\r\n");
+    if (ret) { PRINTF("Failed to start pipeline\r\n"); return ret; }
+
+    *mp_out = mp;
+    *convert_h_out = convert_h;
+    return 0;
+}
+
+static void app_task(void *params)
+{
+    bool stripe_mode = (APP_STRIPE_MODE > 0)? true : false;
+    int ret = 0;
+    args_t *args = (args_t *) params;
+
+    PRINTF("[%s]\r\n", mpp_get_version());
+
+    /* Boot secondary core and initialize RPMSG once, outside the deinit loop.
+     * These resources are permanent for the lifetime of the secondary core
+     * session and are intentionally not freed between iterations. */
+    (void) mpp_boot_secondary_core();
+    PRINTF("Secondary core is up\r\n");
+
+    rpmsg_inst = (struct rpmsg_lite_instance *) mpp_init_rpmsg();
+    if (rpmsg_inst == NULL) {
+        PRINTF("RPMSG init failed\r\n");
         goto err;
     }
+    PRINTF("RPMsg initialized\r\n");
+    PRINTF("RPMsg shared mem base: 0x%x\r\n", (uint32_t) rpmsg_inst->sh_mem_base);
+    PRINTF("User data address: 0x%x\r\n", (uint32_t) &user_data);
+    remote_deinit_requested = 0;
+
+#if defined(CONFIG_TEST_MPP_DEINIT)
+    /* Measure heap after the one-time RPMSG/secondary-core init so that
+     * permanent allocations (rpmsg_lite_instance, virtqueues, env semaphores)
+     * are excluded from the MPP deinit accounting. */
+    uint32_t start_free_heap = mpp_get_free_heap();
+    PRINTF("Available heap: %u kB\r\n", start_free_heap >> 10);
+    for (;;) {
+        mpp_t mp = NULL;
+        mpp_elem_handle_t convert_h = 0;
+        ret = build_pipeline(args, stripe_mode, &mp, &convert_h);
+        if (ret) goto err;
+        uint32_t crt_free_heap = mpp_get_free_heap();
+        PRINTF("Crt available heap: %u kB\r\n", crt_free_heap >> 10);
+        PRINTF("Used heap: %u kB\r\n", (uint32_t)(start_free_heap - crt_free_heap) >> 10);
+#if (CONFIG_TEST_MPP_DEINIT == 2)
+        /* Value 2: core1 is the deinit initiator.
+         * Core0 waits here (no self-imposed timeout) until it receives
+         * MPP_EVENT_MC_REMOTE_DEINIT from core1, which sets the flag via the
+         * event callback. */
+        PRINTF("Waiting for remote deinit from core1...\r\n");
+        for (;;)
+        {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            if (remote_deinit_requested)
+            {
+                PRINTF("remote_deinit_requested = %d\r\n", remote_deinit_requested);
+                break;
+            }
+        }
+        remote_deinit_requested = 0;
+        PRINTF("\r\nRemote deinit from core1 received - initiating teardown\r\n");
+#else
+        /* Value 1 (default): core0 is the deinit initiator.
+         * Wait up to 15 s (or until remote signals first), then tear down. */
+        PRINTF("Waiting 15 s before initiating teardown\r\n");
+        TickType_t t0 = xTaskGetTickCount();
+        while ((xTaskGetTickCount() - t0) < pdMS_TO_TICKS(15000))
+        {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            /* Deferred teardown: if the remote core has requested deinit via
+             * MPP_EVENT_MC_REMOTE_DEINIT, stop and destroy immediately. */
+            if (remote_deinit_requested)
+            {
+                PRINTF("remote_deinit_requested = %d\r\n", remote_deinit_requested);
+                break;
+            }
+        }
+        PRINTF("\r\nInitiating teardown\r\n");
+#endif /* CONFIG_TEST_MPP_DEINIT == 2 */
+        mpp_stop(mp);
+        mpp_destroy(mp);
+        mpp_api_ctl_tasks_destroy();
+        PRINTF("Local pipeline torn down\r\n");
+        uint32_t end_free_heap = mpp_get_free_heap();
+        PRINTF("\r\nCrt available heap: %u kB\r\n", end_free_heap >> 10);
+        PRINTF("unfreed heap: %u bytes\r\n", (uint32_t)(start_free_heap - end_free_heap));
+        if (start_free_heap == end_free_heap)
+            PRINTF("test_mc_image_convert_display MPP deinit - PASSED\r\n");
+        else
+            PRINTF("test_mc_image_convert_display MPP deinit - FAILED\r\n");
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+#else
+    mpp_t mp;
+    mpp_elem_handle_t convert_h;
+    ret = build_pipeline(args, stripe_mode, &mp, &convert_h);
+    if (ret) goto err;
 
 #if (IMG_DYN_CROP == 1)
+    mpp_element_params_t elem_params;
+    set_img_convert_params(&elem_params);
     ret = dyn_crop_loop(mp, convert_h, &elem_params);
     if (ret) {
         mpp_stop(mp);
@@ -488,15 +584,50 @@ static void app_task(void *params)
     }
 #endif
 
+    uint32_t tick_stop = 0, tick_start = 0;
+    uint32_t crt_state = 0;
+
     for (;;)
     {
         vTaskDelay(pdMS_TO_TICKS(TEST_CHECK_PERIOD_MS));
+
+        if (crt_state == 0 && (xTaskGetTickCount() - tick_start) > pdMS_TO_TICKS(3000))
+        {
+            PRINTF("\r\nStopping remote core pipeline\r\n");
+            uint32_t mpp_ret = mpp_stop(user_data.core1_mpp);
+            if (!mpp_ret)
+            {
+                PRINTF("Remote core pipeline stopped successfully\r\n");
+            }
+            else
+            {
+                PRINTF("Failed to stop remote core pipeline\r\n");
+            }
+            tick_stop = xTaskGetTickCount();
+            crt_state = 1;
+        }
+        if (crt_state == 1 && (xTaskGetTickCount() - tick_stop) > pdMS_TO_TICKS(3000))
+        {
+            PRINTF("\r\nRestarting remote core pipeline\r\n");
+            uint32_t mpp_ret = mpp_start(user_data.core1_mpp, 0, false);
+            if (!mpp_ret) 
+            {
+                PRINTF("Remote core pipeline restarted successfully\r\n");
+            } 
+            else 
+            {
+                PRINTF("Failed to restart remote core pipeline\r\n");
+            }
+            tick_start = xTaskGetTickCount();
+            crt_state = 0;
+        }
 #ifdef DISPLAY_FPS
         mpp_stats_disable(MPP_STATS_GRP_MPP);
         PRINTF("==========\n\rFPS: %d\n\r==========\n\r", mp_stats.mpp.fps);
         mpp_stats_enable(MPP_STATS_GRP_MPP);
 #endif
     }
+#endif /* CONFIG_TEST_MPP_DEINIT */
 
 err:
     for (;;)

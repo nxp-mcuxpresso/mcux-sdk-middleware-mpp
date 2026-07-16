@@ -51,12 +51,19 @@
  */
 #define HAL_MC_MEM_ALIGN        4
 
+
+/* Max time (ms) to wait for a DEINIT_NOTIFY_RSP from the remote peer. */
+#define HAL_MC_DEINIT_RSP_TIMEOUT_MS  10000U
+/* Polling interval (ms) used when waiting for the DEINIT_NOTIFY_RSP. */
+#define HAL_MC_DEINIT_RSP_POLL_MS     10U
+
 /**
  * multicore device private data structure
  */
 typedef struct {
     struct rpmsg_lite_instance *rpmsg_inst; /*!< pointer to rpmsg instance */
-    mpp_mcmgr_event_data_e remote_event_data; /*!< remote event data for mcmgr */
+    uint32_t remote_core_id; /*!< remote core id */
+    mpp_mcmgr_event_data_e event_data; /*!< event data for mcmgr */
     uint32_t local_rpmsg_addr; /*!< local rpmsg endpoint address */
     uint32_t remote_rpmsg_addr; /*!< remote rpmsg endpoint address */
     struct rpmsg_lite_endpoint *rpmsg_ept; /*!< rpmsg endpoint handle */
@@ -64,18 +71,25 @@ typedef struct {
     volatile bool remote_ready; /*!< flag indicating if remote core is ready */
     uint32_t nb_buffers; /*!< number of input buffers */
     hal_mutex_t mutex; /*!< Mutex to lock the device during an operation */
+    /* event callback: set by element layer to receive pipeline-level events */
+    int (*callback)(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data);
+    void *cb_user_data; /*!< user data forwarded to callback */
+    volatile bool deinit_notify_received; /*!< true when remote sent MC_MSG_TYPE_DEINIT_NOTIFY */
 } mc_dev_private_data_t;
 
 typedef struct {
     volatile mpp_mcmgr_event_data_e mcmgr_event_data;
+    volatile uint32_t remote_core_id;
     volatile bool remote_ready;
 } mc_remote_event_data_t;
 
 typedef enum {
-    MC_MSG_TYPE_BUF_DESC_REQ = 0,
-    MC_MSG_TYPE_BUF_DESC_RESP = 1,
-    MC_MSG_TYPE_DATA_REQ = 2,
-    MC_MSG_TYPE_DATA_RESP = 3
+    MC_MSG_TYPE_BUF_DESC_REQ   = 0,
+    MC_MSG_TYPE_BUF_DESC_RESP  = 1,
+    MC_MSG_TYPE_DATA_REQ       = 2,
+    MC_MSG_TYPE_DATA_RESP      = 3,
+    MC_MSG_TYPE_DEINIT_NOTIFY     = 4, /* pipeline teardown notification from remote peer */
+    MC_MSG_TYPE_DEINIT_NOTIFY_RSP = 5  /* ACK: remote pipeline stopped, endpoint about to drop */
 } mc_msg_type_e;
 
 typedef struct {
@@ -113,7 +127,7 @@ static mc_dev_private_data_t *mc_dev_list[HAL_MC_MAX_ENDPOINTS] = {NULL};
 /**
  * Database to store endpoint ready data for synchronization
  */
-static mc_remote_event_data_t mc_remote_event_data[HAL_MC_MAX_ENDPOINTS] = {MPP_MCMGR_EVENT_DATA_INVALID};
+static mc_remote_event_data_t mc_remote_event_data[HAL_MC_MAX_ENDPOINTS] = {MPP_MCMGR_DATA_INVALID};
 
 /*******************************************************************************
  * Code
@@ -130,19 +144,21 @@ void hal_mc_rpmsg_remote_ev_handler(mcmgr_core_t coreNum, uint16_t eventData, vo
 
     for (int i = 0; i < HAL_MC_MAX_ENDPOINTS; i++)
     {
-        if (mc_remote_event_data[i].mcmgr_event_data == MPP_MCMGR_EVENT_DATA_INVALID)
+        if (mc_remote_event_data[i].mcmgr_event_data == MPP_MCMGR_DATA_INVALID)
         {
             mc_remote_event_data[i].mcmgr_event_data = (mpp_mcmgr_event_data_e)eventData;
+            mc_remote_event_data[i].remote_core_id = coreNum;
             mc_remote_event_data[i].remote_ready = true;
             found_empty_entry = true;
             break;
         }
-        else if (mc_remote_event_data[i].mcmgr_event_data == eventData)
+        else if (mc_remote_event_data[i].mcmgr_event_data == eventData && 
+                 mc_remote_event_data[i].remote_core_id == coreNum)
         {
             if (mc_remote_event_data[i].remote_ready)
-                HAL_LOGE("Event data already allocated for event_data: 0x%04x\r\n", eventData);
+                HAL_LOGE("Event data ready already set for event_data: 0x%04x, core id %d\r\n", eventData, coreNum);
             else
-                HAL_LOGE("Event data ready already set for event_data: 0x%04x\r\n", eventData);
+                HAL_LOGE("Event data already allocated for event_data: 0x%04x, core id %d\r\n", eventData, coreNum);
             break;
         }
     }
@@ -160,7 +176,7 @@ void hal_mc_rpmsg_remote_ev_handler(mcmgr_core_t coreNum, uint16_t eventData, vo
  * @param timeout_ms Timeout in milliseconds (0 for no timeout)
  * @return kStatus_HAL_MultiCoreSuccess if remote is ready, error otherwise
  */
-static hal_mc_status_t wait_for_remote_ready(mpp_mcmgr_event_data_e event_data, uint32_t timeout_ms)
+static hal_mc_status_t wait_for_remote_ready(mpp_mcmgr_event_data_e event_data, uint32_t timeout_ms, uint32_t remote_core_id)
 {
     uint32_t start_time = hal_get_ostick();
     bool remote_ready = false;
@@ -173,7 +189,8 @@ static hal_mc_status_t wait_for_remote_ready(mpp_mcmgr_event_data_e event_data, 
         // Search for the event data in the database
         for (int i = 0; i < HAL_MC_MAX_ENDPOINTS; i++)
         {
-            if (mc_remote_event_data[i].mcmgr_event_data == event_data)
+            if (mc_remote_event_data[i].mcmgr_event_data == event_data && 
+                mc_remote_event_data[i].remote_core_id == remote_core_id)
             {
                 if (mc_remote_event_data[i].remote_ready)
                 {
@@ -202,21 +219,19 @@ static hal_mc_status_t wait_for_remote_ready(mpp_mcmgr_event_data_e event_data, 
         }
 
         // Small delay to avoid busy waiting
-        hal_task_delay(pdMS_TO_TICKS(10));
+        hal_task_delay_ms(10);
     }
 }
 
-static hal_mc_status_t send_remote_ready_event(mpp_mcmgr_event_data_e event_data)
+static hal_mc_status_t send_remote_ready_event(mpp_mcmgr_event_data_e event_data, uint32_t remote_core)
 {
     hal_mc_status_t ret = kStatus_HAL_MultiCoreSuccess;
 
-    if (event_data == MPP_MCMGR_EVENT_DATA_INVALID)
+    if (event_data == MPP_MCMGR_DATA_INVALID)
     {
         HAL_LOGE("Invalid event data: 0x%04x\r\n", event_data);
         return kStatus_HAL_MultiCoreError;
     }
-
-    mcmgr_core_t remote_core = MCMGR_GetCurrentCore() == kMCMGR_Core0 ? kMCMGR_Core1 : kMCMGR_Core0;
 
 #if defined(MCMGR_REMOTE_APP_EVENT_COUNT) && (MCMGR_REMOTE_APP_EVENT_COUNT >= 2)
     mcmgr_status_t ev_ret = MCMGR_TriggerEvent(remote_core, kMCMGR_RemoteApplicationEvent1, event_data);
@@ -289,7 +304,7 @@ static hal_mc_status_t add_mc_dev_to_list(mc_dev_private_data_t *dev_priv)
             // Check if another device has the same rpmsg parameters
             if (existing->local_rpmsg_addr == dev_priv->local_rpmsg_addr ||
                 existing->remote_rpmsg_addr == dev_priv->remote_rpmsg_addr ||
-                existing->remote_event_data == dev_priv->remote_event_data)
+                existing->event_data == dev_priv->event_data)
             {
                 HAL_LOGE("Device with same rpmsg parameters already exists in list\r\n");
                 hal_mutex_unlock(mc_global_mutex);
@@ -319,37 +334,33 @@ hal_mc_status_t HAL_MultiCoreDev_Init(multicore_dev_t *dev, mpp_mc_params_t *con
     HAL_LOGD("++HAL_MultiCoreDev_Init\r\n");
     hal_mc_status_t ret = kStatus_HAL_MultiCoreSuccess;
 
+    if (dev == NULL || config == NULL)
+    {
+        HAL_LOGE("Invalid input parameters: dev or config is NULL\r\n");
+        return kStatus_HAL_MultiCoreError;
+    }
+
     mcmgr_core_t current_core = MCMGR_GetCurrentCore();
 
-    if (current_core == kMCMGR_Core0)
+    if (current_core == config->remote_core_id)
     {
-        if (config->local_rpmsg_addr < MPP_RPMSG_EPT_ADDR_CORE0_START ||
-            config->local_rpmsg_addr > MPP_RPMSG_EPT_ADDR_CORE0_STOP ||
-            config->remote_rpmsg_addr < MPP_RPMSG_EPT_ADDR_CORE1_START ||
-            config->remote_rpmsg_addr > MPP_RPMSG_EPT_ADDR_CORE1_STOP ||
-            config->remote_event_data < MPP_MCMGR_EVENT_DATA_START ||
-            config->remote_event_data > MPP_MCMGR_EVENT_DATA_STOP)
-        {
-            HAL_LOGE("Invalid rpmsg endpoint address or mcmgr event data for Core0\r\n");
-            return kStatus_HAL_MultiCoreError;
-        }
+        HAL_LOGE("Remote core ID cannot be the same as current core\r\n");
+        return kStatus_HAL_MultiCoreError;
     }
-    else if (current_core == kMCMGR_Core1)
+
+    uint32_t local_rpmsg_start_addr = MPP_RPMSG_ADDR_CORE_START(current_core);
+    uint32_t local_rpmsg_end_addr = MPP_RPMSG_ADDR_CORE_END(current_core);
+    uint32_t remote_rpmsg_start_addr = MPP_RPMSG_ADDR_CORE_START(config->remote_core_id);
+    uint32_t remote_rpmsg_end_addr = MPP_RPMSG_ADDR_CORE_END(config->remote_core_id);
+
+    if (config->local_rpmsg_addr < local_rpmsg_start_addr ||
+        config->local_rpmsg_addr > local_rpmsg_end_addr ||
+        config->remote_rpmsg_addr < remote_rpmsg_start_addr ||
+        config->remote_rpmsg_addr > remote_rpmsg_end_addr ||
+        config->event_data < MPP_MCMGR_DATA_START ||
+        config->event_data > MPP_MCMGR_DATA_END)
     {
-        if (config->local_rpmsg_addr < MPP_RPMSG_EPT_ADDR_CORE1_START ||
-            config->local_rpmsg_addr > MPP_RPMSG_EPT_ADDR_CORE1_STOP ||
-            config->remote_rpmsg_addr < MPP_RPMSG_EPT_ADDR_CORE0_START ||
-            config->remote_rpmsg_addr > MPP_RPMSG_EPT_ADDR_CORE0_STOP ||
-            config->remote_event_data < MPP_MCMGR_EVENT_DATA_START ||
-            config->remote_event_data > MPP_MCMGR_EVENT_DATA_STOP)
-        {
-            HAL_LOGE("Invalid rpmsg endpoint address or mcmgr event data for Core1\r\n");
-            return kStatus_HAL_MultiCoreError;
-        }
-    }
-    else
-    {
-        HAL_LOGE("Unknown core ID\r\n");
+        HAL_LOGE("Invalid rpmsg endpoint address or mcmgr event data for local core %d, remote core %d\r\n", current_core, config->remote_core_id);
         return kStatus_HAL_MultiCoreError;
     }
 
@@ -386,11 +397,15 @@ hal_mc_status_t HAL_MultiCoreDev_Init(multicore_dev_t *dev, mpp_mc_params_t *con
     }
 
     dev_priv->rpmsg_inst = (struct rpmsg_lite_instance *) config->rpmsg_inst;
-    dev_priv->remote_event_data = config->remote_event_data;
+    dev_priv->remote_core_id = config->remote_core_id;
+    dev_priv->event_data = config->event_data;
     dev_priv->local_rpmsg_addr = config->local_rpmsg_addr;
     dev_priv->remote_rpmsg_addr = config->remote_rpmsg_addr;
     dev_priv->remote_ready = false;
     dev_priv->nb_buffers = 0;
+    /* copy pipeline event callback registered by the element layer before init */
+    dev_priv->callback     = dev->config.callback;
+    dev_priv->cb_user_data = dev->config.cb_user_data;
 
     if (hal_mutex_create(&dev_priv->mutex) != MPP_SUCCESS)
     {
@@ -433,8 +448,8 @@ hal_mc_status_t HAL_MultiCoreDev_Init(multicore_dev_t *dev, mpp_mc_params_t *con
 
     if (type == kHAL_MultiCoreDevTypeSource)
     {
-        /* Wait until the secondary core endpoint is ready. */
-        ret = wait_for_remote_ready(dev_priv->remote_event_data, 10000);
+        /* Wait until the remote core endpoint is ready. */
+        ret = wait_for_remote_ready(dev_priv->event_data, 10000, config->remote_core_id);
         if (ret != kStatus_HAL_MultiCoreSuccess)
         {
             HAL_LOGE("Failed to wait for remote core ready\r\n");
@@ -446,7 +461,7 @@ hal_mc_status_t HAL_MultiCoreDev_Init(multicore_dev_t *dev, mpp_mc_params_t *con
     else
     {
         /* Send ready event to the remote core */
-        send_remote_ready_event(dev_priv->remote_event_data);
+        send_remote_ready_event(dev_priv->event_data, config->remote_core_id);
         HAL_LOGI("Sent ready event to remote core\r\n");
     }
 
@@ -712,6 +727,92 @@ hal_mc_status_t HAL_MultiCoreDev_Deinit(multicore_dev_t *dev)
         return kStatus_HAL_MultiCoreError;
     }
 
+    /* Role-aware deinit handshake with remote peer */
+    if (dev_priv->rpmsg_ept != NULL && dev_priv->rpmsg_queue != NULL)
+    {
+        mc_message_t hshk_msg;
+        memset(&hshk_msg, 0, sizeof(hshk_msg));
+
+        if (dev_priv->deinit_notify_received)
+        {
+            /* Responder: remote already notified us; send RSP before dropping endpoint */
+            hshk_msg.header.msg_type = MC_MSG_TYPE_DEINIT_NOTIFY_RSP;
+            rpmsg_lite_send(dev_priv->rpmsg_inst, dev_priv->rpmsg_ept,
+                            dev_priv->remote_rpmsg_addr,
+                            (char *)&hshk_msg, sizeof(mc_message_t), RL_DONT_BLOCK);
+            HAL_LOGI("Sent deinit RSP to remote peer\r\n");
+        }
+        else
+        {
+            /* Initiator: notify remote and wait for RSP before tearing down */
+            hshk_msg.header.msg_type = MC_MSG_TYPE_DEINIT_NOTIFY;
+            rpmsg_lite_send(dev_priv->rpmsg_inst, dev_priv->rpmsg_ept,
+                            dev_priv->remote_rpmsg_addr,
+                            (char *)&hshk_msg, sizeof(mc_message_t), RL_DONT_BLOCK);
+            HAL_LOGI("Sent deinit notify to remote peer, waiting for RSP\r\n");
+
+            /* Wait for MC_MSG_TYPE_DEINIT_NOTIFY_RSP with a timeout.
+             * Stale messages of other types are logged and discarded. */
+            uint32_t deinit_elapsed = 0;
+            bool rsp_received = false;
+            while (deinit_elapsed < HAL_MC_DEINIT_RSP_TIMEOUT_MS)
+            {
+                mc_message_t rsp_msg;
+                uint32_t rsp_remote_addr, rsp_msg_size;
+                int32_t rsp_ret = rpmsg_queue_recv(dev_priv->rpmsg_inst, dev_priv->rpmsg_queue,
+                                                   &rsp_remote_addr, (char *)&rsp_msg,
+                                                   sizeof(mc_message_t), &rsp_msg_size,
+                                                   RL_DONT_BLOCK);
+                if (rsp_ret == RL_SUCCESS)
+                {
+                    if (rsp_msg.header.msg_type == MC_MSG_TYPE_DEINIT_NOTIFY_RSP)
+                    {
+                        HAL_LOGI("Received deinit RSP from remote peer\r\n");
+                        rsp_received = true;
+                        break;
+                    }
+                    /* stale message of another type - log and keep waiting */
+                    HAL_LOGI("Received msg type %d while waiting for deinit RSP - discarding\r\n",
+                             rsp_msg.header.msg_type);
+                }
+                /* rsp_ret != RL_SUCCESS with RL_DONT_BLOCK means the queue is
+                 * currently empty - this is expected while polling; do not log. */
+                hal_task_delay_ms(HAL_MC_DEINIT_RSP_POLL_MS);
+                deinit_elapsed += HAL_MC_DEINIT_RSP_POLL_MS;
+            }
+            if (!rsp_received)
+            {
+                HAL_LOGE("Timeout waiting for deinit RSP from remote - aborting deinit\r\n");
+                return kStatus_HAL_MultiCoreError;
+            }
+        }
+    }
+
+    /* Flush any remaining messages from the queue */
+    if (dev_priv->rpmsg_queue != NULL)
+    {
+        mc_message_t flush_msg;
+        uint32_t msg_size;
+        uint32_t remote_addr;
+        int32_t rpmsg_ret;
+
+        /* Drain all pending messages from the queue */
+        do {
+            rpmsg_ret = rpmsg_queue_recv(dev_priv->rpmsg_inst,
+                                        dev_priv->rpmsg_queue,
+                                        &remote_addr,
+                                        (char *)&flush_msg,
+                                        sizeof(mc_message_t),
+                                        &msg_size,
+                                        RL_DONT_BLOCK);
+            if (rpmsg_ret == RL_SUCCESS)
+            {
+                HAL_LOGE("Flushed message type %d from queue\r\n", flush_msg.header.msg_type);
+            }
+        } while (rpmsg_ret == RL_SUCCESS);
+    }
+    dev->config.initial_enqueue_done = false;
+
     /* Destroy RPMSG endpoint */
     if (dev_priv->rpmsg_ept != NULL)
     {
@@ -740,24 +841,31 @@ hal_mc_status_t HAL_MultiCoreDev_Deinit(multicore_dev_t *dev)
     if (dev_priv->mutex != NULL)
         hal_mutex_remove(dev_priv->mutex);
 
-    /* Remove device from the global device list */
+    /* Remove device from the global device list; count remaining entries */
+    int remaining = 0;
     hal_mutex_lock(mc_global_mutex);
     for (int i = 0; i < HAL_MC_MAX_ENDPOINTS; i++)
     {
         if (mc_dev_list[i] == dev_priv)
-        {
             mc_dev_list[i] = NULL;
-            break;
-        }
+        else if (mc_dev_list[i] != NULL)
+            remaining++;
     }
     hal_mutex_unlock(mc_global_mutex);
+
+    /* Auto-destroy the global mutex when the last mc device is gone */
+    if (remaining == 0)
+    {
+        hal_mutex_remove(mc_global_mutex);
+        mc_global_mutex = NULL;
+    }
 
     /* Remove entry from remote event data database */
     for (int i = 0; i < HAL_MC_MAX_ENDPOINTS; i++)
     {
-        if (mc_remote_event_data[i].mcmgr_event_data == dev_priv->remote_event_data)
+        if (mc_remote_event_data[i].mcmgr_event_data == dev_priv->event_data)
         {
-            mc_remote_event_data[i].mcmgr_event_data = MPP_MCMGR_EVENT_DATA_INVALID;
+            mc_remote_event_data[i].mcmgr_event_data = MPP_MCMGR_DATA_INVALID;
             mc_remote_event_data[i].remote_ready = false;
             break;
         }
@@ -778,7 +886,6 @@ hal_mc_status_t HAL_MultiCoreDev_Start(multicore_dev_t *dev)
 
     /* Clear internal counters */
     dev->config.crt_req_cnt = 0;
-    dev->config.initial_enqueue_done = false;
     memset(dev->config.requested, 0, sizeof(dev->config.requested));
     memset(dev->config.enqueued, 0, sizeof(dev->config.enqueued));
     memset(dev->config.buff_desc, 0, sizeof(dev->config.buff_desc));
@@ -792,35 +899,8 @@ hal_mc_status_t HAL_MultiCoreDev_Stop(multicore_dev_t *dev)
     HAL_LOGD("++HAL_MultiCoreDev_Stop\r\n");
     hal_mc_status_t ret = kStatus_HAL_MultiCoreSuccess;
 
-    mc_dev_private_data_t *dev_priv = (mc_dev_private_data_t *)dev->data;
-
-    /* Flush message queue */
-    if (dev_priv != NULL && dev_priv->rpmsg_queue != NULL)
-    {
-        mc_message_t flush_msg;
-        uint32_t msg_size;
-        uint32_t remote_addr;
-        int32_t rpmsg_ret;
-
-        /* Drain all pending messages from the queue */
-        do {
-            rpmsg_ret = rpmsg_queue_recv(dev_priv->rpmsg_inst,
-                                        dev_priv->rpmsg_queue,
-                                        &remote_addr,
-                                        (char *)&flush_msg,
-                                        sizeof(mc_message_t),
-                                        &msg_size,
-                                        RL_DONT_BLOCK);
-            if (rpmsg_ret == RL_SUCCESS)
-            {
-                HAL_LOGD("Flushed message type %d from queue\r\n", flush_msg.header.msg_type);
-            }
-        } while (rpmsg_ret == RL_SUCCESS);
-    }
-
     /* Clear internal counters */
     dev->config.crt_req_cnt = 0;
-    dev->config.initial_enqueue_done = false;
     memset(dev->config.requested, 0, sizeof(dev->config.requested));
     memset(dev->config.enqueued, 0, sizeof(dev->config.enqueued));
     memset(dev->config.buff_desc, 0, sizeof(dev->config.buff_desc));
@@ -874,6 +954,15 @@ hal_mc_status_t HAL_MultiCoreDev_Dequeue(const multicore_dev_t *dev, void **data
 
     mc_dev_private_data_t *dev_priv = (mc_dev_private_data_t *)dev->data;
 
+    /* If a deinit notify was already received, do not block waiting for
+     * further messages - the remote pipeline is gone and mpp_stop must
+     * be able to return without hanging on the blocking recv below. */
+    if (dev_priv->deinit_notify_received)
+    {
+        HAL_LOGI("Deinit in progress. Skip dequeue\r\n");
+        return kStatus_HAL_MultiCoreNoDataReq;
+    }
+
     if (dev->config.dev_type ==  kHAL_MultiCoreDevTypeSink)
     {
         /* Dequeue message from RPMSG queue (wait for data request message) */
@@ -895,6 +984,16 @@ hal_mc_status_t HAL_MultiCoreDev_Dequeue(const multicore_dev_t *dev, void **data
         {
             HAL_LOGE("Received message from unexpected remote address %d\r\n", remote_addr);
             return kStatus_HAL_MultiCoreError;
+        }
+
+        /* Check for deinit notification from remote mc source peer */
+        if (recv_msg.header.msg_type == MC_MSG_TYPE_DEINIT_NOTIFY)
+        {
+            HAL_LOGI("MC sink: received deinit notify from remote mc source\r\n");
+            dev_priv->deinit_notify_received = true;
+            if (dev_priv->callback != NULL)
+                dev_priv->callback(NULL, MPP_EVENT_MC_REMOTE_DEINIT, NULL, dev_priv->cb_user_data);
+            return kStatus_HAL_MultiCoreNoDataReq;
         }
 
         if (recv_msg.header.msg_type != MC_MSG_TYPE_DATA_REQ)
@@ -938,6 +1037,16 @@ hal_mc_status_t HAL_MultiCoreDev_Dequeue(const multicore_dev_t *dev, void **data
         {
             HAL_LOGE("Received message from unexpected remote address %d\r\n", remote_addr);
             return kStatus_HAL_MultiCoreError;
+        }
+
+        /* Check for deinit notification from remote mc sink peer */
+        if (recv_msg.header.msg_type == MC_MSG_TYPE_DEINIT_NOTIFY)
+        {
+            HAL_LOGI("MC source: received deinit notify from remote mc sink\r\n");
+            dev_priv->deinit_notify_received = true;
+            if (dev_priv->callback != NULL)
+                dev_priv->callback(NULL, MPP_EVENT_MC_REMOTE_DEINIT, NULL, dev_priv->cb_user_data);
+            return kStatus_HAL_MultiCoreNoDataReq;
         }
 
         if (recv_msg.header.msg_type != MC_MSG_TYPE_DATA_RESP)
@@ -1002,6 +1111,13 @@ hal_mc_status_t HAL_MultiCoreDev_Enqueue(const multicore_dev_t *dev, void **data
     int32_t rpmsg_ret;
 
     mc_dev_private_data_t *dev_priv = (mc_dev_private_data_t *)dev->data;
+
+    /* Skip enqueue while deinit is in progress - remote pipeline is gone. */
+    if (dev_priv->deinit_notify_received)
+    {
+        HAL_LOGI("Enqueue skipped: deinit notify already received from remote\r\n");
+        return kStatus_HAL_MultiCoreSuccess;
+    }
 
     if (dev->config.dev_type ==  kHAL_MultiCoreDevTypeSource)
     {

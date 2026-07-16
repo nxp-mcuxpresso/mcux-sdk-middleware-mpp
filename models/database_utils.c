@@ -9,7 +9,7 @@
  * Utility functions for database control
  */
 
-#include <models/database_utils.h>
+#include "database_utils.h"
 
 /* include model infos */
 #include APP_TFLITE_MOBILEFACENET_INFO

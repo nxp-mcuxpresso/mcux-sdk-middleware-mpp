@@ -72,7 +72,7 @@ int HAL_GfxDev_GPU_Register();
 }
 #endif
 
-static int s_vgliteInit;  /*<! Flag to track VGLite initialization status */
+static int s_vgliteInit = 0;  /*<! Flag to track VGLite initialization status */
 
 typedef struct _gfx_vglite_context
 {
@@ -92,7 +92,7 @@ void *vglite_heap_base        = &vglite_heap;
 uint32_t vglite_heap_size     = HAL_VGLITE_HEAP_SZ;
 #endif
 
-static hal_mutex_t s_mutex; /* prevent stopping GPU during conversion */
+static hal_mutex_t s_mutex = NULL; /* prevent stopping GPU during conversion */
 
 int HAL_GfxDev_VGLite_Init(gfx_dev_t *dev, void *param)
 {
@@ -147,14 +147,30 @@ int HAL_GfxDev_VGLite_Init(gfx_dev_t *dev, void *param)
 int HAL_GfxDev_VGLite_Deinit(gfx_dev_t *dev)
 {
     int error = 0;
-    vg_lite_close();
-    hal_mutex_remove(s_mutex);
-    /* free the context */
+
+    /* always free the per-device context, regardless of the shared hw init state */
     gfx_vglite_context_t *vglite_ctx = (gfx_vglite_context_t *)dev->user_data;
     if (vglite_ctx != NULL) {
         hal_free(vglite_ctx);
         dev->user_data = NULL;
     }
+
+    /* only tear down the shared VGLite hardware once */
+    if (s_vgliteInit == 0)
+    {
+        HAL_LOGD("VGLite hardware already de-initialized\r\n");
+        return 0;
+    }
+
+    vg_lite_close();
+
+    if (s_mutex != NULL)
+    {
+        hal_mutex_remove(s_mutex);
+        s_mutex = NULL;
+    }
+
+    s_vgliteInit = 0;
 
     return error;
 }

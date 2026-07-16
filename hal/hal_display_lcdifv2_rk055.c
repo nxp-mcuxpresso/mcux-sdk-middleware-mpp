@@ -214,6 +214,14 @@ static hal_display_status_t DISPLAY_DeInitDisplay(void)
         return kStatus_HAL_DisplayError;
     }
 
+    /* Reset the active framebuffer index so that Getbufdesc returns s_LcdBuffer[0]
+     * consistently on the next pipeline build.
+     * Note: s_newFrameShown is intentionally NOT reset here because DeInitDisplay
+     * only disables the layer without tearing down the display controller hardware.
+     * Resetting s_newFrameShown would force a full g_dc.ops->init() on a live
+     * (layer-disabled but not deinitialized) controller during the next InitDisplay. */
+    s_lcdActiveFbIdx = 0;
+
     return kStatus_HAL_DisplaySuccess;
 }
 

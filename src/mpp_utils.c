@@ -21,6 +21,7 @@
 
 #include "app.h"
 #include "pin_mux.h"
+#include "mpp_api.h"
 #include "mpp_debug.h"
 #include "hal_camera_shared.h"
 #include "mpp_config.h"
@@ -87,7 +88,7 @@ volatile uint16_t *mpp_boot_secondary_core(void)
        startup automatically. */
     uint32_t core1_image_size;
     core1_image_size = get_core1_image_size();
-    MPP_LOGI("Copy CORE1 image to address: 0x%x, size: %d from address: 0x%x\r\n", (void *)(char *)CORE1_BOOT_ADDRESS,
+    MPP_LOGI("Copy CORE1 image to address: 0x%x, size: %d from address: \r\n0x%x\r\n", (void *)(char *)CORE1_BOOT_ADDRESS,
                  core1_image_size, CORE1_IMAGE_START);
 
     /* Copy application from FLASH to RAM */
@@ -113,6 +114,12 @@ volatile uint16_t *mpp_boot_secondary_core(void)
     (void)MCMGR_RegisterEvent(kMCMGR_RemoteApplicationEvent1, hal_mc_rpmsg_remote_ev_handler, NULL);
 #else
     #error "MCMGR_REMOTE_APP_EVENT_COUNT is less than 2. Cannot initialize multicore resources."
+#endif
+#if defined(MCMGR_REMOTE_APP_EVENT_COUNT) && (MCMGR_REMOTE_APP_EVENT_COUNT >= 3)
+    /* Register event handler for remote ready notification before starting to call remote apis */
+    (void)MCMGR_RegisterEvent(kMCMGR_RemoteApplicationEvent2, mpp_mc_remote_event_handler, NULL);
+#else
+    #error "MCMGR_REMOTE_APP_EVENT_COUNT is less than 3. Cannot initialize remote API."
 #endif
 #endif /*(defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1)*/
 
@@ -158,6 +165,12 @@ struct rpmsg_lite_instance *mpp_secondary_core_rpmsg_init(void)
     (void)MCMGR_RegisterEvent(kMCMGR_RemoteApplicationEvent1, hal_mc_rpmsg_remote_ev_handler, NULL);
 #else
     #error "MCMGR_REMOTE_APP_EVENT_COUNT is less than 2. Cannot initialize multicore resources."
+#endif
+#if defined(MCMGR_REMOTE_APP_EVENT_COUNT) && (MCMGR_REMOTE_APP_EVENT_COUNT >= 3)
+    /* Register event handler for remote ready notification before starting to call remote apis */
+    (void)MCMGR_RegisterEvent(kMCMGR_RemoteApplicationEvent2, mpp_mc_remote_event_handler, NULL);
+#else
+    #error "MCMGR_REMOTE_APP_EVENT_COUNT is less than 3. Cannot initialize remote API."
 #endif
 #endif /*(defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1)*/
 

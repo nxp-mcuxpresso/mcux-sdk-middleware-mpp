@@ -226,6 +226,57 @@ err:
 }
 
 
+static int build_pipeline(args_t *args, int src_width, int src_height, mpp_t *mp_out)
+{
+    int ret;
+
+    ret = mpp_api_init(NULL);
+    if (ret)
+        return ret;
+
+    mpp_params_t mpp_params;
+    memset(&mpp_params, 0, sizeof(mpp_params));
+    mpp_params.exec_flag = MPP_EXEC_RC;
+    mpp_params.evt_callback_f = &mpp_event_listener;
+    mpp_params.mask = MPP_EVENT_ALL;
+    *mp_out = mpp_create(&mpp_params, &ret);
+    if (*mp_out == MPP_INVALID)
+        return ret;
+
+    mpp_img_params_t img_params;
+    memset(&img_params, 0, sizeof(img_params));
+    img_params.height = src_height;
+    img_params.width  = src_width;
+    img_params.format = args->source_format;
+    ret = mpp_static_img_add(*mp_out, &img_params, (void *)image_data, NULL);
+    if (ret) {
+        PRINTF("Failed to add static image");
+        return ret;
+    }
+
+    mpp_element_params_t elem_params;
+    set_img_convert_params(&elem_params);
+    ret = mpp_element_add(*mp_out, MPP_ELEMENT_CONVERT, &elem_params, NULL);
+    if (ret) {
+        PRINTF("Failed to add element CONVERT\n");
+        return ret;
+    }
+
+    ret = mpp_nullsink_add(*mp_out);
+    if (ret) {
+        PRINTF("Failed to add NULL sink\r\n");
+        return ret;
+    }
+
+    ret = mpp_start(*mp_out, 1, false);
+    if (ret) {
+        PRINTF("Failed to start pipeline");
+        return ret;
+    }
+
+    return 0;
+}
+
 static void app_task(void *params)
 {
     int src_width = SRC_IMAGE_WIDTH;
@@ -236,58 +287,46 @@ static void app_task(void *params)
 
     PRINTF("[%s]\r\n", mpp_get_version());
 
-    /* add support for params */
-    ret = mpp_api_init(NULL);
-    if (ret)
-	goto err;
+#if defined(CONFIG_TEST_MPP_DEINIT)
+    uint32_t start_free_heap = mpp_get_free_heap();
+    PRINTF("Available heap: %u kB\r\n", start_free_heap >> 10);
 
+    for (;;) {
+        mpp_t mp = NULL;
+        ret = build_pipeline(args, src_width, src_height, &mp);
+        if (ret)
+            goto err;
+
+        uint32_t crt_free_heap = mpp_get_free_heap();
+        PRINTF("Crt available heap: %u kB\r\n", crt_free_heap >> 10);
+        PRINTF("Used heap: %u kB\r\n", (uint32_t)(start_free_heap - crt_free_heap) >> 10);
+
+        TickType_t t0 = xTaskGetTickCount();
+        while ((xTaskGetTickCount() - t0) < pdMS_TO_TICKS(15000))
+            vTaskDelay(pdMS_TO_TICKS(1000));
+
+        mpp_stop(mp);
+        mpp_destroy(mp);
+        mpp_api_ctl_tasks_destroy();
+
+        uint32_t end_free_heap = mpp_get_free_heap();
+        PRINTF("\r\nCrt available heap: %u kB\r\n", end_free_heap >> 10);
+        PRINTF("unfreed heap: %u bytes\r\n", (uint32_t)(start_free_heap - end_free_heap));
+        if (start_free_heap == end_free_heap)
+            PRINTF("test_image_convert MPP deinit - PASSED\r\n");
+        else
+            PRINTF("test_image_convert MPP deinit - FAILED\r\n");
+
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+#else
     mpp_t mp;
-    mpp_params_t mpp_params;
-    memset(&mpp_params, 0, sizeof(mpp_params));
-    mpp_params.exec_flag = MPP_EXEC_RC;
-    mpp_params.evt_callback_f = &mpp_event_listener;
-    mpp_params.mask = MPP_EVENT_ALL;
-    mp = mpp_create(&mpp_params, &ret);
-    if (mp == MPP_INVALID)
-	goto err;
-
-    /* add image static */
-    /* Set static image element parameters */
-    mpp_img_params_t img_params ;
-    memset(&img_params, 0 , sizeof(img_params));
-    img_params.height = src_height;
-    img_params.width =  src_width;
-    img_params.format = args->source_format;
-    ret = mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
-    if (ret) {
-        PRINTF("Failed to add static image");
+    ret = build_pipeline(args, src_width, src_height, &mp);
+    if (ret)
         goto err;
-    }
-
-    /* Add element convert */
-    mpp_element_params_t elem_params;
-    set_img_convert_params(&elem_params);
-    ret = mpp_element_add(mp, MPP_ELEMENT_CONVERT, &elem_params, NULL);
-    if (ret ) {
-        PRINTF("Failed to add element CONVERT\n");
-        goto err;
-    }
-
-    /* close the pipeline with a null sink */
-    ret = mpp_nullsink_add(mp);
-    if (ret) {
-        PRINTF("Failed to add NULL sink\r\n");
-        goto err;
-    }
-
-    ret = mpp_start(mp, 1, false);
-    if (ret) {
-        PRINTF("Failed to start pipeline");
-        goto err;
-    }
-
     /* pause application task */
     vTaskSuspend(NULL);
+#endif /* CONFIG_TEST_MPP_DEINIT */
 
 err:
     for (;;)

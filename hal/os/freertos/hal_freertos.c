@@ -14,6 +14,7 @@
 #include "task.h"
 #include "semphr.h"
 #include "event_groups.h"
+#include "queue.h"
 #include "fsl_device_registers.h"
 
 #include "mpp_config.h"
@@ -219,6 +220,12 @@ hal_sema_t hal_sema_create_binary()
     return xSemaphoreCreateBinary();
 }
 
+void hal_sema_delete(hal_sema_t handle)
+{
+    if (handle != NULL)
+        vSemaphoreDelete((SemaphoreHandle_t) handle);
+}
+
 bool hal_sema_give(hal_sema_t handle)
 {
     SemaphoreHandle_t h = handle;
@@ -315,6 +322,11 @@ uint32_t hal_tick_to_ms(uint32_t os_tick)
     return (os_tick * TICK_PERIOD_MS);
 }
 
+uint32_t hal_ms_to_ticks(uint32_t ms)
+{
+    return pdMS_TO_TICKS(ms);
+}
+
 int hal_task_create( hal_task_fct_t fct,
                             const char * const name,
                             const uint16_t stackdepth,
@@ -345,14 +357,30 @@ void hal_task_resume(hal_task_t task)
     vTaskResume((TaskHandle_t) task);
 }
 
+void hal_task_delete(hal_task_t task)
+{
+    vTaskDelete((TaskHandle_t) task);
+}
+
 void hal_task_delay(uint32_t ticks)
 {
     vTaskDelay(ticks);
 }
 
+void hal_task_delay_ms(uint32_t ms)
+{
+    vTaskDelay(pdMS_TO_TICKS(ms));
+}
+
 hal_event_group_t hal_eventgrp_create()
 {
     return (hal_event_group_t) xEventGroupCreate();
+}
+
+void hal_eventgrp_delete(hal_event_group_t eventgrp)
+{
+    if (eventgrp != NULL)
+        vEventGroupDelete((EventGroupHandle_t) eventgrp);
 }
 
 hal_eventbits_t hal_eventgrp_set_bits( hal_event_group_t eventgrp,
@@ -394,4 +422,71 @@ unsigned int hal_get_idle_percent()
 #else
     return 0;
 #endif
+}
+
+void *hal_queue_create(uint32_t length, uint32_t item_size)
+{
+    QueueHandle_t q = xQueueCreate(length, item_size);
+    if (q == NULL)
+    {
+        HAL_LOGE("Failed to create queue\r\n");
+    }
+    return (void *)q;
+}
+
+void hal_queue_delete(void *queue)
+{
+    if (queue != NULL)
+    {
+        vQueueDelete((QueueHandle_t)queue);
+    }
+}
+
+bool hal_queue_receive(void *queue, void *item, uint32_t timeout)
+{
+    return (xQueueReceive((QueueHandle_t)queue, item, timeout) == pdPASS);
+}
+
+void *hal_queueset_create(uint32_t length)
+{
+    QueueSetHandle_t queue_set = xQueueCreateSet(length);
+    if (queue_set == NULL) {
+        HAL_LOGE("Failed to create queue set\r\n");
+    }
+    return (void *)queue_set;
+}
+
+int hal_queueset_add_queue(void *queue_set, void *queue)
+{
+    if (queue_set == NULL || queue == NULL) {
+        HAL_LOGE("Invalid queue set or queue pointer\r\n");
+        return MPP_INVALID_PARAM;
+    }
+
+    BaseType_t ret = xQueueAddToSet((QueueSetMemberHandle_t)queue, (QueueSetHandle_t)queue_set);
+    if (ret != pdPASS) {
+        HAL_LOGE("Failed to add queue to queue set\n\r");
+        return MPP_ERROR;
+    }
+
+    return MPP_SUCCESS;
+}
+
+void *hal_queueset_receive(void *queue_set, uint32_t timeout)
+{
+    if (queue_set == NULL) {
+        HAL_LOGE("Invalid queue set pointer\r\n");
+        return NULL;
+    }
+
+    QueueSetMemberHandle_t activated_member = xQueueSelectFromSet((QueueSetHandle_t)queue_set, timeout);
+    return (void *)activated_member;
+}
+
+void hal_queueset_delete(void *queue_set)
+{
+    if (queue_set == NULL) {
+        return;
+    }
+    vQueueDelete((QueueSetHandle_t)queue_set);
 }

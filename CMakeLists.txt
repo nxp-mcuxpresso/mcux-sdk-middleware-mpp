@@ -16,6 +16,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES src/mpp_element_filesrc.c
         SOURCES src/mpp_element_filesink.c
         SOURCES src/mpp_element_rtspsink.c
+        SOURCES src/mpp_element_rtspsrc.c
         SOURCES src/mpp_element_inference.c
         SOURCES src/mpp_element_nullsink.c
         SOURCES src/mpp_element_img_compose.c
@@ -27,6 +28,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES src/mpp_utils.c
         SOURCES src/mpp_element_mc_source.c
         SOURCES src/mpp_element_mc_sink.c
+        SOURCES src/mpp_multicore.c
         SOURCES src/*.h
         include/mpp_api_types.h
         include/mpp_api.h
@@ -39,6 +41,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
             hal/include
             hal/os/include
             src
+            common
             .
     )
     mcux_add_include(
@@ -94,6 +97,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/hal_filesrc.c
         SOURCES hal/hal_filesink.c
         SOURCES hal/hal_rtspsink.c
+        SOURCES hal/hal_rtspsrc.c
         SOURCES hal/hal_storage.c
         SOURCES hal/hal_utils.c
         SOURCES hal/os/freertos/hal_freertos.c
@@ -104,6 +108,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/executorch/model.cpp
         SOURCES hal/executorch/syscall.c
         SOURCES hal/rtsp_server/rtsp_server.c
+        SOURCES hal/rtsp_client/rtsp_client.c
         SOURCES hal/hal_display_lcdif_rk043fn.c
         SOURCES hal/hal_camera_csi_mt9m114.c
         SOURCES hal/hal_display_spi_ili9341.c
@@ -125,6 +130,14 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.mpp)
         SOURCES hal/tflite/*.h
         SOURCES hal/executorch/*.h
         SOURCES hal/rtsp_server/*.h
+        SOURCES hal/rtsp_client/*.h
+    )
+
+    # common draw_text utility
+    mcux_add_source(
+        BASE_PATH ${CMAKE_CURRENT_LIST_DIR}
+        SOURCES common/draw_text.c
+        SOURCES common/*.h
     )
 
     mcux_remove_armgcc_configuration(

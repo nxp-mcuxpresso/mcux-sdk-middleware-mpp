@@ -339,6 +339,14 @@ void mpp_memory_free(_mpp_t *mpp)
 
     while ((elem != NULL) && (elem->mpp == mpp))
     {
+        /* free per-pass parameter array if allocated */
+        if (elem->pass_params != NULL)
+        {
+            hal_free(elem->pass_params);
+            elem->pass_params = NULL;
+            elem->n_pass_params = 0;
+        }
+
         if (elem->io.nb_in_buf == 0)
         {   /* no input buffer */
             elem = elem->next[0];
@@ -346,7 +354,7 @@ void mpp_memory_free(_mpp_t *mpp)
         }
 
         /* handle special case of in-place operations */
-        if (elem->io.inplace)
+        if (elem->io.inplace && (elem->io.mem_policy == HAL_MEM_ALLOC_NONE))
         {
             /* element is transparent regarding memory management */
             elem = elem->next[0];
@@ -362,13 +370,16 @@ void mpp_memory_free(_mpp_t *mpp)
         {
             for(i = 0; i < elem->io.nb_in_buf; i++)
             {
-                if (elem->io.in_buf[i]->hw != NULL)
+                if (elem->io.in_buf[i]->hw != NULL && elem->io.in_buf[i]->hw->heap_p != NULL)
                 {
+                    MPP_LOGI("mpp_memory_free: freeing input buffer %d for elem %s @%p\n", i, elem_name(elem), elem);
                     hal_free(elem->io.in_buf[i]->hw->heap_p);
-                    hal_free(elem->io.in_buf[i]->hw);
+                    elem->io.in_buf[i]->hw->heap_p = NULL;
                 }
             }
         }
+
+        elem = elem->next[0];
     }
 
     return;

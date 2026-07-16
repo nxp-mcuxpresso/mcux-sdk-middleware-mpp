@@ -8,7 +8,7 @@
  * The functions that process the tensor output of the Mobilefacenet model
  */
 
-#include "../../../models/mobilefacenet/mobilefacenet_output_postproc_quantized.h"
+#include "mobilefacenet_output_postproc_quantized.h"
 #include <math.h>
 #include "fsl_debug_console.h"
 

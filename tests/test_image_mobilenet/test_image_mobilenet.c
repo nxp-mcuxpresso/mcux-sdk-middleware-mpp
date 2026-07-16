@@ -197,8 +197,8 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
         /* check that we can modify the stats buffer (not accessed by other task) */
         if (Atomic_CompareAndSwap_u32(&app_priv->accessing, 1, 0) == ATOMIC_COMPARE_AND_SWAP_SUCCESS)
         {
-        	/* get model inference time */
-        	app_priv->inference_time_ms = inf_output->inference_time_ms;
+            /* get model inference time */
+            app_priv->inference_time_ms = inf_output->inference_time_ms;
 
             /* copy inference output */
             app_priv->inf_out = out_data;
@@ -253,51 +253,43 @@ void print_result(mpp_stats_t *mobilenet_stats, user_data_t *user_data) {
     }
 }
 
-static void app_task(void *params)
+static int build_pipeline(user_data_t *user_data, mpp_t *mp_out, mpp_stats_t *mobilenet_stats)
 {
-    user_data_t user_data = {0};
     int ret;
 
-    PRINTF("[%s]\r\n", mpp_get_version());
+    memset(user_data, 0, sizeof(*user_data));
 
     ret = mpp_api_init(NULL);
-    if (ret)
-    goto err;
+    if (ret) return ret;
 
     mpp_t mp;
     mpp_params_t mpp_params;
     memset(&mpp_params, 0, sizeof(mpp_params));
     mpp_params.evt_callback_f = &mpp_event_listener;
     mpp_params.mask = MPP_EVENT_ALL;
-    mpp_params.cb_userdata = &user_data;
+    mpp_params.cb_userdata = user_data;
     mpp_params.exec_flag = MPP_EXEC_RC;
     mp = mpp_create(&mpp_params, &ret);
-    if (mp == MPP_INVALID)
-        goto err;
+    if (mp == MPP_INVALID) return ret;
 
     mpp_img_params_t img_params;
-    memset(&img_params, 0, sizeof (mpp_img_params_t));
+    memset(&img_params, 0, sizeof(mpp_img_params_t));
     img_params.format = SRC_IMAGE_FORMAT;
     img_params.width = SRC_IMAGE_WIDTH;
     img_params.height = SRC_IMAGE_HEIGHT;
     mpp_static_img_add(mp, &img_params, (void *)image_data, NULL);
-    if (ret) {
-        PRINTF("Failed to add static image\r\n");
-        goto err;
-    }
+    if (ret) { PRINTF("Failed to add static image\r\n"); return ret; }
 
-    /* configure inference element with model */
     mpp_element_params_t mobilenet_params;
-    static mpp_stats_t mobilenet_stats;
-    memset(&mobilenet_params, 0 , sizeof(mpp_element_params_t));
+    memset(&mobilenet_params, 0, sizeof(mpp_element_params_t));
 
-#if defined(INFERENCE_ENGINE_TFLM)             /* TFlite */
+#if defined(INFERENCE_ENGINE_TFLM)
     mobilenet_params.ml_inference.model_data = mobilenet_data;
     mobilenet_params.ml_inference.model_size = mobilenet_data_len;
     mobilenet_params.ml_inference.model_input_mean = MOBILENET_INPUT_MEAN;
     mobilenet_params.ml_inference.model_input_std = MOBILENET_INPUT_STD;
     mobilenet_params.ml_inference.type = MPP_INFERENCE_TYPE_TFLITE;
-#elif defined(INFERENCE_ENGINE_GLOW)           /* GLOW */
+#elif defined(INFERENCE_ENGINE_GLOW)
     mobilenet_params.ml_inference.model_data = mobilenet_v1_weights_bin;
     mobilenet_params.ml_inference.inference_params.constant_weight_MemSize = MOBILENET_V1_CONSTANT_MEM_SIZE;
     mobilenet_params.ml_inference.inference_params.mutable_weight_MemSize = MOBILENET_V1_MUTABLE_MEM_SIZE;
@@ -307,36 +299,77 @@ static void app_task(void *params)
     mobilenet_params.ml_inference.inference_params.model_input_tensors_type = MPP_TENSOR_TYPE_INT8;
     mobilenet_params.ml_inference.inference_params.model_entry_point = &mobilenet_v1;
     mobilenet_params.ml_inference.type = MPP_INFERENCE_TYPE_GLOW;
-#elif defined(INFERENCE_ENGINE_DeepViewRT)    /* DeepViewRT */
+#elif defined(INFERENCE_ENGINE_DeepViewRT)
     mobilenet_params.ml_inference.model_data = mobilenet_data;
     mobilenet_params.ml_inference.model_size = mobilenet_data_len;
-    mobilenet_params.ml_inference.type = MPP_INFERENCE_TYPE_DEEPVIEWRT ;
+    mobilenet_params.ml_inference.type = MPP_INFERENCE_TYPE_DEEPVIEWRT;
 #endif
-
     mobilenet_params.ml_inference.inference_params.num_inputs = 1;
     mobilenet_params.ml_inference.inference_params.num_outputs = 1;
     mobilenet_params.ml_inference.tensor_order = MPP_TENSOR_ORDER_NHWC;
-    mobilenet_params.stats = &mobilenet_stats;
+    mobilenet_params.stats = mobilenet_stats;
 
     ret = mpp_element_add(mp, MPP_ELEMENT_INFERENCE, &mobilenet_params, NULL);
-    if (ret) {
-        PRINTF("Failed to add element VALGO_TFLite\r\n");
-        goto err;
-    }
+    if (ret) { PRINTF("Failed to add element VALGO_TFLite\r\n"); return ret; }
 
     mpp_stats_enable(MPP_STATS_GRP_ELEMENT);
 
     ret = mpp_nullsink_add(mp);
-    if (ret) {
-        PRINTF("Failed to add NULL sink\r\n");
-        goto err;
-    }
+    if (ret) { PRINTF("Failed to add NULL sink\r\n"); return ret; }
 
     ret = mpp_start(mp, 1, false);
-    if (ret) {
-        PRINTF("Failed to start pipeline\r\n");
-        goto err;
+    if (ret) { PRINTF("Failed to start pipeline\r\n"); return ret; }
+
+    *mp_out = mp;
+    return 0;
+}
+
+static void app_task(void *params)
+{
+    user_data_t user_data = {0};
+    static mpp_stats_t mobilenet_stats;
+    int ret;
+
+    PRINTF("[%s]\r\n", mpp_get_version());
+
+#if defined(CONFIG_TEST_MPP_DEINIT)
+    uint32_t start_free_heap = mpp_get_free_heap();
+    PRINTF("Available heap: %u kB\r\n", start_free_heap >> 10);
+    for (;;) {
+        mpp_t mp = NULL;
+        ret = build_pipeline(&user_data, &mp, &mobilenet_stats);
+        if (ret) goto err;
+        TickType_t xLastWakeTime = xTaskGetTickCount();
+        const TickType_t xFrequency = STATS_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
+        uint32_t last_inf_frame_num = user_data.inference_frame_num;
+        PRINTF("\r\nStart %s\r\n", TC_NAME);
+        uint32_t crt_free_heap = mpp_get_free_heap();
+        PRINTF("Crt available heap: %u kB\r\n", crt_free_heap >> 10);
+        PRINTF("Used heap: %u kB\r\n", (uint32_t)(start_free_heap - crt_free_heap) >> 10);
+        TickType_t t0 = xLastWakeTime;
+        while ((xTaskGetTickCount() - t0) < pdMS_TO_TICKS(15000)) {
+            xTaskDelayUntil(&xLastWakeTime, xFrequency);
+            if (last_inf_frame_num != user_data.inference_frame_num) {
+                print_result(&mobilenet_stats, &user_data);
+                last_inf_frame_num = user_data.inference_frame_num;
+            }
+        }
+        mpp_stop(mp);
+        mpp_destroy(mp);
+        mpp_api_ctl_tasks_destroy();
+        uint32_t end_free_heap = mpp_get_free_heap();
+        PRINTF("\r\nCrt available heap: %u kB\r\n", end_free_heap >> 10);
+        PRINTF("unfreed heap: %u bytes\r\n", (uint32_t)(start_free_heap - end_free_heap));
+        if (start_free_heap == end_free_heap)
+            PRINTF("test_image_mobilenet MPP deinit - PASSED\r\n");
+        else
+            PRINTF("test_image_mobilenet MPP deinit - FAILED\r\n");
+        vTaskDelay(pdMS_TO_TICKS(5000));
     }
+#else
+    mpp_t mp = NULL;
+    ret = build_pipeline(&user_data, &mp, &mobilenet_stats);
+    if (ret) goto err;
 
 #if (CONFIG_STOP_MPP == 1)
     uint32_t print_count = 0;
@@ -380,6 +413,7 @@ static void app_task(void *params)
         }
 #endif
     }
+#endif /* CONFIG_TEST_MPP_DEINIT */
 
 err:
     for (;;)
@@ -388,4 +422,3 @@ err:
         vTaskSuspend(NULL);
     }
 }
-

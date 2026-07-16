@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 NXP.
+ * Copyright 2020-2026 NXP.
  *
  *  SPDX-License-Identifier: Apache-2.0
  *
@@ -30,6 +30,9 @@ int tick_check_rate(uint32_t *last, int *curr, int max);
 
 /* get string from element id */
 char * elem_name(_elem_t *elem);
+
+/* get string from MPP return code */
+char *mpp_error_string(int error_code);
 
 #if MPP_OS_FREERTOS
 /* non-conditional logs */

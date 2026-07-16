@@ -257,13 +257,21 @@ static inline int mc_src_dequeue(_mpp_t *mpp)
 
     if (ret != kStatus_HAL_MultiCoreSuccess)
     {
-        MPP_LOGE("MC dequeue failed\n");
+        if (ret == kStatus_HAL_MultiCoreNoDataReq)
+            MPP_LOGI("No data to dequeue\r\n");
+        else
+            MPP_LOGE("MC dequeue failed\n");
         (void) mc_src_unlock_device(mc);
         return MPP_ERROR;
     }
 
     for (int i = 0; i < elem->io.nb_out_buf; i++)
     {
+        if (recv_addr[i] == NULL)
+        {
+            MPP_LOGD("MC source buffer %d was not requested (skip dequeue for it)\r\n", i);
+            continue;
+        }
         /* Write the dequeued info to the elem output buffer */
         if (recv_addr[i] != elem->io.out_buf[i]->hw)
         {
@@ -330,6 +338,10 @@ int mpp_mc_source_add(mpp_t mpp, mpp_mc_params_t *params, mpp_elem_handle_t *ele
     /* set operating mode */
     elem->io.inplace = false;
     elem->io.nb_in_buf = 0;
+
+    /* Set pipeline event callback before init so HAL can fire MPP_EVENT_MC_REMOTE_DEINIT */
+    mc->dev.config.callback     = elem->mpp->params.evt_callback_f;
+    mc->dev.config.cb_user_data = elem->mpp->params.cb_userdata;
 
     /* HAL init function */
     ret = mc->dev.ops->init(&mc->dev, &mc->params, kHAL_MultiCoreDevTypeSource);

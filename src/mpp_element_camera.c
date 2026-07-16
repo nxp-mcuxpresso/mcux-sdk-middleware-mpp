@@ -125,8 +125,13 @@ static inline int camera_dequeue(_mpp_t *mpp)
     if (cam->params.in_advance_enqueue == false)
     {
         for (int i = 0; i < MAX_OUTPUT_PORTS; i++)
+        {
             cam->dev.config.stream_requested[i] = false;
-
+            for (int j = 0; j < MAX_STREAM_REQUESTERS; j++)
+            {
+                cam->dev.config.stream_requester[i][j] = NULL;
+            }
+        }
         cam->dev.config.crt_stream_req_cnt = 0;
     }
 
@@ -407,10 +412,10 @@ int mpp_camera_add(mpp_t mpp, const char* name, mpp_camera_params_t *params, mpp
     }
     else if (strcmp(name, "USB_cam") == 0)
     {
-        if (params->in_advance_enqueue == true)
-            camera_enqueue_callback = camera_enqueue;
-        else
-            camera_enqueue_callback = NULL;
+        /* Always register the enqueue callback for USB cam.
+         * camera_enqueue will decide whether to call the HAL enqueue ops
+         * based on in_advance_enqueue. */
+        camera_enqueue_callback = camera_enqueue;
     }
     else
     {

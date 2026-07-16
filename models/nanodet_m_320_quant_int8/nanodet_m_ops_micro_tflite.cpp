@@ -23,7 +23,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
 {
 #ifdef APP_USE_NEUTRON64_MODEL
     static tflite::MicroMutableOpResolver<4> s_microOpResolver;
-
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_RESIZE_BILINEAR) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddTranspose();
     s_microOpResolver.AddAdd();
     s_microOpResolver.AddResizeBilinear();
@@ -31,7 +32,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
             tflite::Register_NEUTRON_GRAPH());
 #else
     static tflite::MicroMutableOpResolver<13> s_microOpResolver;
-
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_SLICE) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddConv2D();
     s_microOpResolver.AddDepthwiseConv2D();
     s_microOpResolver.AddPad();

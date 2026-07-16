@@ -412,15 +412,10 @@ int mpp_event_listener(mpp_t mpp, mpp_evt_t evt, void *evt_data, void *user_data
 	return 0;
 }
 
-static void app_task(void *params)
+static int build_pipeline(user_data_t *user_data, bool stripe_mode,
+                           mpp_t *mp_out, mpp_t *mp_split_out, mpp_t *mp_bg_out)
 {
-	static user_data_t user_data = {0};
 	int ret;
-	bool stripe_mode = (APP_STRIPE_MODE > 0)? true : false;
-
-	PRINTF("[%s]\r\n", mpp_get_version());
-
-	PRINTF("Inference Engine: TensorFlow-Lite Micro \r\n");
 
 	/* init API */
 	mpp_api_params_t api_param = {0};
@@ -430,20 +425,18 @@ static void app_task(void *params)
 	api_param.rc_cycle_min = APP_RC_CYCLE_MIN;
 #endif
 	ret = mpp_api_init(&api_param);
-	if (ret)
-		goto err;
+	if (ret) return ret;
 
 	mpp_t mp;
 	mpp_params_t mpp_params;
 	memset(&mpp_params, 0, sizeof(mpp_params));
 	mpp_params.evt_callback_f = &mpp_event_listener;
 	mpp_params.mask = MPP_EVENT_ALL;
-	mpp_params.cb_userdata = &user_data;
+	mpp_params.cb_userdata = user_data;
 	mpp_params.exec_flag = MPP_EXEC_RC;
 
 	mp = mpp_create(&mpp_params, &ret);
-	if (mp == MPP_INVALID)
-		goto err;
+	if (mp == MPP_INVALID) return ret;
 
 #if (SOURCE_STATIC_IMAGE == 1)
 	mpp_img_params_t img_params;
@@ -462,10 +455,7 @@ static void app_task(void *params)
 	cam_params.fps    = 30;
 	cam_params.stripe = stripe_mode;
 	ret = mpp_camera_add(mp, s_camera_name, &cam_params, NULL);
-	if (ret) {
-		PRINTF("Failed to add camera %s\r\n", s_camera_name);
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to add camera %s\r\n", s_camera_name); return ret; }
 #endif
 
 	/* split the pipeline into 2 branches:
@@ -476,10 +466,7 @@ static void app_task(void *params)
 	mpp_params.exec_flag = MPP_EXEC_RC;
 
 	ret = mpp_split(mp, 1 , &mpp_params, &mp_split);
-	if (ret) {
-		PRINTF("Failed to split pipeline\n");
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to split pipeline\n"); return ret; }
 
 	/* First do crop + resize + color convert */
 	mpp_element_params_t elem_params;
@@ -511,10 +498,7 @@ static void app_task(void *params)
 	elem_params.convert.stripe_out = false; /* model takes full frames */
 
 	ret = mpp_element_add(mp, MPP_ELEMENT_CONVERT, &elem_params, NULL);
-	if (ret ) {
-		PRINTF("Failed to add element CONVERT\n");
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to add element CONVERT\n"); return ret; }
 
 	/* create a background mpp (preempt-able branch) for the ML Inference
 	 * because it may take longer than capture period.
@@ -523,10 +507,7 @@ static void app_task(void *params)
 	mpp_params.exec_flag = MPP_EXEC_PREEMPT;
 
 	ret = mpp_background(mp, &mpp_params, &mp_bg);
-	if (ret) {
-		PRINTF("Failed to split pipeline\n");
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to split pipeline\n"); return ret; }
 
 	/* configure TFlite element with model */
 	mpp_element_params_t persondetect_params;
@@ -542,16 +523,11 @@ static void app_task(void *params)
 	persondetect_params.ml_inference.type = MPP_INFERENCE_TYPE_TFLITE;
 
 	ret = mpp_element_add(mp_bg, MPP_ELEMENT_INFERENCE, &persondetect_params, NULL);
-	if (ret) {
-		PRINTF("Failed to add element MPP_ELEMENT_INFERENCE\r\n");
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to add element MPP_ELEMENT_INFERENCE\r\n"); return ret; }
+
 	/* close the pipeline with a null sink */
 	ret = mpp_nullsink_add(mp_bg);
-	if (ret) {
-		PRINTF("Failed to add NULL sink\n");
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to add NULL sink\n"); return ret; }
 
 #ifndef APP_SKIP_CONVERT_FOR_DISPLAY
 	/* On the secondary branch of the pipeline, send the frame to the display */
@@ -578,39 +554,33 @@ static void app_task(void *params)
 	elem_params.convert.ops = MPP_CONVERT_COLOR | MPP_CONVERT_ROTATE | MPP_CONVERT_SCALE;
 
 	ret = mpp_element_add(mp_split, MPP_ELEMENT_CONVERT, &elem_params, NULL);
-
-	if (ret) {
-		PRINTF("Failed to add element CONVERT\r\n");
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to add element CONVERT\r\n"); return ret; }
 #endif
 
 	/* add one label rectangle */
 	memset(&elem_params, 0, sizeof(elem_params));
-	memset(&user_data.labels, 0, sizeof(user_data.labels));
+	memset(&user_data->labels, 0, sizeof(user_data->labels));
 
 	/* params init */
 	elem_params.labels.max_rect = MAX_LABEL_RECTS;
 	elem_params.labels.detected_rect = 1;
-	elem_params.labels.rectangles = user_data.labels;
+	elem_params.labels.rectangles = user_data->labels;
 
 	/* first add detection zone box */
-	user_data.labels[0].top    = DETECTION_ZONE_RECT_TOP;
-	user_data.labels[0].left   = DETECTION_ZONE_RECT_LEFT;
-	user_data.labels[0].bottom = DETECTION_ZONE_RECT_TOP + DETECTION_ZONE_RECT_HEIGHT;
-	user_data.labels[0].right  = DETECTION_ZONE_RECT_LEFT + DETECTION_ZONE_RECT_WIDTH;
-	user_data.labels[0].line_width = RECT_LINE_WIDTH;
-	user_data.labels[0].line_color.rgb.G = 0xff;
-	strcpy((char *)user_data.labels[0].label, "Detection zone");
+	user_data->labels[0].top    = DETECTION_ZONE_RECT_TOP;
+	user_data->labels[0].left   = DETECTION_ZONE_RECT_LEFT;
+	user_data->labels[0].bottom = DETECTION_ZONE_RECT_TOP + DETECTION_ZONE_RECT_HEIGHT;
+	user_data->labels[0].right  = DETECTION_ZONE_RECT_LEFT + DETECTION_ZONE_RECT_WIDTH;
+	user_data->labels[0].line_width = RECT_LINE_WIDTH;
+	user_data->labels[0].line_color.rgb.G = 0xff;
+	strcpy((char *)user_data->labels[0].label, "Detection zone");
 
 	/* retrieve the element handle while add api */
-	ret = mpp_element_add(mp_split, MPP_ELEMENT_LABELED_RECTANGLE, &elem_params, &user_data.elem);
-	if (ret) {
-		PRINTF("Failed to add element LABELED_RECTANGLE (0x%x)\r\n", ret);
-		goto err;
-	}
+	ret = mpp_element_add(mp_split, MPP_ELEMENT_LABELED_RECTANGLE, &elem_params, &user_data->elem);
+	if (ret) { PRINTF("Failed to add element LABELED_RECTANGLE (0x%x)\r\n", ret); return ret; }
+
 	/* pass the mpp of the element 'label rectangle' to callback */
-	user_data.mp = mp_split;
+	user_data->mp = mp_split;
 
 #ifndef APP_SKIP_CONVERT_FOR_DISPLAY
 	/* then rotate if needed */
@@ -622,11 +592,7 @@ static void app_task(void *params)
 		elem_params.convert.angle = APP_DISPLAY_LANDSCAPE_ROTATE;
 		elem_params.convert.ops = MPP_CONVERT_ROTATE;
 		ret = mpp_element_add(mp_split, MPP_ELEMENT_CONVERT, &elem_params, NULL);
-
-		if (ret) {
-			PRINTF("Failed to add element CONVERT\r\n");
-			goto err;
-		}
+		if (ret) { PRINTF("Failed to add element CONVERT\r\n"); return ret; }
 	}
 #endif
 
@@ -640,68 +606,139 @@ static void app_task(void *params)
 	disp_params.rotate = APP_DISPLAY_LANDSCAPE_ROTATE;
 #endif
 	ret = mpp_display_add(mp_split, s_display_name, &disp_params);
-	if (ret) {
-		PRINTF("Failed to add display %s\r\n", s_display_name);
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to add display %s\r\n", s_display_name); return ret; }
 
 	/* start preempt-able pipeline branch */
 	ret = mpp_start(mp_bg, 0, false);
-	if (ret) {
-		PRINTF("Failed to start preempt-able pipeline branch");
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to start preempt-able pipeline branch"); return ret; }
+
 	/* start secondary pipeline branch */
 	ret = mpp_start(mp_split, 0, false);
-	if (ret) {
-		PRINTF("Failed to start secondary pipeline branch");
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to start secondary pipeline branch"); return ret; }
+
 	/* start main pipeline branch */
 	ret = mpp_start(mp, 1, false);
-	if (ret) {
-		PRINTF("Failed to start main pipeline branch");
-		goto err;
-	}
+	if (ret) { PRINTF("Failed to start main pipeline branch"); return ret; }
 
-	TickType_t xLastWakeTime;
-	const TickType_t xFrequency = OUTPUT_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
-	xLastWakeTime = xTaskGetTickCount();
-	uint32_t last_inf_frame_num = user_data.inference_frame_num;
-	for (;;) {
-		xTaskDelayUntil( &xLastWakeTime, xFrequency );
-		if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0)) {
-			if (last_inf_frame_num != user_data.inference_frame_num)
-			{
-				PRINTF("inference time %u ms \r\n", user_data.inference_time_ms);
-				if (user_data.detected_count <= 0) {
-					PRINTF("Persondetect : No person detected\n\r");
-				} else {
-					PRINTF("Number of detections : %d\n\r", user_data.detected_count);
-					for (int i = 0; i < NUM_BOXES_MAX; i++){
-						if (user_data.final_boxes[i].area > 0 && user_data.final_boxes[i].score > 0.0)
-						{
-							if (user_data.final_boxes[i].area > 0) {
-								PRINTF("box %d --> score %u %%\r\n Left=%d, Top=%d, Right=%d, Bottom=%d\r\n"
-										"-------------------------------------------\r\n",
-										i,
-										(uint8_t)((user_data.final_boxes[i].score)*100),
-										user_data.final_boxes[i].left,
-										user_data.final_boxes[i].top,
-										user_data.final_boxes[i].right,
-										user_data.final_boxes[i].bottom);
-							}
-						}
-					}
-				}
-				last_inf_frame_num = user_data.inference_frame_num;
-			}
-			__atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
-		}
-	}
+	*mp_out = mp;
+	*mp_split_out = mp_split;
+	*mp_bg_out = mp_bg;
+	return 0;
+}
 
-	/* pause application task */
-	vTaskSuspend(NULL);
+static void app_task(void *params)
+{
+	static user_data_t user_data = {0};
+	int ret;
+	bool stripe_mode = (APP_STRIPE_MODE > 0)? true : false;
+
+	PRINTF("[%s]\r\n", mpp_get_version());
+
+	PRINTF("Inference Engine: TensorFlow-Lite Micro \r\n");
+
+#if defined(CONFIG_TEST_MPP_DEINIT)
+    uint32_t start_free_heap = mpp_get_free_heap();
+    PRINTF("Available heap: %u kB\r\n", start_free_heap >> 10);
+    for (;;) {
+        memset(&user_data, 0, sizeof(user_data));
+        mpp_t mp = NULL, mp_split = NULL, mp_bg = NULL;
+        ret = build_pipeline(&user_data, stripe_mode, &mp, &mp_split, &mp_bg);
+        if (ret) goto err;
+        TickType_t xLastWakeTime = xTaskGetTickCount();
+        const TickType_t xFrequency = OUTPUT_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
+        uint32_t last_inf_frame_num = user_data.inference_frame_num;
+        {
+            uint32_t crt_free_heap = mpp_get_free_heap();
+            PRINTF("Crt available heap: %u kB\r\n", crt_free_heap >> 10);
+            PRINTF("Used heap: %u kB\r\n", (uint32_t)(start_free_heap - crt_free_heap) >> 10);
+        }
+        TickType_t t0 = xLastWakeTime;
+        while ((xTaskGetTickCount() - t0) < pdMS_TO_TICKS(15000)) {
+            xTaskDelayUntil(&xLastWakeTime, xFrequency);
+            if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0)) {
+                if (last_inf_frame_num != user_data.inference_frame_num)
+                {
+                    PRINTF("inference time %u ms \r\n", user_data.inference_time_ms);
+                    if (user_data.detected_count <= 0) {
+                        PRINTF("Persondetect : No person detected\n\r");
+                    } else {
+                        PRINTF("Number of detections : %d\n\r", user_data.detected_count);
+                        for (int i = 0; i < NUM_BOXES_MAX; i++){
+                            if (user_data.final_boxes[i].area > 0 && user_data.final_boxes[i].score > 0.0)
+                            {
+                                if (user_data.final_boxes[i].area > 0) {
+                                    PRINTF("box %d --> score %u %%\r\n Left=%d, Top=%d, Right=%d, Bottom=%d\r\n"
+                                            "-------------------------------------------\r\n",
+                                            i,
+                                            (uint8_t)((user_data.final_boxes[i].score)*100),
+                                            user_data.final_boxes[i].left,
+                                            user_data.final_boxes[i].top,
+                                            user_data.final_boxes[i].right,
+                                            user_data.final_boxes[i].bottom);
+                                }
+                            }
+                        }
+                    }
+                    last_inf_frame_num = user_data.inference_frame_num;
+                }
+                __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
+            }
+        }
+        mpp_stop(mp_split);
+        mpp_stop(mp_bg);
+        mpp_stop(mp);
+        mpp_destroy(mp);
+        mpp_api_ctl_tasks_destroy();
+        uint32_t end_free_heap = mpp_get_free_heap();
+        PRINTF("\r\nCrt available heap: %u kB\r\n", end_free_heap >> 10);
+        PRINTF("unfreed heap: %u bytes\r\n", (uint32_t)(start_free_heap - end_free_heap));
+        if (start_free_heap == end_free_heap)
+            PRINTF("test_camera_persondetect_view MPP deinit - PASSED\r\n");
+        else
+            PRINTF("test_camera_persondetect_view MPP deinit - FAILED\r\n");
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+#else
+    mpp_t mp, mp_split, mp_bg;
+    ret = build_pipeline(&user_data, stripe_mode, &mp, &mp_split, &mp_bg);
+    if (ret) goto err;
+
+    TickType_t xLastWakeTime;
+    const TickType_t xFrequency = OUTPUT_PRINT_PERIOD_MS / portTICK_PERIOD_MS;
+    xLastWakeTime = xTaskGetTickCount();
+    uint32_t last_inf_frame_num = user_data.inference_frame_num;
+    for (;;) {
+        xTaskDelayUntil(&xLastWakeTime, xFrequency);
+        if (Atomic_CompareAndSwap_u32(&user_data.accessing, 1, 0)) {
+            if (last_inf_frame_num != user_data.inference_frame_num)
+            {
+                PRINTF("inference time %u ms \r\n", user_data.inference_time_ms);
+                if (user_data.detected_count <= 0) {
+                    PRINTF("Persondetect : No person detected\n\r");
+                } else {
+                    PRINTF("Number of detections : %d\n\r", user_data.detected_count);
+                    for (int i = 0; i < NUM_BOXES_MAX; i++){
+                        if (user_data.final_boxes[i].area > 0 && user_data.final_boxes[i].score > 0.0)
+                        {
+                            if (user_data.final_boxes[i].area > 0) {
+                                PRINTF("box %d --> score %u %%\r\n Left=%d, Top=%d, Right=%d, Bottom=%d\r\n"
+                                        "-------------------------------------------\r\n",
+                                        i,
+                                        (uint8_t)((user_data.final_boxes[i].score)*100),
+                                        user_data.final_boxes[i].left,
+                                        user_data.final_boxes[i].top,
+                                        user_data.final_boxes[i].right,
+                                        user_data.final_boxes[i].bottom);
+                            }
+                        }
+                    }
+                }
+                last_inf_frame_num = user_data.inference_frame_num;
+            }
+            __atomic_store_n(&user_data.accessing, 0, __ATOMIC_SEQ_CST);
+        }
+    }
+#endif /* CONFIG_TEST_MPP_DEINIT */
 
 	err:
 	for (;;)

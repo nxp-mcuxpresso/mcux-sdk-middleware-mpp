@@ -14,6 +14,7 @@ mcux_add_include(
     BASE_PATH ${SdkRootDirPath}
     INCLUDES  middleware/eiq/mpp/boards/${board}/tests/test_mc_image_convert_display/${core_id}/
               middleware/eiq/mpp/boards/${board}/tests/test_mc_image_convert_display/
+              middleware/eiq/mpp/tests/test_mc_image_convert_display/inc/
               middleware/eiq/mpp/tests/test_mc_image_convert_display/
 )
 

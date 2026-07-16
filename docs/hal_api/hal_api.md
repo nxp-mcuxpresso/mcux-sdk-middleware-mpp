@@ -167,6 +167,8 @@ Enabling/Disabling HAL components and devices:
 - struct [_filesink](#_filesink)
 - struct [rtspsink_config_t](#rtspsink_config_t)
 - struct [_rtspsink](#_rtspsink)
+- struct [rtspsrc_config_t](#rtspsrc_config_t)
+- struct [_rtspsrc](#_rtspsrc)
 - struct [gfx_surface_t](#gfx_surface_t)
 - struct [gfx_rotate_config_t](#gfx_rotate_config_t)
 - struct [_gfx_dev](#_gfx_dev)
@@ -375,6 +377,7 @@ Enabling/Disabling HAL components and devices:
 - [hal_vdec_status_t ](#hal_vdec_status_t)[ HAL_VdecDev_H264_CPU_Register (](#hal_vdecdev_h264_cpu_register)vdec_h264_dev_t * dev)
 - int[ setup_static_image_elt (](#setup_static_image_elt)static_image_t * elt)
 - int[ setup_filesrc_elt (](#setup_filesrc_elt)filesrc_t * elt)
+- int[ setup_rtspsrc_elt (](#setup_rtspsrc_elt)rtspsrc_t * elt)
 - uint32_t[ calc_checksum (](#calc_checksum)int size\_b, void * pbuf)
 - [hal_venc_status_t ](#hal_venc_status_t)[ HAL_VencDev_H264_CPU_Register (](#hal_vencdev_h264_cpu_register)venc_h264_dev_t * dev)
 
@@ -518,6 +521,22 @@ Register the file source element.
 |in/out|name|description|
 | - | - | - |
 |in|elt|file source element to register|
+
+**Returns**
+
+error code (0: success, otherwise: failure)
+
+##### setup_rtspsrc_elt
+
+int setup\_rtspsrc\_elt ( rtspsrc_t * elt )
+
+Register the RTSP source element.
+
+**Parameters**
+
+|in/out|name|description|
+| - | - | - |
+|in|elt|RTSP source element to register|
 
 **Returns**
 
@@ -801,6 +820,31 @@ Attributes of an RTSP sink element.
 | - | - | - |
 |const [rtspsink_operator_t ](#rtspsink_operator_t) *|ops|operations|
 |[rtspsink_config_t ](#rtspsink_config_t)|config|RTSP sink configuration.|
+
+##### rtspsrc_config_t
+
+**struct rtspsrc\_config\_t**
+
+Configuration parameters kept inside the RTSP source device.
+
+**Data Fields**
+
+- char rtsp\_url[RTSP_URL_MAX_LEN]
+
+##### _rtspsrc
+
+**struct \_rtspsrc**
+
+Attributes of an RTSP source element.
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|const [rtspsrc_operator_t ](#rtspsrc_operator_t) *|ops|Operations.|
+|[rtspsrc_config_t ](#rtspsrc_config_t)|config|RTSP source config.|
+|uint8_t *|buffer|Frame reassembly buffer (HAL-allocated)|
+|uint32_t|buffer\_size|Size of buffer in bytes.|
 
 ##### gfx_surface_t
 
@@ -1176,10 +1220,12 @@ Structure that characterizes the mc device.
 |bool|initial\_enqueue\_done|flag to indicate if initial enqueue is done|
 |uint32_t|min\_req\_cnt|minimum number of buffers required|
 |uint32_t|crt\_req\_cnt|current number of buffers requested|
-|mpp_exec_flag_t|req\_exec\_type||
+|mpp_exec_flag_t|req\_exec\_type|execution type for buffer requests|
 |bool|requested[MAX_OUTPUT_PORTS]|buffer request status|
 |bool|enqueued[MAX_OUTPUT_PORTS]|buffer enqueued status|
 |void *|buff\_desc[MAX_OUTPUT_PORTS]|hw address to receive data|
+|int|(*callback)(mpp\_t mpp, mpp\_evt\_t evt, void *evt\_data, void *user\_data)|optional pipeline event callback - set before calling init to receive MPP_EVENT_MC_REMOTE_DEINIT|
+|void *|cb\_user\_data|opaque pointer forwarded to callback|
 
 ##### _multicore_dev
 
@@ -1668,6 +1714,7 @@ video encoder return status
 - struct [filesrc_operator_t](#filesrc_operator_t)
 - struct [filesink_operator_t](#filesink_operator_t)
 - struct [rtspsink_operator_t](#rtspsink_operator_t)
+- struct [rtspsrc_operator_t](#rtspsrc_operator_t)
 - struct [gfx_dev_operator_t](#gfx_dev_operator_t)
 - struct [vdec_dev_operator_t](#vdec_dev_operator_t)
 - struct [vdec_h264_dev_operator_t](#vdec_h264_dev_operator_t)
@@ -1883,6 +1930,23 @@ Operation that needs to be implemented by an RTSP sink element.
 |hal_rtspsink_status_t|(*stop)(const rtspsink\_t *dev)|stop the dev|
 |hal_rtspsink_status_t|(*enqueue)(const rtspsink\_t *dev, void *data, uint32\_t size)|enqueue a buffer|
 |hal_rtspsink_status_t|(*get\_buf\_desc)(const rtspsink\_t *dev, hw\_buf\_desc\_t *in\_buf, mpp\_memory\_policy\_t *policy)|get buffer descriptors and policy|
+
+##### rtspsrc_operator_t
+
+**struct rtspsrc\_operator\_t**
+
+Operations that need to be implemented by an RTSP source element.
+
+**Data Fields**
+
+|type|name|description|
+| - | - | - |
+|hal_rtspsrc_status_t|(*init)(rtspsrc\_t *dev, mpp\_rtspsrc\_params\_t *config)|initialize the RTSP source device|
+|hal_rtspsrc_status_t|(*deinit)(rtspsrc\_t *dev)|de-initialize the RTSP source device|
+|hal_rtspsrc_status_t|(*start)(const rtspsrc\_t *dev)|start streaming|
+|hal_rtspsrc_status_t|(*stop)(const rtspsrc\_t *dev)|stop streaming|
+|hal_rtspsrc_status_t|(*dequeue)(const rtspsrc\_t *dev, void **data, uint32\_t *size)|dequeue a received buffer|
+|hal_rtspsrc_status_t|(*get\_buf\_desc)(const rtspsrc\_t *dev, hw\_buf\_desc\_t *out\_buf, mpp\_memory\_policy\_t *policy)|get buffer descriptor and memory policy|
 
 ##### gfx_dev_operator_t
 

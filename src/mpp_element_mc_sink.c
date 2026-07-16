@@ -152,7 +152,10 @@ static inline int mc_sink_dequeue(_elem_t *elem, void *buf)
         ret = mc->dev.ops->dequeue(&mc->dev, send_addr, NULL, NULL, NULL);
         if (ret != kStatus_HAL_MultiCoreSuccess)
         {
-            MPP_LOGE("Failed to dequeue from mc device\n");
+            if (ret == kStatus_HAL_MultiCoreNoDataReq)
+                MPP_LOGI("Warning: No buffer req\r\n");
+            else
+                MPP_LOGE("Failed to dequeue from mc device\r\n");
             (void) mc_sink_unlock_device(mc);
             return MPP_ERROR;
         }
@@ -339,6 +342,10 @@ int mpp_mc_sink_add(mpp_t mpp, mpp_mc_params_t *params)
 
         elem->io.in_buf[i]->dequeue_cb = mc_sink_dequeue;
     }
+
+    /* Set pipeline event callback before init so HAL can fire MPP_EVENT_MC_REMOTE_DEINIT */
+    mc->dev.config.callback     = elem->mpp->params.evt_callback_f;
+    mc->dev.config.cb_user_data = elem->mpp->params.cb_userdata;
 
     /* HAL init function */
     ret = mc->dev.ops->init(&mc->dev, &mc->params, kHAL_MultiCoreDevTypeSink);

@@ -1024,7 +1024,7 @@ hal_camera_status_t HAL_CameraDev_Virtual_USB_Dequeue(const camera_dev_t *dev, v
                 /* Attempt to enqueue the requested streams now */
                 bool stream_active[NUM_STREAMS];
                 for (int i = 0; i < NUM_STREAMS; i++)
-                    stream_active[i] = dev->config.stream[i].active & dev->config.stream_requested[i];
+                    stream_active[i] = dev->config.stream[i].active && dev->config.stream_requested[i];
 
                 GOTO_ON_ERROR(camera_dev_enqueue(dev, stream_active) != kStatus_HAL_CameraSuccess, dequeue_cleanup,
                             "Got error while trying to enqueue buffers to camera device\n");

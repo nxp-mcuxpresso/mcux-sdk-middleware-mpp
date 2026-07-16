@@ -21,6 +21,7 @@
 #include "mpp_heap.h"
 #include "hal_os.h"
 #include "mpp_debug.h"
+#include "string.h"
 
 extern hal_mutex_t stats_lock[];
 
@@ -123,6 +124,51 @@ static bool mpp_last_stripe(_mpp_t *mpp)
     return true;
 }
 
+/* Walk the ancestor chain (same exec_heap) and return the effective n_passes.
+ * The topmost ancestor whose n_passes != 0 takes precedence; if none is found
+ * among ancestors, fall back to mpp's own n_passes.
+ */
+static uint32_t get_effective_n_passes(_mpp_t *mpp)
+{
+    uint32_t effective = mpp->n_passes;
+    _mpp_t *m = mpp;
+
+    /* walk up the hook chain while we stay on the same exec_heap */
+    while (m->hook != NULL) {
+        _mpp_t *parent = m->hook->mpp;
+        if (parent->exec_heap != mpp->exec_heap)
+            break;
+        /* parent with n_passes set overrides any child setting */
+        if (parent->n_passes != 0)
+            effective = parent->n_passes;
+        m = parent;
+    }
+    return effective;
+}
+
+/* Returns true if this mpp should run on the given pass index.
+ * The effective n_passes is determined by walking up the ancestor chain so
+ * that multi-level branch hierarchies are handled correctly.
+ */
+static bool is_in_pass_group(_mpp_t *mpp, uint32_t pass_idx)
+{
+    uint32_t effective = get_effective_n_passes(mpp);
+    return (effective != 0 && pass_idx < effective);
+}
+
+/* Returns the maximum n_passes across all mpps in the heap */
+static uint32_t get_heap_max_n_passes(_mpp_t *prio_lst[])
+{
+    uint32_t max = 1;
+    for (int i = 0; i < MAX_MPP_HEAP_PRIO; i++) {
+        if (prio_lst[i] != NULL) {
+            if (prio_lst[i]->n_passes > max)
+                max = prio_lst[i]->n_passes;
+        }
+    }
+    return max;
+}
+
 /* MPP serial execution */
 void mpp_execute(_mpp_t *mpp)
 {
@@ -137,10 +183,13 @@ void mpp_execute(_mpp_t *mpp)
     if (__builtin_expect((mpp->oper_status != MPP_RUNNING), 0))
     {
         /* Avoid running on an old frame when restarting the pipeline*/
-        if (elem->type == MPP_TYPE_PROC)
+        if (elem != NULL && elem->type == MPP_TYPE_PROC)
         {
             for (i = 0; i < elem->io.nb_in_buf; i++)
-                elem->io.last_frame_id[i] = elem->io.in_buf[i]->frame_id;
+            {
+                if (elem->io.in_buf[i] != NULL)
+                    elem->io.last_frame_id[i] = elem->io.in_buf[i]->frame_id;
+            }
         }
         return;
     }
@@ -159,7 +208,8 @@ void mpp_execute(_mpp_t *mpp)
      * for its own rate limitation.
      */
     MPP_LOGD_IF(RLMT_CHECK(1), "Dequeue from src@%p\n", elem);
-    if(elem->type == MPP_TYPE_SOURCE && elem->src_dequeue != NULL)
+    /* skip source dequeue on passes after the first */
+    if(elem->type == MPP_TYPE_SOURCE && elem->src_dequeue != NULL && mpp->pass_idx == 0)
     {
         /* Check if a dequeue callback is defined on output buffer */
         for (i = 0; i < elem->io.nb_out_buf; i++)
@@ -250,7 +300,9 @@ void mpp_execute(_mpp_t *mpp)
 
     /* if branch has an element that wants to force the update */
     /* store value here, in case mpp gets updated while in processing loop */
-    bool force_update = mpp->force_update;
+    /* on passes after the first, treat as force-update so elements are not
+     * skipped due to unchanged frame_id (no new dequeue on pass > 0) */
+    bool force_update = mpp->force_update || (mpp->pass_idx > 0);
 
     /* loop over processing elements in mpp */
     while ((elem != NULL) && (elem->mpp == mpp) && (elem->type == MPP_TYPE_PROC))
@@ -337,6 +389,16 @@ void mpp_execute(_mpp_t *mpp)
                     bufsize = elem->io.in_buf[i]->hw->stride * elem->io.in_buf[i]->height;
                 HAL_DCACHE_InvalidateByRange((uint32_t) elem->io.in_buf[i]->hw->addr, bufsize);
             }
+        }
+
+        /* select pass-specific params if element has a pass_params array */
+        if (elem->pass_params != NULL) {
+            hal_ctx_t ctx;
+            hal_atomic_enter(&ctx);
+            uint32_t pidx = (mpp->pass_idx < elem->n_pass_params)
+                            ? mpp->pass_idx : (elem->n_pass_params - 1);
+            memcpy(&elem->params, &elem->pass_params[pidx], sizeof(mpp_element_params_t));
+            hal_atomic_exit(&ctx);
         }
 
         stats = elem->params.stats;
@@ -476,45 +538,56 @@ void mpp_execute_heap(_mpp_t *prio_lst[])
     mpp_stats_t *stats;
     uint64_t time_us;
     bool done = true;
+    bool last_stripe = false;
 
-    do
+    /* compute the maximum number of passes required across all mpps in this heap */
+    uint32_t n_passes = get_heap_max_n_passes(prio_lst);
+
+    for (uint32_t pass = 0; pass < n_passes; pass++)
     {
-        for (i = 0; i < MAX_MPP_HEAP_PRIO; i++)
-        {
-            if (prio_lst[i] != NULL)
+        do {
+            last_stripe = mpp_last_stripe(prio_lst[0]);
+            for (i = 0; i < MAX_MPP_HEAP_PRIO; i++)
             {
                 _mpp_t *mpp = prio_lst[i];
-                /**/
-                stats = mpp->params.stats;
-                if (stats) start_time = hal_get_exec_time();
-                mpp_execute(mpp);
-                if (stats) end_time = hal_get_exec_time();
-                /* check final stripe (first mpp has the source) */
-                if (mpp_last_stripe(prio_lst[0])) 
-                    mpp->fps_params.frame_cnt++;
-                if (stats && hal_mutex_lock_no_wait(stats_lock[MPP_STATS_GRP_MPP]) == MPP_SUCCESS)
+
+                if (mpp != NULL)
                 {
-                    stats->mpp.mpp = (mpp_t)mpp;
-                    stats->mpp.mpp_exec_time = end_time - start_time;
-                    if (mpp->fps_params.frame_cnt >= MPP_FPS_STATS_WINDOW)
+                    /* on passes after the first, skip mpps that are not
+                     * in the pass group (i.e. have no pass configured upstream) */
+                    if (pass > 0 && !is_in_pass_group(mpp, pass))
+                        continue;
+
+                    mpp->pass_idx = pass;
+                    stats = mpp->params.stats;
+                    if (stats) start_time = hal_get_exec_time();
+                    mpp_execute(mpp);
+                    if (stats) end_time = hal_get_exec_time();
+                    /* check final stripe (first mpp has the source) */
+                    if (last_stripe)
+                        mpp->fps_params.frame_cnt++;
+                    if (stats && hal_mutex_lock_no_wait(stats_lock[MPP_STATS_GRP_MPP]) == MPP_SUCCESS)
                     {
-                        time_us = hal_get_crt_time() - mpp->fps_params.start_time_us;
-                        assert(time_us > 0);
-                        uint64_t fps_calc = (mpp->fps_params.frame_cnt * 1000000UL) / time_us;
-                        assert(fps_calc <= 0xFFFFFFFFUL);
-                        stats->mpp.fps = (unsigned int)fps_calc;
-                        mpp->fps_params.frame_cnt = 0;
-                        mpp->fps_params.start_time_us = hal_get_crt_time();
+                        stats->mpp.mpp = (mpp_t)mpp;
+                        stats->mpp.mpp_exec_time = end_time - start_time;
+                        if (mpp->fps_params.frame_cnt >= MPP_FPS_STATS_WINDOW)
+                        {
+                            time_us = hal_get_crt_time() - mpp->fps_params.start_time_us;
+                            assert(time_us > 0);
+                            uint64_t fps_calc = (mpp->fps_params.frame_cnt * 1000000UL) / time_us;
+                            assert(fps_calc <= 0xFFFFFFFFUL);
+                            stats->mpp.fps = (unsigned int)fps_calc;
+                            mpp->fps_params.frame_cnt = 0;
+                            mpp->fps_params.start_time_us = hal_get_crt_time();
+                        }
+                        (void) hal_mutex_unlock(stats_lock[MPP_STATS_GRP_MPP]);
                     }
-                    (void) hal_mutex_unlock(stats_lock[MPP_STATS_GRP_MPP]);
                 }
             }
-            /**/
+            done = mpp_is_done(prio_lst[0]); /* check final stripe (first mpp has the source) */
         }
-        done = mpp_is_done(prio_lst[0]); /* check final stripe (first mpp has the source) */
+        while(!done);   /* continue on next stripe */
     }
-    while(!done);   /* continue on next stripe */
-
 }
 
 /* gives the number of elements in mpp */
@@ -601,6 +674,41 @@ int mpp_memory_manage_heap(_mpp_t *prio_lst[])
 /**
  * Check buffer allocation of all branches from a list
  **/
+void mpp_heap_remove(_mpp_t *mpp)
+{
+    if (!mpp || !mpp->exec_heap)
+        return;
+    for (int i = 0; i < MAX_MPP_HEAP_PRIO; i++)
+    {
+        if (mpp->exec_heap[i] == mpp)
+        {
+            MPP_LOGI("removed pipeline @%p from exec_heap slot %d\n", mpp, i);
+            mpp->exec_heap[i] = NULL;
+            return;
+        }
+    }
+    MPP_LOGI("pipeline @%p not found in exec_heap\n", mpp);
+}
+
+void mpp_print_heap(void)
+{
+#if MPP_OS_FREERTOS
+    MPP_LOGI("Free heap: %u bytes\n", (unsigned int) xPortGetFreeHeapSize());
+#else
+    MPP_LOGE("not supported on this OS\n");
+#endif
+}
+
+uint32_t mpp_get_free_heap(void)
+{
+#if MPP_OS_FREERTOS
+    return (uint32_t) xPortGetFreeHeapSize();
+#else
+    MPP_LOGE("mpp_get_free_heap: not supported on this OS\n");
+    return 0;
+#endif
+}
+
 int mpp_memory_check_list(_mpp_t *prio_lst[])
 {
     /* browse the mpp's and check for buffer's allocation */

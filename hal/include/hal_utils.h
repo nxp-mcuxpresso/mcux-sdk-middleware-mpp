@@ -27,6 +27,7 @@
 #include "hal_display_dev.h"
 #include "hal_static_image.h"
 #include "hal_filesrc.h"
+#include "hal_rtspsrc.h"
 #include "hal_graphics_dev.h"
 #include "hal_vdec_dev.h"
 
@@ -85,6 +86,14 @@ int setup_static_image_elt(static_image_t *elt);
  * @return error code (0: success, otherwise: failure)
  */
 int setup_filesrc_elt(filesrc_t *elt);
+
+/*!
+ * @brief Register the RTSP source element
+ *
+ * @param[in] elt RTSP source element to register
+ * @return error code (0: success, otherwise: failure)
+ */
+int setup_rtspsrc_elt(rtspsrc_t *elt);
 
 /*!
  * @brief Compute a 32-bit checksum over a memory buffer

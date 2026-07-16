@@ -75,6 +75,9 @@ hal_sema_t hal_sema_create();
 /*! @brief create binary semaphore */
 hal_sema_t hal_sema_create_binary();
 
+/*! @brief delete semaphore */
+void hal_sema_delete(hal_sema_t handle);
+
 /*! @brief give semaphore */
 bool hal_sema_give(hal_sema_t handle);
 
@@ -104,11 +107,20 @@ void hal_task_suspend(hal_task_t task);
 /*! @brief resume task */
 void hal_task_resume(hal_task_t task);
 
+/*! @brief delete task */
+void hal_task_delete(hal_task_t task);
+
 /*! @brief delay task */
 void hal_task_delay(uint32_t ticks);
 
+/*! @brief Delay task execution for specified milliseconds */
+void hal_task_delay_ms(uint32_t ms);
+
 /*! @brief create event group */
 hal_event_group_t hal_eventgrp_create();
+
+/*! @brief delete event group */
+void hal_eventgrp_delete(hal_event_group_t eventgrp);
 
 /*! @brief set bits of event group */
 hal_eventbits_t hal_eventgrp_set_bits(  hal_event_group_t eventgrp,
@@ -133,6 +145,9 @@ uint32_t hal_get_tick_rate_hz();
 /*! @brief Converts OS ticks to milliseconds. */
 uint32_t hal_tick_to_ms(uint32_t os_tick);
 
+/*! @brief Convert milliseconds to OS ticks */
+uint32_t hal_ms_to_ticks(uint32_t ms);
+
 /*! @brief Provides the exec time in ms of current task */
 uint32_t hal_get_exec_time();
 
@@ -153,6 +168,27 @@ int hal_get_os_max_prio();
 
 /*! @brief get CPU percent used by idle task */
 unsigned int hal_get_idle_percent();
+
+/*! @brief create queue (returns opaque handle, NULL on failure) */
+void *hal_queue_create(uint32_t length, uint32_t item_size);
+
+/*! @brief delete queue */
+void hal_queue_delete(void *queue);
+
+/*! @brief receive item from queue; returns true on success */
+bool hal_queue_receive(void *queue, void *item, uint32_t timeout);
+
+/*! @brief create queue set */
+void *hal_queueset_create(uint32_t length);
+
+/*! @brief add queue to queue set */
+int hal_queueset_add_queue(void *queue_set, void *queue);
+
+/*! @brief receive from queue set */
+void *hal_queueset_receive(void *queue_set, uint32_t timeout);
+
+/*! @brief delete queue set */
+void hal_queueset_delete(void *queue_set);
 
 #if MPP_OS_FREERTOS
 

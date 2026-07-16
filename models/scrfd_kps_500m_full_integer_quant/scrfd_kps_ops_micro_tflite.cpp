@@ -22,6 +22,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
 {
 #if defined(APP_USE_NEUTRON16_MODEL)
     static tflite::MicroMutableOpResolver<12> s_microOpResolver;
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_EXP) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddCustom(tflite::GetString_NEUTRON_GRAPH(),
         tflite::Register_NEUTRON_GRAPH());
     s_microOpResolver.AddPad();
@@ -37,6 +39,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
     s_microOpResolver.AddExp();
 #elif defined(APP_USE_NEUTRON64_MODEL)
     static tflite::MicroMutableOpResolver<14> s_microOpResolver;
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_RESIZE_NEAREST_NEIGHBOR) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddCustom(tflite::GetString_NEUTRON_GRAPH(),
         tflite::Register_NEUTRON_GRAPH());
     s_microOpResolver.AddPad();
@@ -54,7 +58,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
     s_microOpResolver.AddResizeNearestNeighbor();
 #else
     static tflite::MicroMutableOpResolver<24> s_microOpResolver;
-
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_LOGISTIC) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddConv2D();
     s_microOpResolver.AddDepthwiseConv2D();
     s_microOpResolver.AddPad();

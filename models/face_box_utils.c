@@ -6,7 +6,7 @@
  */
 
 #include "app_constants.h"
-#include "models/utils.h"
+#include "utils.h"
 #include "string.h"
 #include "math.h"
 #include "stdbool.h"

@@ -187,50 +187,39 @@ err:
 #define FRAME_HEIGHT   APP_CAMERA_HEIGHT
 #endif
 
-static void app_task(void *params) {
-
-    int width  = FRAME_WIDTH;
-    int height = FRAME_HEIGHT;
-	int ret;
-	args_t *args = (args_t *) params;
-
-	PRINTF("[%s]\r\n", mpp_get_version());
+static int build_pipeline(args_t *args, int width, int height, mpp_t *mp_out)
+{
+    int ret;
 
 #if( defined(CONFIG_RC_CYCLE_FRAMES) && (CONFIG_RC_CYCLE_FRAMES != 0))
-	mpp_api_params_t api_param = {0};
-	api_param.rc_cycle_min = CONFIG_RC_CYCLE_FRAMES * 33; /* cycle period multiple of frames @30fps */
+    mpp_api_params_t api_param = {0};
+    api_param.rc_cycle_min = CONFIG_RC_CYCLE_FRAMES * 33; /* cycle period multiple of frames @30fps */
     api_param.rc_cycle_inc = 33; /* one frame @30fps */
     ret = mpp_api_init(&api_param);
 #else
-	ret = mpp_api_init(NULL);
+    ret = mpp_api_init(NULL);
 #endif
-	if (ret)
-		goto err;
+    if (ret) return ret;
 
-	mpp_t mp;
-	mpp_params_t mpp_params;
-	memset(&mpp_params, 0, sizeof(mpp_params));
-	mpp_params.exec_flag = MPP_EXEC_RC;
-	mp = mpp_create(&mpp_params, &ret);
-	if (mp == MPP_INVALID)
-		goto err;
+    mpp_t mp;
+    mpp_params_t mpp_params;
+    memset(&mpp_params, 0, sizeof(mpp_params));
+    mpp_params.exec_flag = MPP_EXEC_RC;
+    mp = mpp_create(&mpp_params, &ret);
+    if (mp == MPP_INVALID) return ret;
 
-	mpp_camera_params_t cam_params;
-	memset(&cam_params, 0 , sizeof(cam_params));
-	cam_params.height = height;
-	cam_params.width =  width;
-	cam_params.format = args->camera_format;
-	cam_params.fps    = 30;
-	ret = mpp_camera_add(mp, args->camera_name, &cam_params, NULL);
-    if (ret) {
-        PRINTF("Failed to add camera %s\r\n", args->camera_name);
-        goto err;
-    }
+    mpp_camera_params_t cam_params;
+    memset(&cam_params, 0, sizeof(cam_params));
+    cam_params.height = height;
+    cam_params.width  = width;
+    cam_params.format = args->camera_format;
+    cam_params.fps    = 30;
+    ret = mpp_camera_add(mp, args->camera_name, &cam_params, NULL);
+    if (ret) { PRINTF("Failed to add camera %s\r\n", args->camera_name); return ret; }
 
 #ifndef EMULATOR
     mpp_element_params_t elem_params;
     memset(&elem_params, 0, sizeof(elem_params));
-    /* pick default device from the first listed and supported by Hw */
     elem_params.convert.dev_name = IMG_CONVERT_DEV_NAME;
     elem_params.convert.angle = APP_DISPLAY_LANDSCAPE_ROTATE;
     elem_params.convert.pixel_format = args->display_format;
@@ -296,29 +285,62 @@ static void app_task(void *params) {
 #endif
 
     ret = mpp_element_add(mp, MPP_ELEMENT_CONVERT, &elem_params, NULL);
-
-    if (ret) {
-        PRINTF("Failed to add element CONVERT\r\n");
-        goto err;
-    }
-#endif
+    if (ret) { PRINTF("Failed to add element CONVERT\r\n"); return ret; }
+#endif /* EMULATOR */
 
     mpp_display_params_t disp_params;
-    memset(&disp_params, 0 , sizeof(disp_params));
+    memset(&disp_params, 0, sizeof(disp_params));
     disp_params.height = APP_DISPLAY_HEIGHT;
-    disp_params.width = APP_DISPLAY_WIDTH;
+    disp_params.width  = APP_DISPLAY_WIDTH;
     disp_params.format = args->display_format;
     ret = mpp_display_add(mp, args->display_name, &disp_params);
-	if (ret) {
-	    PRINTF("Failed to add display %s\r\n", args->display_name);
-		goto err;
-    }
+    if (ret) { PRINTF("Failed to add display %s\r\n", args->display_name); return ret; }
 
     ret = mpp_start(mp, 1, false);
-    if (ret) {
-        PRINTF("Failed to start pipeline\r\n");
-        goto err;
+    if (ret) { PRINTF("Failed to start pipeline\r\n"); return ret; }
+
+    *mp_out = mp;
+    return 0;
+}
+
+static void app_task(void *params) {
+
+    int width  = FRAME_WIDTH;
+    int height = FRAME_HEIGHT;
+    int ret;
+    args_t *args = (args_t *) params;
+
+    PRINTF("[%s]\r\n", mpp_get_version());
+
+#if defined(CONFIG_TEST_MPP_DEINIT)
+    uint32_t start_free_heap = mpp_get_free_heap();
+    PRINTF("Available heap: %u kB\r\n", start_free_heap >> 10);
+    for (;;) {
+        mpp_t mp = NULL;
+        ret = build_pipeline(args, width, height, &mp);
+        if (ret) goto err;
+        uint32_t crt_free_heap = mpp_get_free_heap();
+        PRINTF("Crt available heap: %u kB\r\n", crt_free_heap >> 10);
+        PRINTF("Used heap: %u kB\r\n", (uint32_t)(start_free_heap - crt_free_heap) >> 10);
+        TickType_t t0 = xTaskGetTickCount();
+        while ((xTaskGetTickCount() - t0) < pdMS_TO_TICKS(15000))
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        mpp_stop(mp);
+        mpp_destroy(mp);
+        mpp_api_ctl_tasks_destroy();
+        uint32_t end_free_heap = mpp_get_free_heap();
+        PRINTF("\r\nCrt available heap: %u kB\r\n", end_free_heap >> 10);
+        PRINTF("unfreed heap: %u bytes\r\n", (uint32_t)(start_free_heap - end_free_heap));
+        if (start_free_heap == end_free_heap)
+            PRINTF("test_camera_convert_display MPP deinit - PASSED\r\n");
+        else
+            PRINTF("test_camera_convert_display MPP deinit - FAILED\r\n");
+        vTaskDelay(pdMS_TO_TICKS(5000));
     }
+#else
+    mpp_t mp;
+    ret = build_pipeline(args, width, height, &mp);
+    if (ret) goto err;
 
 #if (CONFIG_STOP_MPP == 1)
     const TickType_t xDelay = MPP_STOP_DELAY_MS / portTICK_PERIOD_MS;
@@ -343,6 +365,7 @@ static void app_task(void *params) {
 
     /* pause application task */
     vTaskSuspend(NULL);
+#endif /* CONFIG_TEST_MPP_DEINIT */
 
 err:
     for (;;)
@@ -351,4 +374,3 @@ err:
         vTaskSuspend(NULL);
     }
 }
-

@@ -479,13 +479,13 @@ static hal_display_status_t hal_set_background_to_black(void)
                     top, left + backgr_buff_width - 1,
                     top + backgr_buff_height - 1);
             if (status !=  kStatus_Success) {
-                free(backgr_buff);
+                hal_free(backgr_buff);
                 return kStatus_HAL_DisplayError;
             }
 
             status = SSD1963_WriteMemory(&lcd_handle, backgr_buff, backgr_buff_size);
             if (status !=  kStatus_Success) {
-                free(backgr_buff);
+                hal_free(backgr_buff);
                 return kStatus_HAL_DisplayError;
             }
 
@@ -496,7 +496,7 @@ static hal_display_status_t hal_set_background_to_black(void)
         left = 0;
     }
 
-    free(backgr_buff);
+    hal_free(backgr_buff);
 
     return ret;
 
@@ -605,9 +605,22 @@ hal_display_status_t HAL_DisplayDev_McuLcdSsd1963_Deinit(const display_dev_t *de
 {
     hal_display_status_t ret = kStatus_HAL_DisplaySuccess;
 
+    HAL_LOGD("++HAL_DisplayDev_McuLcdSsd1963_Deinit\n");
+
+    /* deinit the FlexIO MCULCD peripheral */
+    FLEXIO_MCULCD_Deinit(&s_display_dev_flexio_lcd);
+
+    /* deinit the eDMA controller */
     EDMA_Deinit(BOARD_EDMA);
 
+    /* release the transfer-done semaphore created during Init */
+    hal_sema_delete(s_transfer_done);
+    s_transfer_done = NULL;
+
     hal_mutex_remove(s_mutex);
+    s_mutex = NULL;
+
+    HAL_LOGD("--HAL_DisplayDev_McuLcdSsd1963_Deinit\n");
 
     return ret;
 }

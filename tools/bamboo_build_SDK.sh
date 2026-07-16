@@ -66,15 +66,19 @@ archive_armgcc () {
     case "${BOARD}" in
         evkbmimxrt1170)
             BUILD_PREFIX="flexspi_nor_sdram_"
-            CORE_ID="cm7"
+            CORE_ID="_cm7"
             ;;
         frdmmcxn947)
             BUILD_PREFIX=""
-            CORE_ID="cm33_core0"
+            CORE_ID="_cm33_core0"
             ;;
-        mimxrt700evk)
+        mimxrt700evk|frdmimxrt700)
             BUILD_PREFIX="flash_"
-            CORE_ID="cm33_core0"
+            CORE_ID="_cm33_core0"
+            ;;
+        frdmimxrt1152)
+            BUILD_PREFIX="flexspi_nor_hyperram_"
+            CORE_ID=""
             ;;
         *)
             echo "Fail sdk board name"
@@ -91,8 +95,8 @@ archive_armgcc () {
         cp ${build}/*.elf ${out_dir} 2>/dev/null || :
         app_name=$(echo "${build}" | cut -d "/" -f 2)
         if echo "${build}" | grep "${BUILD_PREFIX}${bamboo_TEST_BUILD_CONFIG}" && [[ "${bamboo_TEST_DISPLAY}" == "${DISPLAY}" ]]; then
-            cp ${build}/${app_name}.bin ${bamboo_ARTIFACTS_DIR}/build_${BOARD}/${app_name}_${CORE_ID}.bin
-            cp ${build}/${app_name}.elf ${bamboo_ARTIFACTS_DIR}/build_${BOARD}/${app_name}_${CORE_ID}.elf
+            cp ${build}/${app_name}.bin ${bamboo_ARTIFACTS_DIR}/build_${BOARD}/${app_name}${CORE_ID}.bin
+            cp ${build}/${app_name}.elf ${bamboo_ARTIFACTS_DIR}/build_${BOARD}/${app_name}${CORE_ID}.elf
         fi
     done
 }

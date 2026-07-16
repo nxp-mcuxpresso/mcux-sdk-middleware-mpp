@@ -244,6 +244,26 @@ int HAL_GfxDev_Pxp_Getbufdesc(const gfx_dev_t *dev, hw_buf_desc_t *in_buf, hw_bu
 int HAL_GfxDev_Pxp_Deinit(gfx_dev_t *dev)
 {
     int error = 0;
+
+    if (s_GfxPxpHandle.pxpInit == 0)
+        return error;
+
+#if ENABLE_PXP_LOCK
+    if (s_GfxPxpHandle.mutex != NULL)
+    {
+        hal_mutex_remove(s_GfxPxpHandle.mutex);
+        s_GfxPxpHandle.mutex = NULL;
+    }
+#endif
+
+    if (s_GfxPxpHandle.semaphore != NULL)
+    {
+        hal_sema_delete(s_GfxPxpHandle.semaphore);
+        s_GfxPxpHandle.semaphore = NULL;
+    }
+
+    s_GfxPxpHandle.pxpInit = 0;
+
     return error;
 }
 

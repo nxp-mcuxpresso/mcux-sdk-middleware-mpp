@@ -32,6 +32,7 @@
 #include "hal_static_image.h"
 #include "hal_filesrc.h"
 #include "hal_filesink.h"
+#include "hal_rtspsrc.h"
 #include "hal_rtspsink.h"
 #include "hal_types.h"
 #include "stddef.h"
@@ -79,6 +80,7 @@ _mpp_src_type_e {MPP_SRC_INVALID,
 				 MPP_SRC_CAMERA,
 				 MPP_SRC_STATIC_IMAGE,
 				 MPP_SRC_FILE,
+				 MPP_SRC_RTSP,
 				 MPP_SRC_MC,
 				 MPP_SRC_NUM}
 _mpp_src_type_t;
@@ -224,6 +226,11 @@ struct _mpp_s {
     mpp_stats_t *stats;
 
     _mpp_fps_params_t fps_params;
+
+    /* number of passes per source frame; 0 means not set (treated as 1) */
+    uint32_t n_passes;
+    /* current pass index set by the executor before each pass */
+    uint32_t pass_idx;
 };
 
 /* camera source */
@@ -271,6 +278,14 @@ typedef struct _filesink_s {
     /* HAL/FWK type */
     filesink_t dev;
 }_filesink_t;
+
+/* RTSP source */
+typedef struct _rtspsrc_s {
+    /* parameters */
+	mpp_rtspsrc_params_t params;
+    /* HAL/FWK type */
+    rtspsrc_t dev;
+}_rtspsrc_t;
 
 /* RTSP sink */
 typedef struct _rtspsink_s {
@@ -321,6 +336,7 @@ struct _elem_s {
         _static_image_t *img;
         _filesrc_t *filesrc;
         _filesink_t *filesink;
+        _rtspsrc_t *rtspsrc;
         _rtspsink_t *rtspsink;
         vdec_dev_t *vdec;
         _multicore_dev_t *mc;
@@ -339,10 +355,19 @@ struct _elem_s {
 
     /* Private data for element-specific context */
     void *priv;
+
+    /* per-pass parameter array (NULL for single-pass elements) */
+    mpp_element_params_t *pass_params;
+    /* number of entries in pass_params */
+    uint32_t n_pass_params;
 };
 
 typedef unsigned int (*elem_setup_func_t)(_elem_t *);
 elem_setup_func_t get_setup_function(mpp_element_id_t id);
+
+/* multipass setup: same signature as regular setup; elem->pass_params is already populated */
+typedef unsigned int (*multipass_elem_setup_func_t)(_elem_t *);
+multipass_elem_setup_func_t get_multipass_elem_setup_function(mpp_element_id_t id);
 
 static inline int can_add(mpp_element_id_t id)
 {
@@ -373,6 +398,11 @@ uint32_t mpp_lbl_rectangle_update (_elem_t *elem, mpp_element_params_t *params);
 
 /* image convert update function */
 unsigned int mpp_convert_update(_elem_t *elem, mpp_element_params_t *params);
+
+/* image convert multipass update function */
+unsigned int mpp_convert_multipass_update(_elem_t *elem,
+                                      mpp_element_params_t *params_array,
+                                      uint32_t n_params);
 
 /* inference update function */
 uint32_t mpp_inference_update(_elem_t *elem, mpp_element_params_t *params);

@@ -23,6 +23,11 @@
 #define _MPP_API_H
 
 #include "mpp_api_types.h"
+#include "mpp_config.h"
+
+#if (defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1) && (defined MCMGR_USED)
+#include "mcmgr.h"
+#endif /* (defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1) && (defined MCMGR_USED) */
 
 /**
  * @defgroup MPP_API MPP API
@@ -108,10 +113,21 @@ int mpp_filesrc_add(mpp_t mpp, mpp_filesrc_params_t *params, void *addr, mpp_ele
 int mpp_filesink_add(mpp_t mpp, mpp_filesink_params_t *params, mpp_elem_handle_t *elem_h);
 
 /**
+ * Source RTSP addition
+ *
+ * @param [in] mpp input pipeline
+ * @param [in] params RTSP parameters
+ * @param [out] elem_h element handle in pipeline
+ * @return \ref return_codes
+ *
+ */
+int mpp_rtspsrc_add(mpp_t mpp, mpp_rtspsrc_params_t *params, mpp_elem_handle_t *elem_h);
+
+/**
  * Sink RTSP addition
  *
  * @param [in] mpp input pipeline
- * @param [in] params file parameters
+ * @param [in] params RTSP parameters
  * @param [out] elem_h element handle in pipeline
  * @return \ref return_codes
  *
@@ -221,6 +237,29 @@ int mpp_element_add(mpp_t mpp, mpp_element_id_t id, mpp_element_params_t *params
 int mpp_split(mpp_t mpp, unsigned int num, mpp_params_t *params, mpp_t *out_list);
 
 /**
+ * Link a newly built pipeline as a live branch off an existing element
+ * in a running pipeline.
+ *
+ * The new pipeline must have been fully constructed and closed before this
+ * call. Its exec_flag (set at mpp_create time) determines which heap it
+ * joins. The pipeline is started immediately (equivalent to mpp_start with
+ * last=false) and begins receiving frames from hook_elem on the next
+ * execution cycle.
+ *
+ * @param [in] hook_elem_h handle of the element in the running pipeline to
+ *                         branch off from
+ * @param [in] new_mpp     handle of the closed pipeline to attach as a branch
+ * @return \ref return_codes
+ *
+ * @pre
+ * - hook_elem_h must belong to a running pipeline
+ * - new_mpp must be in MPP_CLOSED state and not running
+ * - If new_mpp->first_elem does not own its input buffer, the hook element
+ *   output buffer must already be allocated
+ */
+int mpp_link_branch(mpp_elem_handle_t hook_elem_h, mpp_t new_mpp);
+
+/**
  * Put next elements processing in background
  *
  * @param [in] mpp input pipeline
@@ -229,6 +268,44 @@ int mpp_split(mpp_t mpp, unsigned int num, mpp_params_t *params, mpp_t *out_list
  * @return \ref return_codes
  */
 int mpp_background(mpp_t mpp, mpp_params_t *params, mpp_t *out_mpp);
+
+/**
+ * Add processing element with per-pass parameter sets (single input, single output)
+ *
+ * This function adds an element configured to run with a different set of
+ * parameters on each pass. params_array[i] is selected for pass index i.
+ * If the effective pass count exceeds n_params, the last entry is reused.
+ *
+ * Available elements are the same as for mpp_element_add.
+ *
+ * @param [in] mpp          input pipeline
+ * @param [in] id           element id
+ * @param [in] params_array array of element parameters, one per pass (must have at least 1 entry)
+ * @param [in] n_params     number of entries in params_array
+ * @param [out] elem_h      element handle in pipeline
+ * @return \ref return_codes
+ */
+int mpp_multipass_element_add(mpp_t mpp, mpp_element_id_t id,
+                          mpp_element_params_t *params_array,
+                          uint32_t n_params,
+                          mpp_elem_handle_t *elem_h);
+
+/**
+ * Set the number of passes per source frame for a pipeline branch
+ *
+ * This function sets how many times the pipeline branch is executed per
+ * source frame. A value of 0 is invalid and returns MPP_INVALID_PARAM;
+ * n_passes must be at least 1.
+ * Can be called before or after mpp_start to update the pass count at runtime.
+ * Sub-branches that share the same execution heap inherit the pass count
+ * from the topmost ancestor whose n_passes is non-zero; a sub-branch whose
+ * own n_passes is 0 (unset) falls back to that inherited value.
+ *
+ * @param [in] mpp      pipeline branch handle
+ * @param [in] n_passes desired pass count (must be >= 1)
+ * @return \ref return_codes
+ */
+int mpp_set_n_passes(mpp_t mpp, uint32_t n_passes);
 
 /**
  * Update element parameters
@@ -242,6 +319,22 @@ int mpp_background(mpp_t mpp, mpp_params_t *params, mpp_t *out_mpp);
  * @return \ref return_codes
  */
 int mpp_element_update(mpp_t mpp, mpp_elem_handle_t elem_h, mpp_element_params_t *params, bool force_update);
+
+/**
+ * Update element parameters for multiple pipeline passes
+ *
+ * @param [in] mpp          input pipeline
+ * @param [in] elem_h       element handle in the pipeline
+ * @param [in] params_array array of element parameters, one entry per pass
+ * @param [in] n_params     number of entries in params_array
+ * @param [in] force_update force the pipeline to run even though
+ *         there is no input frame update for processing elements after update.
+ *         If the force_update flag was already requested before, the current value is ignored
+ * @return \ref return_codes
+ */
+int mpp_multipass_element_update(mpp_t mpp, mpp_elem_handle_t elem_h,
+                             mpp_element_params_t *params_array, uint32_t n_params,
+                             bool force_update);
 
 /**
  * Check if the pipeline is currently running
@@ -289,6 +382,20 @@ int mpp_stop(mpp_t mpp);
  * @return \ref return_codes
  */
 int mpp_force_update(mpp_t mpp);
+
+#if (defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1) && (defined MCMGR_USED)
+/**
+ * @brief Remote API event handler callback
+ * 
+ * Called by MCMGR when a remote core signals readiness for API communication.
+ * Stores the event in the database for later retrieval during initialization.
+ * 
+ * @param coreNum Core number that triggered the event
+ * @param eventData Event data payload
+ * @param context User context (unused)
+ */
+void mpp_mc_remote_event_handler(mcmgr_core_t coreNum, uint16_t eventData, void *context);
+#endif /* (defined HAL_ENABLE_MULTICORE) && (HAL_ENABLE_MULTICORE == 1) && (defined MCMGR_USED) */
 
 /**
  * Enable statistics collection
@@ -380,6 +487,42 @@ int mpp_storage_get_free_space(uint64_t *free_bytes, uint64_t *total_bytes);
  * @return 0 on success, non-zero on error
  */
 int mpp_eth_netif_init(uint8_t ip_addr[4], uint8_t netmask[4], uint8_t gateway[4]);
+
+/**
+ * Destroy a stopped pipeline and free all its resources.
+ * The pipeline must not be in MPP_RUNNING state.
+ * All HAL device deinit functions are called and all memory allocated
+ * for elements, device structs, and output buffer descriptors is freed.
+ *
+ * @param[in] mpp handle to the pipeline to destroy
+ * @return MPP_SUCCESS on success, MPP_ERROR if the pipeline is still running,
+ *         MPP_INVALID_PARAM if mpp is NULL.
+ */
+int mpp_destroy(mpp_t mpp);
+
+/**
+ * Destroy the three pipeline control tasks created by mpp_api_init().
+ * Also destroys the associated event groups, semaphore, and stats mutexes.
+ * May only be called after all pipelines have been destroyed (prio lists empty).
+ *
+ * @return MPP_SUCCESS on success, MPP_ERROR if any pipeline is still registered.
+ */
+int mpp_api_ctl_tasks_destroy(void);
+
+/**
+ * Print the current free heap size to the log.
+ * Useful to call before and after mpp_destroy() to verify full cleanup.
+ * Implemented for FreeRTOS only; prints a notice on other OSes.
+ */
+void mpp_print_heap(void);
+
+
+/**
+ * Get the current free heap size.
+ *
+ * @return The amount of free heap memory in bytes
+ */
+uint32_t mpp_get_free_heap(void);
 
 /** @}*/
 

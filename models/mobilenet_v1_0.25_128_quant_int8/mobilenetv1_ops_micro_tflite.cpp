@@ -23,14 +23,16 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
 {
 #ifdef APP_USE_NEUTRON64_MODEL
     static tflite::MicroMutableOpResolver<3> s_microOpResolver;
-
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_SOFTMAX) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddDequantize();
     s_microOpResolver.AddSoftmax();
     s_microOpResolver.AddCustom(tflite::GetString_NEUTRON_GRAPH(),
         tflite::Register_NEUTRON_GRAPH());
 #elif defined(APP_USE_NEUTRON16_MODEL)
     static tflite::MicroMutableOpResolver<8> s_microOpResolver;
-
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_SOFTMAX) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddAveragePool2D();
     s_microOpResolver.AddConv2D();
     s_microOpResolver.AddDepthwiseConv2D();
@@ -42,7 +44,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
         tflite::Register_NEUTRON_GRAPH());
 #else
     static tflite::MicroMutableOpResolver<6> s_microOpResolver;
-
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_SOFTMAX) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddAveragePool2D();
     s_microOpResolver.AddConv2D();
     s_microOpResolver.AddDepthwiseConv2D();

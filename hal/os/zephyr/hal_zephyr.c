@@ -206,6 +206,13 @@ hal_sema_t hal_sema_create_binary()
     return ksem;
 }
 
+void hal_sema_delete(hal_sema_t handle)
+{
+    if (handle) {
+        safe_free(handle);
+    }
+}
+
 bool hal_sema_give(hal_sema_t handle)
 {
     struct k_sem *ksem = (struct k_sem *) handle;
@@ -293,6 +300,11 @@ uint32_t hal_tick_to_ms(uint32_t os_tick)
     return k_ticks_to_ms_floor32(os_tick);
 }
 
+uint32_t hal_ms_to_ticks(uint32_t ms)
+{
+    return K_MSEC(ms).ticks;
+}
+
 int hal_task_create(hal_task_fct_t fct, const char *const name,
                     const uint16_t stackdepth, void *const pparams,
                     uint32_t prio, hal_task_t *const ptask)
@@ -355,9 +367,26 @@ void hal_task_resume(hal_task_t task)
     }
 }
 
+void hal_task_delete(hal_task_t task)
+{
+    hal_zephyr_task_t *ztask = (hal_zephyr_task_t *) task;
+    if (ztask == NULL)
+        return;
+    if (ztask->tid)
+        k_thread_abort(ztask->tid);
+    if (ztask->stack)
+        k_thread_stack_free(ztask->stack);
+    safe_free(ztask);
+}
+
 void hal_task_delay(uint32_t ticks)
 {
     k_sleep(K_TICKS(ticks));
+}
+
+void hal_task_delay_ms(uint32_t ms)
+{
+    k_sleep(K_MSEC(ms));
 }
 
 hal_event_group_t hal_eventgrp_create()
@@ -371,6 +400,13 @@ hal_event_group_t hal_eventgrp_create()
     k_event_init(kevent);
 
     return kevent;
+}
+
+void hal_eventgrp_delete(hal_event_group_t eventgrp)
+{
+    if (eventgrp) {
+        safe_free(eventgrp);
+    }
 }
 
 hal_eventbits_t hal_eventgrp_set_bits(hal_event_group_t eventgrp,
@@ -438,6 +474,67 @@ unsigned int hal_get_idle_percent()
     /* TODO: This would need to be implemented based on Zephyr's stats
      * For now, return 0 */
     return 0;
+}
+
+void *hal_queue_create(uint32_t length, uint32_t item_size)
+{
+    struct k_msgq *q = safe_malloc(sizeof(struct k_msgq));
+    if (q == NULL)
+    {
+        HAL_LOGE("Failed to allocate queue\r\n");
+        return NULL;
+    }
+    uint8_t *buf = safe_malloc(length * item_size);
+    if (buf == NULL)
+    {
+        HAL_LOGE("Failed to allocate queue buffer\r\n");
+        safe_free(q);
+        return NULL;
+    }
+    k_msgq_init(q, buf, item_size, length);
+    return (void *)q;
+}
+
+void hal_queue_delete(void *queue)
+{
+    if (queue == NULL)
+        return;
+    struct k_msgq *q = (struct k_msgq *)queue;
+    k_msgq_cleanup(q);
+    /* Free the buffer that was allocated in hal_queue_create */
+    safe_free(q->buffer_start);
+    safe_free(q);
+}
+
+bool hal_queue_receive(void *queue, void *item, uint32_t timeout)
+{
+    struct k_msgq *q = (struct k_msgq *)queue;
+    k_timeout_t ztimeout =
+        (timeout == HAL_MAX_TIMEOUT) ? K_FOREVER : K_TICKS(timeout);
+    return (k_msgq_get(q, item, ztimeout) == 0);
+}
+
+void *hal_queueset_create(uint32_t length)
+{
+    HAL_LOGE("Queue sets not supported in Zephyr\r\n");
+    return NULL;
+}
+
+int hal_queueset_add_queue(void *queue_set, void *queue)
+{
+    HAL_LOGE("Queue sets not supported in Zephyr\r\n");
+    return MPP_ERROR;
+}
+
+void *hal_queueset_receive(void *queue_set, uint32_t timeout)
+{
+    HAL_LOGE("Queue sets not supported in Zephyr");
+    return NULL;
+}
+
+void hal_queueset_delete(void *queue_set)
+{
+    HAL_LOGE("Queue sets not supported in Zephyr\r\n");
 }
 
 #endif /* MPP_OS_ZEPHYR */

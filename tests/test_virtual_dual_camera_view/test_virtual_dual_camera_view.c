@@ -333,7 +333,6 @@ static void app_task(void *params) {
     elem_params.convert.angle = APP_DISPLAY_LANDSCAPE_ROTATE;
     elem_params.convert.flip = APP_SRC_DISPLAY_FLIP;
     elem_params.convert.pixel_format = args->display_format;
-    elem_params.convert.angle = ROTATE_90;
     elem_params.convert.scale.width = APP_DISPLAY_WIDTH;
     elem_params.convert.scale.height = APP_DISPLAY_HEIGHT;
     elem_params.convert.ops = MPP_CONVERT_COLOR | MPP_CONVERT_ROTATE | MPP_CONVERT_SCALE;

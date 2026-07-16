@@ -136,3 +136,42 @@ char * elem_name(_elem_t *elem)
     return str;
 }
 
+/* get string from MPP return code */
+char *mpp_error_string(int error_code)
+{
+    char *str = NULL;
+    switch(error_code)
+    {
+    case MPP_SUCCESS:
+        str = "MPP_SUCCESS";
+        break;
+    case MPP_ERROR:
+        str = "MPP_ERROR";
+        break;
+    case MPP_INVALID_ELEM:
+        str = "MPP_INVALID_ELEM";
+        break;
+    case MPP_INVALID_PARAM:
+        str = "MPP_INVALID_PARAM";
+        break;
+    case MPP_ERR_ALLOC_MUTEX:
+        str = "MPP_ERR_ALLOC_MUTEX";
+        break;
+    case MPP_INVALID_MUTEX:
+        str = "MPP_INVALID_MUTEX";
+        break;
+    case MPP_MUTEX_TIMEOUT:
+        str = "MPP_MUTEX_TIMEOUT";
+        break;
+    case MPP_MUTEX_ERROR:
+        str = "MPP_MUTEX_ERROR";
+        break;
+    case MPP_MALLOC_ERROR:
+        str = "MPP_MALLOC_ERROR";
+        break;
+    default:
+        str = "UNKNOWN_ERROR";
+        break;
+    }
+    return str;
+}

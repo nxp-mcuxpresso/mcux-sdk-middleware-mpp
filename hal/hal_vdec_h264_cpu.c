@@ -100,7 +100,9 @@ hal_vdec_status_t HAL_VdecDev_H264_Deinit(const vdec_h264_dev_t *dev)
     }
     
     hal_free(ctx);
-    
+    /* prevent dangling pointer use after free */
+    ((vdec_h264_dev_t *)dev)->user_data = NULL;
+
     HAL_LOGD("--HAL_VdecDev_H264_Deinit\r\n");
     return MPP_kStatus_HAL_VDecSuccess;
 }

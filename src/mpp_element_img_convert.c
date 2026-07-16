@@ -28,6 +28,46 @@
 #include "hal_graphics_dev.h"
 #include "hal.h"
 
+/* fill-in the gfx source and destination structures */
+static void set_gfx_dev(gfx_dev_t *gfx, _elem_t * elem)
+{
+    /* set source buffer */
+    gfx->src.format = elem->io.in_buf[0]->format;
+    gfx->src.width = elem->io.in_buf[0]->width;
+    if (elem->io.in_buf[0]->stripe_num > 0)
+        gfx->src.height = elem->io.in_buf[0]->height / MPP_STRIPE_NUM;
+    else
+        gfx->src.height = elem->io.in_buf[0]->height;
+    gfx->src.swapByte = 0;
+
+    /* set destination buffer */
+    gfx->dst.format = elem->params.convert.pixel_format;
+    gfx->dst.width = elem->params.convert.out_buf.width;
+    if (elem->io.in_buf[0]->stripe_num > 0)
+    {
+        /* even if output is full frame, deal with stripe */
+        float v_scaling = (float) elem->params.convert.scale.height / elem->io.in_buf[0]->height;
+        gfx->dst.height = gfx->src.height * v_scaling;  /* output stripe height is input x scale */
+    }
+    else
+        gfx->dst.height = elem->params.convert.out_buf.height;
+    gfx->dst.swapByte = 0;
+
+    /* crop source window */
+    gfx->src.top = elem->params.convert.crop.top;
+    gfx->src.bottom = elem->params.convert.crop.bottom;
+    gfx->src.left = elem->params.convert.crop.left;
+    gfx->src.right = elem->params.convert.crop.right;
+
+    /* output destination window */
+    gfx->dst.left = elem->params.convert.out_window.left;
+    gfx->dst.top = elem->params.convert.out_window.top;
+    gfx->dst.right = elem->params.convert.out_window.left + elem->params.convert.scale.width - 1;
+    gfx->dst.bottom = elem->params.convert.out_window.top + elem->params.convert.scale.height - 1;
+
+    return;
+}
+
 /* element processing function */
 static int convert_func(_elem_t *elem)
 {
@@ -36,11 +76,10 @@ static int convert_func(_elem_t *elem)
     buf_desc_t *obuf = elem->io.out_buf[0];
     buf_desc_t *ibuf = elem->io.in_buf[0];
 
-    /* The value of following parameters are only set after
-     * the pipeline graph has been constructed.
-     * Hence those parameters can't be set from the setup function.
-     */
-    /* set source buffer(s) */
+    /* apply current params (already validated at setup/update) to the gfx structures */
+    set_gfx_dev(gfx, elem);
+
+    /* set source buffer address (only available at runtime) */
     gfx->src.buf = ibuf->hw->addr;
     gfx->src.pitch = ibuf->hw->stride;
     if (ibuf->format == MPP_PIXEL_YUV420P)
@@ -168,8 +207,12 @@ static inline bool is_custom_rotation(mpp_rotate_degree_t angle, float custom_an
                                    && custom_angle != 180.0f && custom_angle != 270.0f);
 }
 
-/* check parameters and complete missing fields */
-static int check_convert_params(_elem_t *elem)
+/* check and complete the given convert params entry.
+ * params is modified in-place: default crop, scale and pixel_format are filled in
+ * when the corresponding ops flags are not set.
+ * elem is used only to obtain the previous element's buffer descriptor.
+ */
+static int check_convert_params(_elem_t *elem, mpp_element_params_t *params)
 {
     int ret = MPP_SUCCESS;
     unsigned int input_width = 0, input_height = 0;
@@ -182,43 +225,43 @@ static int check_convert_params(_elem_t *elem)
     }
 
     /* check output buffer dimensions */
-    if ((elem->params.convert.out_buf.width == 0) ||
-            (elem->params.convert.out_buf.height == 0))
+    if ((params->convert.out_buf.width == 0) ||
+            (params->convert.out_buf.height == 0))
     {
         MPP_LOGE("Invalid output buffer parameter\n");
         return MPP_INVALID_PARAM;
     }
 
-    if(!(elem->params.convert.ops & MPP_CONVERT_CROP))
+    if(!(params->convert.ops & MPP_CONVERT_CROP))
     {
         /* keep full image area */
-        elem->params.convert.crop.top = 0;
-        elem->params.convert.crop.left = 0;
-        elem->params.convert.crop.bottom = prev_buf->height - 1;
-        elem->params.convert.crop.right = prev_buf->width - 1;
+        params->convert.crop.top = 0;
+        params->convert.crop.left = 0;
+        params->convert.crop.bottom = prev_buf->height - 1;
+        params->convert.crop.right = prev_buf->width - 1;
     }
 
     /* check crop params */
-    if ( (elem->params.convert.crop.top > elem->params.convert.crop.bottom)
-            || (elem->params.convert.crop.left > elem->params.convert.crop.right)
-            || (elem->params.convert.crop.right > prev_buf->width)
-            || (elem->params.convert.crop.bottom > prev_buf->height) )
+    if ( (params->convert.crop.top > params->convert.crop.bottom)
+            || (params->convert.crop.left > params->convert.crop.right)
+            || (params->convert.crop.right > prev_buf->width)
+            || (params->convert.crop.bottom > prev_buf->height) )
     {
         MPP_LOGE("Invalid crop parameter\n\r");
         MPP_LOGE("top = %d, left = %d, right = %d, bott = %d\n\r",
-                elem->params.convert.crop.top, elem->params.convert.crop.left,
-                elem->params.convert.crop.right, elem->params.convert.crop.bottom);
+                params->convert.crop.top, params->convert.crop.left,
+                params->convert.crop.right, params->convert.crop.bottom);
         return MPP_INVALID_PARAM;
     }
 
     /* compute the input area dimensions */
-    input_width = elem->params.convert.crop.right - elem->params.convert.crop.left + 1;
-    input_height = elem->params.convert.crop.bottom - elem->params.convert.crop.top + 1;
+    input_width = params->convert.crop.right - params->convert.crop.left + 1;
+    input_height = params->convert.crop.bottom - params->convert.crop.top + 1;
 
     /* complete convert params for hal */
-    if(!(elem->params.convert.ops & MPP_CONVERT_COLOR))
+    if(!(params->convert.ops & MPP_CONVERT_COLOR))
     {   /* keep source color format */
-        elem->params.convert.pixel_format = prev_buf->format;
+        params->convert.pixel_format = prev_buf->format;
     }
 
     /* In case of output window, top and left coordinates from struct out_window
@@ -226,10 +269,10 @@ static int check_convert_params(_elem_t *elem)
      * Otherwise, it will be set to:
      * - top/left coordinates of the output buffer
      */
-    if(!(elem->params.convert.ops & MPP_CONVERT_OUT_WINDOW))
+    if(!(params->convert.ops & MPP_CONVERT_OUT_WINDOW))
     {   /* keep source position */
-        elem->params.convert.out_window.top = 0;
-        elem->params.convert.out_window.left = 0;
+        params->convert.out_window.top = 0;
+        params->convert.out_window.left = 0;
     }
 
     /* In case of scaling, dimensions from struct scale
@@ -237,17 +280,17 @@ static int check_convert_params(_elem_t *elem)
      * Otherwise, it will be set to:
      * - dims of input window
      */
-    if(!(elem->params.convert.ops & MPP_CONVERT_SCALE))
+    if(!(params->convert.ops & MPP_CONVERT_SCALE))
     {
         /* keep source dimensions */
-        if(elem->params.convert.ops & MPP_CONVERT_ROTATE)
+        if(params->convert.ops & MPP_CONVERT_ROTATE)
         {
             /* rotate swaps dimensions */
             /* Check for custom rotation */
-            if (is_custom_rotation(elem->params.convert.angle, elem->params.convert.custom_angle))
+            if (is_custom_rotation(params->convert.angle, params->convert.custom_angle))
             {
                 /* For custom angles, calculate bounding box */
-                float angle_rad = elem->params.convert.custom_angle * 3.14159265f / 180.0f;
+                float angle_rad = params->convert.custom_angle * 3.14159265f / 180.0f;
                 /* CID 54622912, CID 54622917: MISRA D4.11 - validate sinf/cosf argument is finite
                  * (not NaN or infinity) before passing to library functions */
                 if (!isfinite(angle_rad))
@@ -257,108 +300,65 @@ static int check_convert_params(_elem_t *elem)
                 }
                 float cos_val = fabsf(cosf(angle_rad));
                 float sin_val = fabsf(sinf(angle_rad));
-                
-                elem->params.convert.scale.width = (unsigned int)((input_width * cos_val) + (input_height * sin_val));
-                elem->params.convert.scale.height = (unsigned int)((input_height * cos_val) + (input_width * sin_val));
+
+                params->convert.scale.width = (unsigned int)((input_width * cos_val) + (input_height * sin_val));
+                params->convert.scale.height = (unsigned int)((input_height * cos_val) + (input_width * sin_val));
             }
             else
             {
                 /* Fixed angle rotation */
-                switch(elem->params.convert.angle)
+                switch(params->convert.angle)
                 {
                 case ROTATE_90:
                 case ROTATE_270:
-                    elem->params.convert.scale.width = input_height;
-                    elem->params.convert.scale.height = input_width;
+                    params->convert.scale.width = input_height;
+                    params->convert.scale.height = input_width;
                     break;
                 case ROTATE_CUSTOM:
-                    if (elem->params.convert.custom_angle == 0.0f || elem->params.convert.custom_angle == 180.0f)
+                    if (params->convert.custom_angle == 0.0f || params->convert.custom_angle == 180.0f)
                     {
-                        elem->params.convert.scale.width = input_width;
-                        elem->params.convert.scale.height = input_height;
+                        params->convert.scale.width = input_width;
+                        params->convert.scale.height = input_height;
                     }
                     else
                     {
-                        elem->params.convert.scale.width = input_height;
-                        elem->params.convert.scale.height = input_width;
+                        params->convert.scale.width = input_height;
+                        params->convert.scale.height = input_width;
                     }
                     break;
                 case ROTATE_0:
                 case ROTATE_180:
                 default:
-                    elem->params.convert.scale.width = input_width;
-                    elem->params.convert.scale.height = input_height;
+                    params->convert.scale.width = input_width;
+                    params->convert.scale.height = input_height;
                     break;
                 }
             }
         } else {
-            elem->params.convert.scale.width = input_width;
-            elem->params.convert.scale.height = input_height;
+            params->convert.scale.width = input_width;
+            params->convert.scale.height = input_height;
         }
     }
 
-    if(!(elem->params.convert.ops & MPP_CONVERT_ROTATE))
+    if(!(params->convert.ops & MPP_CONVERT_ROTATE))
     {   /* keep source orientation */
-        elem->params.convert.angle = ROTATE_0;
-        elem->params.convert.flip = FLIP_NONE;
+        params->convert.angle = ROTATE_0;
+        params->convert.flip = FLIP_NONE;
     }
 
     /* check output window params */
-    if ((elem->params.convert.out_window.top + elem->params.convert.scale.height > elem->params.convert.out_buf.height)
-            || (elem->params.convert.out_window.left + elem->params.convert.scale.width > elem->params.convert.out_buf.width))
+    if ((params->convert.out_window.top + params->convert.scale.height > params->convert.out_buf.height)
+            || (params->convert.out_window.left + params->convert.scale.width > params->convert.out_buf.width))
     {
         MPP_LOGE("Invalid output window parameter\n");
         MPP_LOGE("Window %dx%d at pos %d,%d cannot fit in %dx%d buffer\n",
-            elem->params.convert.scale.width, elem->params.convert.scale.height,
-            elem->params.convert.out_window.top, elem->params.convert.out_window.left,
-            elem->params.convert.out_buf.width, elem->params.convert.out_buf.height);
+            params->convert.scale.width, params->convert.scale.height,
+            params->convert.out_window.top, params->convert.out_window.left,
+            params->convert.out_buf.width, params->convert.out_buf.height);
         return MPP_INVALID_PARAM;
     }
     return ret;
 }
-
-/* fill-in the gfx source and destination structures */
-static void set_gfx_dev(gfx_dev_t *gfx, _elem_t * elem)
-{
-    /* set source buffer */
-    gfx->src.format = elem->io.in_buf[0]->format;
-    gfx->src.width = elem->io.in_buf[0]->width;
-    if (elem->io.in_buf[0]->stripe_num > 0)
-        gfx->src.height = elem->io.in_buf[0]->height / MPP_STRIPE_NUM;
-    else
-        gfx->src.height = elem->io.in_buf[0]->height;
-    gfx->src.swapByte = 0;
-
-    /* set destination buffer */
-    gfx->dst.format = elem->params.convert.pixel_format;
-    gfx->dst.width = elem->params.convert.out_buf.width;
-    if (elem->io.in_buf[0]->stripe_num > 0)
-    {
-        /* even if output is full frame, deal with stripe */
-        float v_scaling = (float) elem->params.convert.scale.height / elem->io.in_buf[0]->height;
-        gfx->dst.height = gfx->src.height * v_scaling;  /* output stripe height is input x scale */
-    }
-    else
-        gfx->dst.height = elem->params.convert.out_buf.height;
-    gfx->dst.swapByte = 0;
-
-    /* crop source window */
-    gfx->src.top = elem->params.convert.crop.top;
-    gfx->src.bottom = elem->params.convert.crop.bottom;
-    gfx->src.left = elem->params.convert.crop.left;
-    gfx->src.right = elem->params.convert.crop.right;
-
-    /* output destination window */
-    gfx->dst.left = elem->params.convert.out_window.left;
-    gfx->dst.top = elem->params.convert.out_window.top;
-    gfx->dst.right = elem->params.convert.out_window.left + elem->params.convert.scale.width - 1;
-    gfx->dst.bottom = elem->params.convert.out_window.top + elem->params.convert.scale.height - 1;
-
-    return;
-}
-
-/* function to setup/configure input/output memory  */
-int setup_convert_mem(uint8_t **io_bufs[], unsigned int io_buf_sz[]);
 
 /* element setup function */
 unsigned int elem_convert_setup(_elem_t *elem)
@@ -397,7 +397,7 @@ unsigned int elem_convert_setup(_elem_t *elem)
             break;
         }
 
-        ret = check_convert_params(elem);
+        ret = check_convert_params(elem, &elem->params);
         if (ret != MPP_SUCCESS) {
             MPP_LOGE("invalid parameters for Image Convert\r\n");
             ret = MPP_INVALID_PARAM;
@@ -443,8 +443,7 @@ unsigned int elem_convert_setup(_elem_t *elem)
         }
 
         if (((elem->io.in_buf[0]->stripe_num > 0) || (elem->io.out_buf[0]->stripe_num > 0))
-            && (elem->params.convert.angle != ROTATE_0 || 
-            is_custom_rotation(elem->params.convert.angle, elem->params.convert.custom_angle)))
+            && (elem->params.convert.angle != ROTATE_0))
         {
             MPP_LOGE("\nStripe mode not supported with rotation.\n");
             ret = MPP_INVALID_PARAM;
@@ -502,10 +501,56 @@ unsigned int elem_convert_setup(_elem_t *elem)
     return ret;
 }
 
+/* multipass setup for convert element:
+ * - validates that all entries in pass_params share the same output dimensions
+ *   and pixel format as the first entry (buffer descriptors are fixed at setup time)
+ * - then delegates to the regular elem_convert_setup using pass_params[0] as params
+ */
+unsigned int elem_convert_multipass_setup(_elem_t *elem)
+{
+    int ret = MPP_SUCCESS;
+
+    if (elem == NULL || elem->pass_params == NULL || elem->n_pass_params == 0)
+        return MPP_INVALID_PARAM;
+
+    /* check output dimensions are identical across all pass entries */
+    mpp_element_params_t *base = &elem->pass_params[0];
+    for (uint32_t i = 1; i < elem->n_pass_params; i++) {
+        mpp_element_params_t *p = &elem->pass_params[i];
+        if (p->convert.out_buf.width  != base->convert.out_buf.width  ||
+            p->convert.out_buf.height != base->convert.out_buf.height ||
+            p->convert.pixel_format   != base->convert.pixel_format   ||
+            p->convert.stripe_in      != base->convert.stripe_in      ||
+            p->convert.stripe_out     != base->convert.stripe_out)
+        {
+            MPP_LOGE("pass entry %d has incompatible output dimensions or format\n", i);
+            return MPP_INVALID_PARAM;
+        }
+    }
+
+    /* validate and complete all pass entries (including entry 0) via
+     * check_convert_params. check_convert_params fills in defaults (crop,
+     * scale, pixel_format) in-place so that at runtime the injected
+     * pass_params[i] are already fully specified. Entry 0 must also be
+     * completed here because elem_convert_setup works on elem->params (a
+     * copy), not on pass_params[0] directly. */
+    for (uint32_t i = 0; i < elem->n_pass_params; i++) {
+        ret = check_convert_params(elem, &elem->pass_params[i]);
+        if (ret != MPP_SUCCESS) {
+            MPP_LOGE("pass entry %d has invalid convert parameters\n", i);
+            return ret;
+        }
+    }
+
+    /* use the first (completed) entry as active params, then run regular setup */
+    elem->params = elem->pass_params[0];
+    ret = elem_convert_setup(elem);
+    return ret;
+}
+
 unsigned int mpp_convert_update(_elem_t *elem, mpp_element_params_t *params)
 {
     int ret = MPP_SUCCESS;
-    gfx_dev_t *gfx = NULL;
     do {
         /* sanity checks */
         if (params == NULL) {
@@ -529,7 +574,7 @@ unsigned int mpp_convert_update(_elem_t *elem, mpp_element_params_t *params)
         /* save new parameters in element context */
         memcpy(&elem->params, params, sizeof(mpp_element_params_t));
 
-        ret = check_convert_params(elem);
+        ret = check_convert_params(elem, &elem->params);
         if (ret != MPP_SUCCESS) {
             MPP_LOGE("invalid parameters for Image Convert\r\n");
             ret = MPP_INVALID_PARAM;
@@ -537,21 +582,73 @@ unsigned int mpp_convert_update(_elem_t *elem, mpp_element_params_t *params)
         }
 
         /* do not change resolution in buffer descriptor */
-
         if (((elem->io.in_buf[0]->stripe_num > 0) || (elem->io.out_buf[0]->stripe_num > 0))
-            && (elem->params.convert.angle != ROTATE_0 ||
-            is_custom_rotation(elem->params.convert.angle, elem->params.convert.custom_angle)))
+            && (elem->params.convert.angle != ROTATE_0))
         {   
             MPP_LOGE("\nStripe mode not supported with rotation.\n");
             ret = MPP_INVALID_PARAM;
             break;
         }
 
-        /* update gfx source and destination */
-        gfx = elem->dev.gfx;
-        set_gfx_dev(gfx, elem);
-
     } while (false);
+
+    return ret;
+}
+
+/* multipass update for convert element:
+ * validates stripe constraints and output dimensions consistency,
+ * then completes all pass entries via check_convert_params and
+ * writes back the completed params to params_array.
+ * Finally updates the gfx structure for pass entry 0 (current active params).
+ */
+unsigned int mpp_convert_multipass_update(_elem_t *elem,
+                                      mpp_element_params_t *params_array,
+                                      uint32_t n_params)
+{
+    int ret = MPP_SUCCESS;
+
+    if (params_array == NULL || n_params == 0)
+        return MPP_INVALID_PARAM;
+
+    /* validate fixed constraints across all entries */
+    for (uint32_t i = 0; i < n_params; i++) {
+        if (params_array[i].convert.stripe_in != elem->params.convert.stripe_in) {
+            MPP_LOGE("pass entry %d: cannot update input stripe format\n", i);
+            return MPP_INVALID_PARAM;
+        }
+        if (params_array[i].convert.stripe_out != elem->params.convert.stripe_out) {
+            MPP_LOGE("pass entry %d: cannot update output stripe format\n", i);
+            return MPP_INVALID_PARAM;
+        }
+        /* all pass entries must share the same output buffer dimensions and format */
+        if (params_array[i].convert.out_buf.width  != params_array[0].convert.out_buf.width  ||
+            params_array[i].convert.out_buf.height != params_array[0].convert.out_buf.height ||
+            params_array[i].convert.pixel_format   != params_array[0].convert.pixel_format)
+        {
+            MPP_LOGE("pass entry %d has incompatible output dimensions or format\n", i);
+            return MPP_INVALID_PARAM;
+        }
+    }
+
+    /* complete and validate all entries via check_convert_params */
+    for (uint32_t i = 0; i < n_params; i++) {
+        ret = check_convert_params(elem, &params_array[i]);
+        if (ret != MPP_SUCCESS) {
+            MPP_LOGE("pass entry %d has invalid convert parameters\n", i);
+            return ret;
+        }
+
+        /* check stripe + rotation constraint */
+        if (((elem->io.in_buf[0]->stripe_num > 0) || (elem->io.out_buf[0]->stripe_num > 0))
+            && (params_array[i].convert.angle != ROTATE_0))
+        {
+            MPP_LOGE("pass entry %d: stripe mode not supported with rotation\n", i);
+            return MPP_INVALID_PARAM;
+        }
+    }
+
+    /* set entry 0 as the current active params */
+    elem->params = params_array[0];
 
     return ret;
 }

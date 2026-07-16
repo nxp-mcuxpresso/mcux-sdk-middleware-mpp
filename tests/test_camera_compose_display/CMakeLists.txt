@@ -8,13 +8,11 @@ mcux_add_source(
     BASE_PATH ${SdkRootDirPath}
     SOURCES middleware/eiq/mpp/tests/test_camera_compose_display/test_camera_compose_display.c
             middleware/eiq/mpp/boards/${board}/tests/test_camera_compose_display/mpp_config.h
-            middleware/eiq/mpp/common/draw_text.c
 )
 
 mcux_add_include(
     BASE_PATH ${SdkRootDirPath}
     INCLUDES middleware/eiq/mpp/boards/${board}/tests/test_camera_compose_display/
-             middleware/eiq/mpp/common/
 )
 
 # board files

@@ -6,16 +6,36 @@ Current version is 4.4.0
   - 4.4.0
     - New features:
       - Changed documentation generation to produce .md format output (dox2md.py)
+      - Added RTSP/RTP source support for MJPEG streaming
+      - Added multicore remote API: pipeline/element API calls are forwarded over RPMsg to the core owning the resource
+      - Added APIs for pipeline destroy and resource cleanup (mpp_deinit)
+      - Added new API to link a newly created branch to an already existing pipeline at runtime (similar to mpp_split but works at runtime)
+      - Added support for multi-params convert element
+      - Added support for running the same pipeline branch multiple times in a row
+      - Added static image support for gesture recognition example
+      - Updated USB camera driver to support multiple simultaneous streams
+      - Added new hand detection model for NPU and updated post-processing for gesture recognition
+      - Added API for converting error codes to human-readable strings
+      - Updated all NPU models to neutron-compiler 3.2.1
+      - Added QueueSet support in FreeRTOS HAL
+      - Added OS HAL APIs: hal_ms_to_ticks, hal_task_delay_ms, queue create/delete/receive, task/semaphore/event-group delete
     - Bug fixes:
       - Fixed all examples on frdmimxrt700
       - Fixed examples for frdmimxrt1152 (USB camera + VGLite GPU pipeline)
       - Fixed several Coverity High security issues
       - Removed unsupported boards folders: evkbimxrt1050, evkmimxrt1170, mcxn9xxbrk, mcxn9xxevk
+      - Fixed various de-init methods across HAL and processing elements
+      - Fixed de-init methods for displays: SPI ILI9341, LCDIFv2 RK055, ST7796, SSD1963
+      - Fixed deinit for VGLite, PXP, H264 dec/enc, USB camera HALs
+      - Fixed multicore HAL deinit: added synchronization between RPMsg source-sink pair
+      - Fixed multicore HAL message queue flush (flush only on de-init, not on stop)
+      - Fixed models ops resolver to avoid operators being registered twice on repeated init calls
+      - Fixed rt1152 build (FreeRTOS QueueSets were not enabled)
     - Known issues:
       - frdmimxrt1152: camera_view example is very slow even at low resolution (160x120) and low fps (5)
       - frdmimxrt1152: nanodet inference time is around 3s compared to ~600ms on rt1170
-      - frdmimxrt700: examples are not fully validated yet
       - frdmmcxn947: for some camera + inference examples, stripes are seen on the screen
+      - frdmmcxn947: persondetect and ultraface models are not working with the latest neutron-compiler 3.2.1
     - Supported evaluation boards:
       - frdmmcxn947
       - evkbmimxrt1170

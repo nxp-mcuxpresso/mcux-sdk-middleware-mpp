@@ -55,6 +55,7 @@ typedef enum {
     MPP_EVENT_QUALITY_CHECK_READY,      /*!< Quality check measurements are ready */
     MPP_EVENT_CONVERT_PARAMS_READY,     /*!< VGLite roate matrix and input crop parameters ready */
     MPP_EVENT_INTERNAL_TEST_RESERVED,   /*!< INTERNAL: DO NOT USE */
+    MPP_EVENT_MC_REMOTE_DEINIT,         /*!< remote MC paired pipeline was deinitialized */
     MPP_EVENT_NUM   /*!< DO NOT USE */
 } mpp_evt_t;
 
@@ -63,8 +64,23 @@ typedef unsigned int mpp_evt_mask_t;
 /** Bit mask to receive all Events */
 #define MPP_EVENT_ALL 0xffffffff
 
+/** @brief Maximum number of cores supported in a multicore MPP system */
+#ifndef CONFIG_MPP_MAX_CORES
+    #define MPP_MAX_CORES               2
+#else
+    #define MPP_MAX_CORES               CONFIG_MPP_MAX_CORES
+#endif
+
 /** @brief Maximum number of RPMsg endpoints per core */
 #define MPP_MAX_RPMSG_EPT_PER_CORE      5
+/** @brief Base RPMsg endpoint address; override with CONFIG_MPP_RPMSG_ADDR_START */
+#ifndef CONFIG_MPP_RPMSG_ADDR_START
+    #define CONFIG_MPP_RPMSG_ADDR_START 10
+#endif
+/** @brief Base MCMGR event data value for MPP; override with CONFIG_MPP_MCMGR_DATA_START */
+#ifndef CONFIG_MPP_MCMGR_DATA_START
+    #define CONFIG_MPP_MCMGR_DATA_START 1
+#endif
 
 /**
  * Execution parameters
@@ -122,6 +138,14 @@ typedef struct {
     int pipeline_task_max_prio; /*!< pipeline tasks maximum priority. */
     int pipeline_rc_task_prio;  /*!< pipeline run-to-completion tasks priority. 0: sets default value */
     int pipeline_pr_task_prio;  /*!< pipeline preemptable tasks priority. 0: sets default value */
+    /* multicore related parameters */
+    struct {
+        uint32_t n_remote_cores;           /*!< number of remote cores */
+        struct {
+            uint32_t remote_core_id;    /*!< remote core id */
+            void *rpmsg_inst;           /*!< pointer to rpmsg instance */
+        } core[MPP_MAX_CORES - 1];
+    } multicore;
 } mpp_api_params_t;
 
 /** @brief Pipeline creation parameters */
@@ -131,6 +155,7 @@ typedef struct {
         mpp_exec_flag_t exec_flag;  /*!< execution flag */
         void *cb_userdata;          /*!< user data pointer passed to the callback */
         mpp_stats_t *stats;         /*!< pointer to statistics structure */
+        uint32_t core_id;           /*!< core ID where the pipeline runs */
 } mpp_params_t;
 
 /** Rotation value */
@@ -202,19 +227,46 @@ typedef enum {
 
 /** Multicore pipeline RPMSG endpoint addresses */
 typedef enum {
-    MPP_RPMSG_EPT_ADDR_INVALID = 0, /*!< invalid endpoint address */
-    MPP_RPMSG_EPT_ADDR_CORE0_START = 10,  /*!< core 0 endpoint start address */
-    MPP_RPMSG_EPT_ADDR_CORE0_STOP = MPP_RPMSG_EPT_ADDR_CORE0_START + (MPP_MAX_RPMSG_EPT_PER_CORE - 1),  /*!< core 0 endpoint stop address */
-    MPP_RPMSG_EPT_ADDR_CORE1_START, /*!< core 1 endpoint start address */
-    MPP_RPMSG_EPT_ADDR_CORE1_STOP = MPP_RPMSG_EPT_ADDR_CORE1_START + (MPP_MAX_RPMSG_EPT_PER_CORE - 1)   /*!< core 1 endpoint stop address */
+    MPP_RPMSG_ADDR_INVALID = 0, /*!< invalid endpoint address */
+    /* Core endpoints - automatically adapts to MPP_MAX_CORES */
+    MPP_RPMSG_ADDR_START = CONFIG_MPP_RPMSG_ADDR_START,  /*!< first core endpoint start address */
+    MPP_RPMSG_ADDR_END = CONFIG_MPP_RPMSG_ADDR_START + (MPP_MAX_CORES * MPP_MAX_RPMSG_EPT_PER_CORE) - 1,  /*!< last core endpoint end address */
+    /* Remote API endpoints - one pair per core */
+    MPP_RPMSG_ADDR_API_TX_BASE = MPP_RPMSG_ADDR_END + 1, /*!< remote api send endpoint base (add core_id) */
+    MPP_RPMSG_ADDR_API_RX_BASE = MPP_RPMSG_ADDR_API_TX_BASE + MPP_MAX_CORES, /*!< remote api receive endpoint base (add core_id) */
+    MPP_RPMSG_ADDR_MAX = MPP_RPMSG_ADDR_API_RX_BASE + MPP_MAX_CORES - 1  /*!< maximum endpoint address */
 } mpp_rpmsg_endpoint_addr_e;
+
+/** @brief First RPMsg endpoint address for a given core */
+#define MPP_RPMSG_ADDR_CORE_START(core_id) (MPP_RPMSG_ADDR_START + ((core_id) * MPP_MAX_RPMSG_EPT_PER_CORE))
+/** @brief Last RPMsg endpoint address for a given core */
+#define MPP_RPMSG_ADDR_CORE_END(core_id)   (MPP_RPMSG_ADDR_CORE_START(core_id) + MPP_MAX_RPMSG_EPT_PER_CORE - 1)
+/** @brief Remote API transmit endpoint address for a given core */
+#define MPP_RPMSG_ADDR_API_TX(core_id)     (MPP_RPMSG_ADDR_API_TX_BASE + (core_id))
+/** @brief Remote API receive endpoint address for a given core */
+#define MPP_RPMSG_ADDR_API_RX(core_id)     (MPP_RPMSG_ADDR_API_RX_BASE + (core_id))
+
+/* Compile-time check for address range overflow */
+#ifdef CONFIG_MPP_RPMSG_ADDR_END
+    _Static_assert(MPP_RPMSG_ADDR_MAX <= CONFIG_MPP_RPMSG_ADDR_END,
+                    "RPMSG endpoint addresses exceed configured CONFIG_MPP_RPMSG_ADDR_END");
+#endif
 
 /** Multicore pipeline MCMGR remote event data */
 typedef enum {
-    MPP_MCMGR_EVENT_DATA_INVALID = 0, /*!< invalid mcmgr event data */
-    MPP_MCMGR_EVENT_DATA_START,       /*!< mcmgr event data start */
-    MPP_MCMGR_EVENT_DATA_STOP = MPP_MCMGR_EVENT_DATA_START + (MPP_MAX_RPMSG_EPT_PER_CORE - 1)  /*!< mcmgr event data stop */ 
+    MPP_MCMGR_DATA_INVALID = 0, /*!< invalid mcmgr event data */
+    /* Event data range - same range for all cores */
+    MPP_MCMGR_DATA_START = CONFIG_MPP_MCMGR_DATA_START,       /*!< mcmgr event data start */
+    MPP_MCMGR_DATA_END = CONFIG_MPP_MCMGR_DATA_START + (MPP_MAX_RPMSG_EPT_PER_CORE - 1),  /*!< mcmgr event data end */
+    MPP_MCMGR_DATA_API, /*!< mcmgr event data remote api */
+    MPP_MCMGR_DATA_MAX  /*!< maximum mcmgr event data */
 } mpp_mcmgr_event_data_e;
+
+/* Compile-time check for event data range overflow */
+#ifdef CONFIG_MPP_MCMGR_DATA_END
+    _Static_assert(MPP_MCMGR_DATA_MAX <= CONFIG_MPP_MCMGR_DATA_END,
+                    "MCMGR event data values exceed configured CONFIG_MPP_MCMGR_DATA_END");
+#endif
 
 /** RTP payload types */
 typedef enum {
@@ -234,6 +286,12 @@ typedef struct {
     bool active;                 /*!< Stream is active or not */
     int height;
     int width;
+    int usb_camera_index;        /*!< USB camera slot index to bind this stream to (0-based).
+                                   *  Set to -1 (or leave zero-initialised) for automatic
+                                   *  assignment (first free g_Videos[] slot).
+                                   *  Use a non-negative value to select a specific camera
+                                   *  when a single USB device exposes multiple UVC interfaces
+                                   *  (e.g. 0 = RGB, 1 = IR). */
 } mpp_camera_stream_cfg;
 
 /** Camera parameters */
@@ -288,6 +346,15 @@ typedef struct {
     uint64_t max_file_size;                /*!< Maximum file size in bytes */
 } mpp_filesink_params_t;
 
+/** RTSP source parameters */
+typedef struct _mpp_rtspsrc_params {
+    const char *rtsp_url;                     /*!< RTSP URL (rtsp://ip:port/path) */
+    uint64_t rtsp_buffer_size;                /*!< Maximum buffer size in bytes */
+    int width;                                /*!< Source image width in pixels */
+    int height;                               /*!< Source image height in pixels */
+    mpp_pixel_format_t format;                /*!< Pixel format of output buffer (use MPP_PIXEL_JPEG for compressed JPEG) */
+} mpp_rtspsrc_params_t;
+
 /** RTSP sink parameters */
 typedef struct _mpp_rtspsink_params {
     uint16_t port;                     /*!< RTSP server port (default: 8554) */
@@ -300,10 +367,11 @@ typedef struct _mpp_rtspsink_params {
 
 /** MC element parameters */
 typedef struct {
-    void *rpmsg_inst; /*!< pointer to rpmsg instance */
-    uint16_t remote_event_data; /*!< remote event data for mcmgr */
-    uint32_t local_rpmsg_addr; /*!< local rpmsg endpoint address */
+    void *rpmsg_inst;           /*!< pointer to rpmsg instance */
+    uint32_t remote_core_id;    /*!< remote core id */
+    uint32_t local_rpmsg_addr;  /*!< local rpmsg endpoint address */
     uint32_t remote_rpmsg_addr; /*!< remote rpmsg endpoint address */
+    uint16_t event_data;        /*!< event data for mcmgr */
 } mpp_mc_params_t;
 
 /** Display parameters */
@@ -615,6 +683,7 @@ union {
 #define MPP_MUTEX_TIMEOUT   (42)    /*!< Mutex timeout occured */
 #define MPP_MUTEX_ERROR     (43)    /*!< Mutex error occured */
 #define MPP_MALLOC_ERROR    (50)    /*!< Memory allocation error occured */
+#define MPP_UNSUPPORTED     (60)    /*!< Operation not supported for this element */
 
 /** @} */
 

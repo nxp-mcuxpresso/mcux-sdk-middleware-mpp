@@ -37,3 +37,4 @@ audio-voice-components
 emwin
 naturedsp
 openh264
+edgefast_open

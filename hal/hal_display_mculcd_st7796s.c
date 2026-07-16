@@ -483,13 +483,13 @@ static hal_display_status_t hal_set_background_to_black(void)
                     (uint16_t)top, (uint16_t)right_edge,
                     (uint16_t)bottom_edge);
             if (status !=  kStatus_Success) {
-                free(backgr_buff);
+                hal_free(backgr_buff);
                 return kStatus_HAL_DisplayError;
             }
 
             status = ST7796S_WritePixels(&lcd_handle, (uint16_t *) backgr_buff, backgr_pix_count);
             if (status !=  kStatus_Success) {
-                free(backgr_buff);
+                hal_free(backgr_buff);
                 return kStatus_HAL_DisplayError;
             }
 
@@ -500,7 +500,7 @@ static hal_display_status_t hal_set_background_to_black(void)
         left = 0;
     }
 
-    free(backgr_buff);
+    hal_free(backgr_buff);
 
     return ret;
 
@@ -609,9 +609,22 @@ hal_display_status_t HAL_DisplayDev_McuLcdST7796S_Deinit(const display_dev_t *de
 {
     hal_display_status_t ret = kStatus_HAL_DisplaySuccess;
 
+    HAL_LOGD("++HAL_DisplayDev_McuLcdST7796S_Deinit\n");
+
+    /* deinit the FlexIO MCULCD peripheral */
+    FLEXIO_MCULCD_Deinit(&s_display_dev_flexio_lcd);
+
+    /* deinit the eDMA controller */
     EDMA_Deinit(BOARD_EDMA);
 
+    /* release the transfer-done semaphore created during Init */
+    hal_sema_delete(s_transfer_done);
+    s_transfer_done = NULL;
+
     hal_mutex_remove(s_mutex);
+    s_mutex = NULL;
+
+    HAL_LOGD("--HAL_DisplayDev_McuLcdST7796S_Deinit\n");
 
     return ret;
 }

@@ -21,6 +21,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
 {
 #if defined(APP_USE_NEUTRON64_MODEL)
 	static tflite::MicroMutableOpResolver<6> s_microOpResolver;
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_SOFTMAX) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddMean();
     s_microOpResolver.AddQuantize();
     s_microOpResolver.AddReshape();
@@ -30,6 +32,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
 
 #else
     static tflite::MicroMutableOpResolver<9> s_microOpResolver;
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_TRANSPOSE) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddMean();
     s_microOpResolver.AddConv2D();
     s_microOpResolver.AddDepthwiseConv2D();

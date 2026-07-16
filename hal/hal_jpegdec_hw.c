@@ -31,7 +31,8 @@
 #include "hal_os.h"
 #include "fsl_jpegdec.h"
 
-static hal_mutex_t s_mutex; /* prevent stopping JPEG decode during conversion */
+static hal_mutex_t s_mutex;    /* prevent stopping JPEG decode during conversion */
+static int s_jpegHwInit = 0;   /* singleton flag: JPEGDEC_Init called only once */
 
 JPEG_DECODER_Type g_jpegdec = {
     .core    = JPEGDEC,
@@ -580,19 +581,24 @@ int HAL_JPEG_Hw_Init(vdec_dev_t *dev, void *param)
 		return kStatus_Fail;
 	}
 
-	/* Step 1: Init JPEG decoder module. */
-	JPEGDEC_GetDefaultConfig(&config);
+	/* Step 1: Init JPEG decoder hardware only on the first call.
+	 * On subsequent calls (re-init after deinit) the hardware is already
+	 * configured and does not need to be re-initialized. */
+	if (s_jpegHwInit == 0)
+	{
+		JPEGDEC_GetDefaultConfig(&config);
 
-	/* Enable only one slot. */
-	config.slots = kJPEGDEC_Slot0;
+		/* Enable only one slot. */
+		config.slots = kJPEGDEC_Slot0;
 
-	JPEGDEC_Init(HAL_JPEGDEC, &config);
+		JPEGDEC_Init(HAL_JPEGDEC, &config);
+		s_jpegHwInit = 1;
+	}
 
-	/* Create mutex */
+	/* Create mutex (always recreated on each init since deinit removes it) */
 	if (hal_mutex_create(&s_mutex) != MPP_SUCCESS)
 	{
 		HAL_LOGE("Failed to create JPEG HW decode mutex\n");
-		JPEGDEC_Deinit(HAL_JPEGDEC);
 		return kStatus_Fail;
 	}
 
@@ -603,8 +609,17 @@ int HAL_JPEG_Hw_Deinit(const vdec_dev_t *dev)
 {
     int ret = kStatus_Success;
 
-    JPEGDEC_Deinit(HAL_JPEGDEC);
-    hal_mutex_remove(s_mutex);
+    /* JPEGDEC_Deinit is intentionally not called here so that the hardware
+     * remains configured across deinit/init cycles.  s_jpegHwInit stays set.
+     * JPEGDEC_Reset is called before every decode in HAL_JPEG_Hw_Decode to
+     * ensure a clean state without needing a full hardware re-init. */
+    /* JPEGDEC_Deinit(HAL_JPEGDEC); */
+
+    if (s_mutex != NULL)
+    {
+        hal_mutex_remove(s_mutex);
+        s_mutex = NULL;
+    }
 
     return ret;
 }

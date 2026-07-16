@@ -970,7 +970,7 @@ class MPPBuilder:
             # Output .md into docs/<output_file_name>/<output_file_name>.md
             md_output = self.w_dir / "docs" / output_file_name / f"{output_file_name}.md"
             cmd = [
-                "python", str(dox2md),
+                "python3", str(dox2md),
                 "--xml-dir", str(xml_dir),
                 "--title", doc_title,
                 "--version", api_version,

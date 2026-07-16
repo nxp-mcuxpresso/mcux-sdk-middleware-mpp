@@ -183,7 +183,8 @@ static int decode_output_boxes(const int8_t* boxes_int, const int8_t* score_int,
         box_data curr_box = {0};
         float score;
 
-        score = (float)(score_int[i] - BLAZE_DETECTOR_SCORE_ZERO_POINT) * BLAZE_DETECTOR_SCORE_SCALE;
+        float logit = (float)(score_int[i] - BLAZE_DETECTOR_SCORE_ZERO_POINT) * BLAZE_DETECTOR_SCORE_SCALE;
+        score = 1.0f / (1.0f + expf(-logit));
 
         if (score <= BLAZE_DETECTOR_PALM_SCORE_THRES)
             continue;
@@ -201,10 +202,10 @@ static int decode_output_boxes(const int8_t* boxes_int, const int8_t* score_int,
         float w = p[2];
         float h = p[3];
 
-        float cx = sx * BLAZE_DETECTOR_VAR_0 * anchor.w + anchor.x_center;
-        float cy = sy * BLAZE_DETECTOR_VAR_0 * anchor.h + anchor.y_center;
-        w = expf(w * BLAZE_DETECTOR_VAR_1) * anchor.w;
-        h = expf(h * BLAZE_DETECTOR_VAR_1) * anchor.h;
+        float cx = sx / (float)BLAZE_DETECTOR_WIDTH  + anchor.x_center;
+        float cy = sy / (float)BLAZE_DETECTOR_HEIGHT + anchor.y_center;
+        w  = w  / (float)BLAZE_DETECTOR_WIDTH;
+        h  = h  / (float)BLAZE_DETECTOR_HEIGHT;
 
         curr_box.left = (cx - w * 0.5f) * BLAZE_DETECTOR_WIDTH;
         curr_box.top = (cy - h * 0.5f) * BLAZE_DETECTOR_HEIGHT;
@@ -216,8 +217,8 @@ static int decode_output_boxes(const int8_t* boxes_int, const int8_t* score_int,
         {
             float lx = p[4 + (2 * j) + 0];
             float ly = p[4 + (2 * j) + 1];
-            lx = lx * BLAZE_DETECTOR_VAR_0 * anchor.w + anchor.x_center;
-            ly = ly * BLAZE_DETECTOR_VAR_0 * anchor.h + anchor.y_center;
+            lx = lx / (float)BLAZE_DETECTOR_WIDTH  + anchor.x_center;
+            ly = ly / (float)BLAZE_DETECTOR_HEIGHT + anchor.y_center;
 
             curr_box.landmarks[j].x = lx*BLAZE_DETECTOR_WIDTH;
             curr_box.landmarks[j].y = ly*BLAZE_DETECTOR_HEIGHT;

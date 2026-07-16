@@ -28,5 +28,7 @@ void mpp_heap_move(_mpp_t *mpp , _mpp_t *rio_lst[], unsigned int dst_prio);
 void mpp_dump_heap(_mpp_t *prio_lst[]);
 int mpp_memory_manage_heap(_mpp_t *prio_lst[]);
 int mpp_memory_check_list(_mpp_t *prio_lst[]);
+void mpp_print_heap(void);
+void mpp_heap_remove(_mpp_t *mpp);
 
 #endif

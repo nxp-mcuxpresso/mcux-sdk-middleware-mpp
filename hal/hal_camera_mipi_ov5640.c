@@ -39,7 +39,6 @@
 #include "fsl_mipi_csi2rx.h"
 #include "fsl_debug_console.h"
 #include "camera_support.h"
-#include "display_support.h"
 #include "fsl_common.h"
 #include "hal.h"
 #include "hal_os.h"
@@ -101,6 +100,12 @@ AT_NONCACHEABLE_SECTION_ALIGN(
 extern camera_device_handle_t cameraDevice;
 extern camera_receiver_handle_t cameraReceiver;
 
+static uint32_t gCurrentBufferAddr = 0;
+
+/* Saved config from the first PHY+sensor init; used to detect config mismatches
+ * on subsequent init cycles (PHY and sensor are not re-initialised). */
+static mpp_camera_params_t s_firstCameraConfig;
+
 /*******************************************************************************
  * Code
  ******************************************************************************/
@@ -135,10 +140,18 @@ static status_t MipiOv5640_VerifyCameraClockSource(void)
     return status;
 }
 
-void MipiOv5640_InitMipiCsi(mpp_camera_params_t *config)
+/*
+ * One-time hardware initialisation that does NOT depend on mpp_camera_params_t.
+ * This must only run once across all init/deinit cycles; no corresponding
+ * deinit is needed for these steps.
+ *
+ *   - MIPI CSI2 clock roots and video-mux routing (fixed HW topology)
+ *   - Board-level display controller preparation (needed for MIPI D-PHY power)
+ *   - Camera I2C bus initialisation
+ *   - CSI IRQ priority (constant, never changes)
+ */
+static void MipiOv5640_HwInitOnce(void)
 {
-    csi2rx_config_t csi2rxConfig = {0};
-
     /* This clock should be equal or faster than the receive byte clock,
      * D0_HS_BYTE_CLKD, from the RX DPHY. For this board, there are two
      * data lanes, the MIPI CSI pixel format is 16-bit per pixel, the
@@ -196,6 +209,21 @@ void MipiOv5640_InitMipiCsi(mpp_camera_params_t *config)
         {
         }
     }
+
+    MipiOv5640_InitCameraResource();
+
+    /* CSI interrupt priority: fixed, set once. */
+    NVIC_SetPriority(CSI_IRQn, hal_get_max_syscall_prio() + 1);
+}
+
+/*
+ * Config-dependent MIPI CSI2 PHY initialisation.
+ * Depends on resolution and frame rate from mpp_camera_params_t.
+ * Must be undone by CSI2RX_Deinit() in HAL_CameraDev_MipiOv5640_Deinit.
+ */
+static void MipiOv5640_InitMipiCsi(mpp_camera_params_t *config)
+{
+    csi2rx_config_t csi2rxConfig = {0};
 
     /*
      * Initialize the MIPI CSI2
@@ -268,6 +296,13 @@ void MipiOv5640_InitMipiCsi(mpp_camera_params_t *config)
         }
     }
 
+    /* Power on the MIPI D-PHY and de-assert isolation before starting CSI2RX.
+     * This must be done on every init cycle because CSI2RX_Deinit disables the
+     * PHY via the CSI CSR registers; without powering up BPC4 here the D-PHY
+     * stays isolated and no MIPI data reaches the CSI peripheral. */
+    // PGMC_BPC4->BPC_POWER_CTRL |= (PGMC_BPC_BPC_POWER_CTRL_PSW_ON_SOFT_MASK |
+    //                                PGMC_BPC_BPC_POWER_CTRL_ISO_OFF_SOFT_MASK);
+
     CSI2RX_Init(MIPI_CSI2RX, &csi2rxConfig);
 }
 
@@ -276,6 +311,22 @@ hal_camera_status_t HAL_CameraDev_MipiOv5640_Init(
 {
     hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
     HAL_LOGD("++HAL_CameraDev_MipiOv5640_Init( param[%p]\n", param);
+
+    /*
+     * --- One-time setup (config-independent) ---
+     * Clock roots, video mux, display controller, I2C bus, IRQ priority.
+     * These do not depend on 'config' and must only run once.
+     *
+     * s_hwInitDone  - guards MipiOv5640_HwInitOnce (clocks, I2C, IRQ priority)
+     * s_phyInitDone - guards MIPI PHY + sensor init; left running across cycles
+     */
+    static bool s_hwInitDone  = false;
+    static bool s_phyInitDone = false;
+    if (!s_hwInitDone)
+    {
+        MipiOv5640_HwInitOnce();
+        s_hwInitDone = true;
+    }
 
     dev->config.width = config->width;
     dev->config.height = config->height;
@@ -287,10 +338,6 @@ hal_camera_status_t HAL_CameraDev_MipiOv5640_Init(
     camera_config_t cameraConfig;
 
     memset(&cameraConfig, 0, sizeof(cameraConfig));
-
-    BOARD_PrepareDisplayController();
-
-    MipiOv5640_InitCameraResource();
 
     switch(config->format) {
     case MPP_PIXEL_YUV1P444:
@@ -314,35 +361,75 @@ hal_camera_status_t HAL_CameraDev_MipiOv5640_Init(
     cameraConfig.controlFlags               = CAMERA_DEV_CONTROL_FLAGS;
     cameraConfig.framePerSec                = config->fps;
 
-    NVIC_SetPriority(CSI_IRQn, hal_get_max_syscall_prio() + 1);
+    /*
+     * 1. Init the CSI receiver on every cycle.
+     * CSI_TransferCreateHandle (called inside) memsets the handle and reinitialises
+     * the empty/full buffer queues, giving a clean state for each pipeline run.
+     * Paired with CAMERA_RECEIVER_Deinit in HAL_CameraDev_MipiOv5640_Deinit.
+     */
     CAMERA_RECEIVER_Init(&cameraReceiver, &cameraConfig, HAL_CameraDev_MipiOv5640_ReceiverCallback, NULL);
 
-    MipiOv5640_InitMipiCsi(config);
+    /*
+     * 2. Init MIPI CSI2 PHY and sensor only on the first cycle.
+     * Reinitialising the PHY and sensor every cycle causes a D-PHY re-lock
+     * failure; they are left running across deinit/init cycles.
+     *
+     * On subsequent cycles, verify that the requested config matches the one
+     * used at first init.  The PHY and sensor are already programmed for that
+     * config and cannot be reconfigured without a full power cycle.
+     */
+    if (!s_phyInitDone)
+    {
+        /* Save the first-init config for comparison on later cycles. */
+        s_firstCameraConfig = *config;
 
-    switch(config->format) {
-    case MPP_PIXEL_YUV1P444:
-        cameraConfig.pixelFormat   = kVIDEO_PixelFormatYUYV;
-        cameraConfig.bytesPerPixel = 2;
-        break;
-    case MPP_PIXEL_BGRX:
-    case MPP_PIXEL_BGRA:
-        cameraConfig.pixelFormat   = kVIDEO_PixelFormatRGB565;
-        cameraConfig.bytesPerPixel = 2;
-        break;
-    default:
-        HAL_LOGE("Camera format unsupported\n");
-        return kStatus_HAL_CameraError;
+        MipiOv5640_InitMipiCsi(config);
+
+        switch(config->format) {
+        case MPP_PIXEL_YUV1P444:
+            cameraConfig.pixelFormat   = kVIDEO_PixelFormatYUYV;
+            cameraConfig.bytesPerPixel = 2;
+            break;
+        case MPP_PIXEL_BGRX:
+        case MPP_PIXEL_BGRA:
+            cameraConfig.pixelFormat   = kVIDEO_PixelFormatRGB565;
+            cameraConfig.bytesPerPixel = 2;
+            break;
+        default:
+            HAL_LOGE("Camera format unsupported\n");
+            return kStatus_HAL_CameraError;
+        }
+        cameraConfig.resolution    = FSL_VIDEO_RESOLUTION(config->width, config->height);
+        cameraConfig.interface     = kCAMERA_InterfaceMIPI;
+        cameraConfig.controlFlags  = CAMERA_DEV_CONTROL_FLAGS;
+        cameraConfig.framePerSec   = dev->config.framerate;
+        cameraConfig.csiLanes      = CAMERA_MIPI_CSI_LANE;
+        CAMERA_DEVICE_Init(&cameraDevice, &cameraConfig);
+
+        CAMERA_DEVICE_Start(&cameraDevice);
+
+        s_phyInitDone = true;
     }
-    cameraConfig.resolution    = FSL_VIDEO_RESOLUTION(config->width, config->height);
-    cameraConfig.interface     = kCAMERA_InterfaceMIPI;
-    cameraConfig.controlFlags  = CAMERA_DEV_CONTROL_FLAGS;
-    cameraConfig.framePerSec   = dev->config.framerate;
-    cameraConfig.csiLanes      = CAMERA_MIPI_CSI_LANE;
-    CAMERA_DEVICE_Init(&cameraDevice, &cameraConfig);
+    else
+    {
+        /* Re-init cycle: verify config matches the first-init parameters.
+         * The PHY and sensor are already programmed for s_firstCameraConfig and
+         * cannot be reconfigured without a full power cycle. */
+        if ((config->width  != s_firstCameraConfig.width)  ||
+            (config->height != s_firstCameraConfig.height) ||
+            (config->fps    != s_firstCameraConfig.fps)    ||
+            (config->format != s_firstCameraConfig.format))
+        {
+            HAL_LOGE("Camera re-init config mismatch: "
+                     "requested %dx%d@%d fmt=%d vs first-init %dx%d@%d fmt=%d\n",
+                     config->width, config->height, config->fps, config->format,
+                     s_firstCameraConfig.width, s_firstCameraConfig.height,
+                     s_firstCameraConfig.fps, s_firstCameraConfig.format);
+            return kStatus_HAL_CameraError;
+        }
+    }
 
-    CAMERA_DEVICE_Start(&cameraDevice);
-
-    /* Submit the empty frame buffers to buffer queue. */
+    /* 3. Submit the empty frame buffers to the CSI receiver queue (every cycle). */
     for (uint32_t i = 0; i < CAMERA_DEV_MipiOv5640_BUFFER_COUNT; i++)
     {
         CAMERA_RECEIVER_SubmitEmptyBuffer(&cameraReceiver, (uint32_t)(s_cameraBuffer[i]));
@@ -377,11 +464,22 @@ hal_camera_status_t HAL_CameraDev_MipiOv5640_Getbufdesc(const camera_dev_t *dev,
 
 hal_camera_status_t HAL_CameraDev_MipiOv5640_Deinit(camera_dev_t *dev)
 {
-    hal_camera_status_t ret = kStatus_HAL_CameraSuccess;
-    return ret;
-}
+    HAL_LOGD("++HAL_CameraDev_MipiOv5640_Deinit\n");
 
-static uint32_t gCurrentBufferAddr = 0;
+    /*
+     * Only deinit the CSI receiver.  The MIPI PHY and OV5640 sensor are left
+     * running across deinit/init cycles because re-initialising them causes a
+     * D-PHY re-lock failure.  CAMERA_RECEIVER_Init called on the next Init cycle
+     * resets the handle and buffer queues to a clean state.
+     */
+    CAMERA_RECEIVER_Deinit(&cameraReceiver);
+
+    /* Drop the buffer held by the upper layer. */
+    gCurrentBufferAddr = 0;
+
+    HAL_LOGD("--HAL_CameraDev_MipiOv5640_Deinit\n");
+    return kStatus_HAL_CameraSuccess;
+}
 
 hal_camera_status_t HAL_CameraDev_MipiOv5640_Start(const camera_dev_t *dev)
 {

@@ -22,11 +22,15 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
 {
 #if defined(APP_USE_NEUTRON64_MODEL)
     static tflite::MicroMutableOpResolver<2> s_microOpResolver;
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_LOGISTIC) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddLogistic();
     s_microOpResolver.AddCustom(tflite::GetString_NEUTRON_GRAPH(),
         tflite::Register_NEUTRON_GRAPH());
 #else
     static tflite::MicroMutableOpResolver<7> s_microOpResolver;
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_FULLY_CONNECTED) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddConv2D();
     s_microOpResolver.AddDepthwiseConv2D();
     s_microOpResolver.AddAdd();

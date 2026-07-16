@@ -79,8 +79,8 @@ for MODEL_BASENAME in "ultraface_slim_ultraslim" "nanodet_m_0.5x_nhwc_nopermute"
         CONV_HEADER=${MPP_DIR}/${MODEL_DIR}/${MODEL_H_NAME}_${NPU_VERSION}_tflite.h
         TEMP_HEADER="temp_model.h"
 
-        VERSION="$( $CONVERTER/neutron-converter --version )"
-        $CONVERTER/neutron-converter --input ${ORI_TFLITE} --output ${CONV_TFLITE}  --target $CHIP
+        VERSION="$( $CONVERTER/neutron-compiler --version )"
+        $CONVERTER/neutron-compiler --input ${ORI_TFLITE} --output ${CONV_TFLITE}  --target $CHIP
 
         #transform tflite into header
         xxd -i ${CONV_TFLITE} > ${TEMP_HEADER}

@@ -22,6 +22,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
 {
 #if defined(APP_USE_NEUTRON64_MODEL)
     static tflite::MicroMutableOpResolver<5> s_microOpResolver;
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_DIV) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddCustom(tflite::GetString_NEUTRON_GRAPH(),
         tflite::Register_NEUTRON_GRAPH());
     s_microOpResolver.AddQuantize();
@@ -30,6 +32,8 @@ tflite::MicroOpResolver &MODEL_GetOpsResolver()
     s_microOpResolver.AddDiv();
 #else
     static tflite::MicroMutableOpResolver<15> s_microOpResolver;
+    if (s_microOpResolver.FindOp(tflite::BuiltinOperator_MUL) != nullptr)
+        return s_microOpResolver;
     s_microOpResolver.AddQuantize();
     s_microOpResolver.AddGather();
     s_microOpResolver.AddMean();
