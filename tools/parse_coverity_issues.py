@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+
+"""
+ * Copyright 2026 NXP
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+"""
+
 """
 Coverity Issues Parser for MPP Project
 
