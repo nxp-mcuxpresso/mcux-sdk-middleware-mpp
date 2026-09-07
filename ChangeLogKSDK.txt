@@ -16,7 +16,7 @@ Current version is 4.4.0
       - Updated USB camera driver to support multiple simultaneous streams
       - Added new hand detection model for NPU and updated post-processing for gesture recognition
       - Added API for converting error codes to human-readable strings
-      - Updated all NPU models to neutron-compiler 3.2.1
+      - Updated all NPU models to neutron-compiler 3.2.2
       - Added QueueSet support in FreeRTOS HAL
       - Added OS HAL APIs: hal_ms_to_ticks, hal_task_delay_ms, queue create/delete/receive, task/semaphore/event-group delete
     - Bug fixes:
